@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -18,6 +19,9 @@ import org.signal.core.ui.compose.Scaffolds
 import org.signal.core.ui.compose.SignalPreview
 import org.signal.core.ui.compose.theme.SignalTheme
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.recipients.Recipient
+import org.thoughtcrime.securesms.util.AvatarUtil
 
 @Composable
 @VisibleForTesting
@@ -25,6 +29,8 @@ fun AccessibilityModeSettingsScreen(
   state: AccessibilityModeSettingsState,
   callbacks: AccessibilityModeSettingsCallbacks
 ) {
+  val context = LocalContext.current
+  
   Scaffolds.Settings(
     title = stringResource(R.string.preferences__accessibility_mode),
     onNavigationClick = { callbacks.onNavigationClick() },
@@ -36,19 +42,39 @@ fun AccessibilityModeSettingsScreen(
         .testTag(AccessibilityModeSettingsTestTags.SCROLLER)
     ) {
       item {
-        // Thread Selection Row
-        Rows.TextRow(
-          text = when {
-            org.thoughtcrime.securesms.database.SignalDatabase.threads
-              .getUnarchivedConversationListCount(org.thoughtcrime.securesms.conversationlist.model.ConversationFilter.OFF) == 0 ->
-              stringResource(R.string.preferences__accessibility_mode_no_chats_available)
-            state.threadId == -1L -> stringResource(R.string.preferences__accessibility_mode_no_chat_selected)
-            else -> stringResource(R.string.preferences__accessibility_mode_chat_selected, state.threadId.toString())
-          },
-          icon = ImageVector.vectorResource(R.drawable.symbol_chat_24),
-          onClick = { callbacks.onThreadSelectionClick() },
-          modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.ROW_THREAD_SELECTION)
-        )
+        // Thread Selection Row - show ChatRow when chat is selected
+        when {
+          SignalDatabase.threads.getUnarchivedConversationListCount(org.thoughtcrime.securesms.conversationlist.model.ConversationFilter.OFF) == 0 -> {
+            // No chats available
+            Rows.TextRow(
+              text = stringResource(R.string.preferences__accessibility_mode_no_chats_available),
+              icon = ImageVector.vectorResource(R.drawable.symbol_chat_24),
+              onClick = { callbacks.onThreadSelectionClick() },
+              modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.ROW_THREAD_SELECTION)
+            )
+          }
+          state.threadId == -1L -> {
+            // No chat selected
+            Rows.TextRow(
+              text = stringResource(R.string.preferences__accessibility_mode_no_chat_selected),
+              icon = ImageVector.vectorResource(R.drawable.symbol_chat_24),
+              onClick = { callbacks.onThreadSelectionClick() },
+              modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.ROW_THREAD_SELECTION)
+            )
+          }
+          else -> {
+            // Chat is selected - show ChatRow
+            val recipient = getRecipientForThread(state.threadId)
+            val lastMessage = getLastMessageForThread(state.threadId)
+            
+            ChatRow(
+              recipient = recipient,
+              lastMessage = lastMessage,
+              onClick = { callbacks.onThreadSelectionClick() },
+              modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.ROW_THREAD_SELECTION)
+            )
+          }
+        }
       }
 
       item {
@@ -94,4 +120,64 @@ private fun AccessibilityModeSettingsScreenPreview() {
       callbacks = AccessibilityModeSettingsCallbacks.Empty
     )
   }
+}
+
+/**
+ * Helper function to get recipient for a thread ID
+ */
+private fun getRecipientForThread(threadId: Long): Recipient {
+  return try {
+    val threadRecord = SignalDatabase.threads.getThreadRecord(threadId)
+    if (threadRecord != null) {
+      Recipient.resolved(threadRecord.recipient.id)
+    } else {
+      Recipient.UNKNOWN
+    }
+  } catch (e: Exception) {
+    Recipient.UNKNOWN
+  }
+}
+
+/**
+ * Helper function to get last message for a thread ID
+ */
+private fun getLastMessageForThread(threadId: Long): String {
+  return try {
+    val cursor = SignalDatabase.messages.getConversation(threadId, 0L, 1L)
+    cursor.use { 
+      if (cursor.moveToFirst()) {
+        // For now, return empty string as we need to find the right way to read message body
+        // This is a placeholder - we'll implement proper message reading later
+        ""
+      } else {
+        ""
+      }
+    }
+  } catch (e: Exception) {
+    ""
+  }
+}
+
+/**
+ * ChatRow component to display selected chat information
+ */
+@Composable
+private fun ChatRow(
+  recipient: Recipient,
+  lastMessage: String,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  val context = LocalContext.current
+  
+  Rows.TextRow(
+    text = if (recipient.isSelf) {
+      stringResource(R.string.note_to_self)
+    } else {
+      recipient.getShortDisplayName(context)
+    },
+    icon = ImageVector.vectorResource(R.drawable.symbol_chat_24),
+    onClick = onClick,
+    modifier = modifier
+  )
 }
