@@ -995,3 +995,262 @@ viewModel.pagingController           // ✅ STABLE
 - Data access: **HIGHLY RELIABLE**
 
 This analysis confirms that our planned integration approach is **extremely safe** for long-term stability. The core interfaces we plan to reuse have been stable for over a year with only non-breaking improvements, making them ideal candidates for direct reuse in our accessibility interface.
+
+---
+
+## N) Signal Settings Architecture & Implementation Strategy
+
+### **Settings Implementation Architecture**
+
+Based on our analysis of the Signal codebase, here's how settings are implemented:
+
+#### **1. Component Structure Pattern**
+```
+app/src/main/java/org/thoughtcrime/securesms/components/settings/app/{category}/
+├── {Category}SettingsFragment.kt      # UI container (Compose-based)
+├── {Category}SettingsViewModel.kt      # Business logic & state management
+├── {Category}SettingsState.kt          # UI state data classes
+└── {Category}SettingsRepository.kt     # Data access (optional)
+
+app/src/main/java/org/thoughtcrime/securesms/keyvalue/
+└── {Category}Values.kt                 # Persistent storage (extends SignalStoreValues)
+```
+
+#### **2. Settings Storage Pattern**
+**SignalStore Integration**:
+```kotlin
+// In SignalStore.kt
+class SignalStore(context: Application, private val store: KeyValueStore) {
+  val accessibilityModeValues = AccessibilityModeValues(store)  // Our new addition
+
+  companion object {
+    @JvmStatic
+    @get:JvmName("accessibilityMode")
+    val accessibilityMode: AccessibilityModeValues
+      get() = instance!!.accessibilityModeValues
+
+    fun onFirstEverAppLaunch() {
+      accessibilityMode.onFirstEverAppLaunch()  // Our new addition
+    }
+
+    val keysToIncludeInBackup: List<String>
+      get() = listOf(
+        // ... existing keys ...
+        accessibilityMode.keysToIncludeInBackup  // Our new addition
+      )
+  }
+}
+```
+
+#### **3. Values Class Pattern**
+**Extends SignalStoreValues with delegates**:
+```kotlin
+class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
+  companion object {
+    const val ACCESSIBILITY_MODE_ENABLED = "accessibility_mode_enabled"
+    // ... other constants
+  }
+
+  // Boolean values using booleanValue delegate
+  var isAccessibilityModeEnabled: Boolean by booleanValue(ACCESSIBILITY_MODE_ENABLED, false)
+  var isExitGestureEnabled: Boolean by booleanValue(ACCESSIBILITY_EXIT_GESTURE_ENABLED, true)
+
+  // Long and string values
+  var accessibilityThreadId: Long by longValue(ACCESSIBILITY_THREAD_ID, -1L)
+  var accessibilityThreadType: String by stringValue(ACCESSIBILITY_THREAD_TYPE, "")
+
+  override fun onFirstEverAppLaunch() {
+    // Set sensible defaults
+    isAccessibilityModeEnabled = false
+    isExitGestureEnabled = true
+    // ... other defaults
+  }
+
+  override fun getKeysToIncludeInBackup(): List<String> {
+    return listOf(
+      ACCESSIBILITY_MODE_ENABLED,
+      ACCESSIBILITY_EXIT_GESTURE_ENABLED,
+      // ... other keys
+    )
+  }
+}
+```
+
+#### **4. Main Settings Menu Integration**
+**Location**: Between "Appearance" and "Chats" sections in `AppSettingsFragment.kt`
+
+**Implementation**:
+```kotlin
+// In AppSettingsFragment.kt, add this row after appearance settings:
+item {
+  Rows.TextRow(
+    text = stringResource(R.string.preferences__accessibility_mode),
+    icon = painterResource(R.drawable.symbol_accessibility_24),
+    onClick = {
+      callbacks.navigate(R.id.action_appSettingsFragment_to_accessibilityModeSettingsFragment)
+    }
+  )
+}
+```
+
+#### **5. Navigation Integration**
+**Navigation Graph Update** (`app_settings_with_change_number.xml`):
+```xml
+<action
+    android:id="@+id/action_appSettingsFragment_to_accessibilityModeSettingsFragment"
+    app:destination="@id/accessibilityModeSettingsFragment"
+    app:enterAnim="@anim/fragment_open_enter"
+    app:exitAnim="@anim/fragment_open_exit"
+    app:popEnterAnim="@anim/fragment_close_enter"
+    app:popExitAnim="@anim/fragment_close_exit" />
+
+<fragment
+    android:id="@+id/accessibilityModeSettingsFragment"
+    android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsFragment"
+    android:label="Accessibility Mode"
+    tools:layout="@layout/dsl_settings_fragment" />
+```
+
+### **Settings Implementation Benefits**
+
+#### **1. Consistency with Signal**
+- **Familiar Patterns**: Developers know how to work with this structure
+- **Easy Maintenance**: Follows established conventions
+- **Upstream Compatible**: Easy to rebase with Signal changes
+
+#### **2. Data Safety**
+- **Encrypted Storage**: Uses Signal's existing encrypted key-value store
+- **Backup Integration**: Automatically included in Signal backups
+- **Migration Support**: Follows Signal's data migration patterns
+
+#### **3. Extensibility**
+- **Scalable**: Easy to add more accessibility features
+- **Modular**: Components can be enhanced independently
+- **Reusable**: Can extract common patterns for other settings
+
+---
+
+## O) Testing Infrastructure & TDD Implementation Strategy
+
+### **Signal Testing Framework**
+
+Based on our implementation experience, here's how testing works in Signal:
+
+#### **1. Testing Dependencies**
+**Gradle Configuration** (`app/build.gradle.kts`):
+```kotlin
+testImplementation(libs.junit.junit)                    // JUnit 4
+testImplementation(testLibs.robolectric.robolectric)   // Android framework mocking
+testImplementation(testLibs.mockk)                      // Mocking framework
+testImplementation(testLibs.assertk)                    // Assertion library
+testImplementation(testLibs.androidx.test.core)         // Android test core
+testImplementation(testLibs.androidx.test.core.ktx)    // Android test core KTX
+```
+
+#### **2. Test Runner & Configuration**
+**Test Class Structure**:
+```kotlin
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE, application = Application::class)
+class AccessibilityModeValuesTest {
+  @get:Rule
+  val appDependencies = MockAppDependenciesRule()
+
+  // Test implementation
+}
+```
+
+#### **3. MockK Usage Patterns**
+**KeyValueStore Mocking**:
+```kotlin
+// Mock the store
+val keyValueStore = mockk<KeyValueStore>()
+
+// Mock the Writer for write operations
+val mockWrite = mockk<KeyValueStore.Writer>()
+every { keyValueStore.beginWrite() } returns mockWrite
+every { mockWrite.putBoolean(any(), any()) } returns mockWrite
+every { mockWrite.putLong(any(), any()) } returns mockWrite
+every { mockWrite.putString(any(), any()) } returns mockWrite
+every { mockWrite.apply() } returns Unit
+
+// Mock the getters
+every { keyValueStore.getBoolean(AccessibilityModeValues.ACCESSIBILITY_MODE_ENABLED, false) } returns false
+every { keyValueStore.getLong(AccessibilityModeValues.ACCESSIBILITY_THREAD_ID, -1L) } returns -1L
+every { keyValueStore.getString(AccessibilityModeValues.ACCESSIBILITY_THREAD_TYPE, "") } returns ""
+```
+
+#### **4. Running Tests**
+**Command Line**:
+```bash
+# Run all tests
+./gradlew :Signal-Android:testPlayProdDebugUnitTest
+
+# Run specific test class
+./gradlew :Signal-Android:testPlayProdDebugUnitTest --tests AccessibilityModeValuesTest
+
+# Run specific test method
+./gradlew :Signal-Android:testPlayProdDebugUnitTest --tests AccessibilityModeValuesTest.test_default_values_on_first_launch
+```
+
+**Android Studio**:
+- Right-click on test file → "Run 'AccessibilityModeValuesTest'"
+- Right-click on test method → "Run 'test_default_values_on_first_launch'"
+
+#### **5. TDD Implementation Strategy**
+
+**Phase 1: Data Layer (COMPLETED ✅)**
+1. **Test & Implement**: `AccessibilityModeValues` class
+2. **Test & Implement**: Integration with `SignalStore`
+3. **Test & Implement**: Basic CRUD operations
+
+**Phase 2: Business Logic (NEXT)**
+1. **Test & Implement**: `AccessibilityModeSettingsViewModel`
+2. **Test & Implement**: State management
+3. **Test & Implement**: Settings operations
+
+**Phase 3: UI Layer**
+1. **Test & Implement**: `AccessibilityModeSettingsFragment`
+2. **Test & Implement**: `AccessibilityModeSettingsState`
+3. **Test & Implement**: UI interactions
+
+**Phase 4: Integration**
+1. **Test & Implement**: Navigation integration
+2. **Test & Implement**: Main settings menu addition
+3. **Test & Implement**: End-to-end functionality
+
+### **Testing Best Practices Learned**
+
+#### **1. MockK Import Strategy**
+- **No explicit import needed**: `any()` is available by default
+- **Correct types**: Use `KeyValueStore.Writer`, not `WriteOperation`
+- **Proper mocking**: Mock both read and write operations
+
+#### **2. Test Structure**
+- **Setup**: Mock dependencies in `@Before` method
+- **Teardown**: Clean up mocks in `@After` method
+- **Assertions**: Use JUnit assertions, not Kotlin test assertions
+
+#### **3. SignalStore Mocking**
+- **Object mocking**: `mockkObject(SignalStore)` for static methods
+- **Instance mocking**: `mockk<KeyValueStore>()` for instance methods
+- **Cleanup**: `unmockkAll()` to prevent test interference
+
+### **Testing Infrastructure Benefits**
+
+#### **1. TDD Implementation**
+- **Clear Boundaries**: Each component has well-defined responsibilities
+- **Testable**: Easy to write unit tests for each layer
+- **Incremental**: Can build and test step by step
+
+#### **2. Quality Assurance**
+- **Regression Prevention**: Tests catch breaking changes
+- **Refactoring Safety**: Tests ensure functionality preservation
+- **Documentation**: Tests serve as living documentation
+
+#### **3. Maintenance**
+- **Upstream Compatibility**: Tests verify Signal updates don't break our code
+- **Change Detection**: Tests identify when Signal interfaces change
+- **Integration Safety**: Tests verify our components work with Signal's architecture
+
+This testing infrastructure provides a solid foundation for implementing our accessibility features with confidence and quality assurance.

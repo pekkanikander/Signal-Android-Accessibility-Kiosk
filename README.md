@@ -26,9 +26,11 @@ A thin, maintainable fork of the official Signal Android client that provides a 
 - ✅ Repository set up; upstream README moved to `README-SIGNAL.md`.
 - ✅ Local build on macOS (CLI, Gradle wrapper) verified.
 - ✅ Architecture analysis complete; parallel accessibility interface approach selected over UI interception.
-- ⏳ Accessibility interface design and implementation (WIP).
-- ⏳ Settings integration and accessibility mode toggle.
-- ⏳ Parallel AccessibilityActivity with existing component reuse.
+- ⏳ **Phase 1**: Accessibility interface design and implementation (WIP)
+- ⏳ **Phase 2**: AccessibilityMode settings implementation.
+- ✅ **Phase 2.1 Complete**: AccessibilityModeValues class implemented with comprehensive test coverage.
+- ⏳ **Phase 2.2**: SignalStore integration and accessibility settings UI development.
+- ⏳ **Phase 2**: AccessibilityModeActivity implementation with component reuse.
 
 Initial target device: **Samsung Galaxy A21s (Android 12)**. Development also validated on a matching AVD profile.
 
@@ -39,13 +41,15 @@ Initial target device: **Samsung Galaxy A21s (Android 12)**. Development also va
 Keep the networking/crypto stack exactly as upstream; create a **parallel accessibility interface** that leverages existing conversation logic:
 
 1. **Settings Integration**
-   Add accessibility mode toggle in existing Signal settings. When enabled, switch to dedicated AccessibilityActivity.
+   Add accessibility mode toggle in existing Signal settings. When enabled, switch to dedicated AccessibilityModeActivity.
 
-2. **Parallel Accessibility Interface**
-   - Create `AccessibilityActivity` with custom, accessibility-optimized UI
+2. **Parallel Accessibility Mode Interface**
+   - Create `AccessibilityModeActivity` with custom, accessibility-optimized UI
    - Reuse existing `ConversationViewModel`, `ConversationRepository`, and backend services
    - Large, high-contrast controls for send/voice note actions
    - No menus, no navigation, no escape routes
+
+**Current Progress**: ✅ **Phase 2.1 Complete** - AccessibilityModeValues class implemented with full test coverage. Ready for SignalStore integration and settings UI development.
 
 3. **Component Reuse Strategy**
    - **Existing**: Message handling, crypto, network, storage, conversation logic
