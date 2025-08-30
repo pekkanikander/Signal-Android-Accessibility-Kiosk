@@ -1254,3 +1254,146 @@ every { keyValueStore.getString(AccessibilityModeValues.ACCESSIBILITY_THREAD_TYP
 - **Integration Safety**: Tests verify our components work with Signal's architecture
 
 This testing infrastructure provides a solid foundation for implementing our accessibility features with confidence and quality assurance.
+
+---
+
+## P) Test Results & Debugging Infrastructure
+
+### **Test Results Storage & Access**
+
+**Test Results Location**:
+```
+app/build/test-results/testPlayProdDebugUnitTest/
+├── TEST-org.thoughtcrime.securesms.keyvalue.AccessibilityModeValuesTest.xml  # XML test results
+└── ... (other test results)
+
+app/build/reports/tests/testPlayProdDebugUnitTest/
+├── index.html                    # Main test report
+├── classes/                      # Individual class results
+│   └── org.thoughtcrime.securesms.keyvalue.AccessibilityModeValuesTest.html
+└── css/ js/                     # Report styling and scripts
+```
+
+**Test Results Formats**:
+- **XML Results**: Machine-readable format for CI/CD integration
+- **HTML Reports**: Human-readable reports with detailed test information
+- **Console Output**: Real-time test execution in terminal
+
+### **How to Check Test Results**
+
+#### **1. Command Line Test Execution**
+```bash
+# Force clean build and test execution
+./gradlew :Signal-Android:clean
+./gradlew :Signal-Android:testPlayProdDebugUnitTest --tests AccessibilityModeValuesTest
+
+# Check if tests are being skipped (up-to-date)
+./gradlew :Signal-Android:testPlayProdDebugUnitTest --tests AccessibilityModeValuesTest --info
+```
+
+#### **2. Test Result Analysis**
+```bash
+# Find test result files
+find . -name "*AccessibilityModeValuesTest*" -type f
+
+# Check XML test results
+cat app/build/test-results/testPlayProdDebugUnitTest/TEST-org.thoughtcrime.securesms.keyvalue.AccessibilityModeValuesTest.xml
+
+# Open HTML report in browser
+open app/build/reports/tests/testPlayProdDebugUnitTest/index.html
+```
+
+#### **3. Debugging Test Issues**
+
+**Common Test Problems & Solutions**:
+
+**Problem**: Tests show as "UP-TO-DATE" and don't run
+```bash
+# Solution: Force clean rebuild
+./gradlew :Signal-Android:clean
+./gradlew :Signal-Android:testPlayProdDebugUnitTest --tests AccessibilityModeValuesTest
+```
+
+**Problem**: Tests pass but no output visible
+```bash
+# Solution: Check test results in build directory
+ls -la app/build/test-results/testPlayProdDebugUnitTest/
+ls -la app/build/reports/tests/testPlayProdDebugUnitTest/
+```
+
+**Problem**: MockK mocking issues
+```kotlin
+// Solution: Ensure proper cleanup
+@After
+fun tearDown() {
+  unmockkAll()  // Clean up all mocks
+}
+```
+
+### **Test Infrastructure Insights**
+
+#### **1. Test Independence**
+- **No SignalStore Required**: Tests work with mocked dependencies
+- **Isolated Testing**: Each test is independent and repeatable
+- **Fast Execution**: Tests run in seconds, not minutes
+
+#### **2. Test Result Persistence**
+- **Build Directory**: All results stored in `app/build/`
+- **XML Format**: Machine-readable for CI/CD integration
+- **HTML Reports**: Human-readable for development debugging
+
+#### **3. Gradle Integration**
+- **Variant-Specific**: Tests run for specific build variants (e.g., `testPlayProdDebugUnitTest`)
+- **Incremental**: Gradle skips tests if nothing changed
+- **Clean Required**: Sometimes need `clean` to force test execution
+
+### **Best Practices for Test Development**
+
+#### **1. Test Execution Workflow**
+1. **Write Test First** (TDD approach)
+2. **Run Test** (should fail initially)
+3. **Implement Feature** (make test pass)
+4. **Verify Results** (check test output and reports)
+
+#### **2. Debugging Workflow**
+1. **Check Test Results**: Look in `app/build/test-results/`
+2. **Review HTML Reports**: Open `app/build/reports/tests/`
+3. **Force Clean Build**: Use `./gradlew clean` if tests seem stuck
+4. **Check Console Output**: Look for test execution details
+
+#### **3. Test Maintenance**
+- **Regular Execution**: Run tests after each change
+- **Result Monitoring**: Check for test failures or performance issues
+- **Mock Cleanup**: Always clean up mocks in `@After` methods
+
+This comprehensive testing infrastructure documentation ensures that future development and debugging will be efficient and effective.
+
+---
+
+## **📚 Implementation Plan Sections Summary**
+
+**Architecture & Design**:
+- **A)** New Architecture: Parallel Accessibility Interface
+- **B)** Settings Integration & Accessibility Mode Toggle
+- **C)** AccessibilityActivity Design & Implementation
+- **D)** Thread Selection & Configuration
+- **E)** Exit Mechanism & Return Navigation
+- **F)** Kiosk Features vs. Accessibility Features
+
+**Implementation & Risk**:
+- **G)** Risk Assessment: Parallel vs. Interception
+- **H)** Implementation Checklist & File Modifications
+- **I)** Implementation Phases
+
+**Analysis & Strategy**:
+- **J)** Critical Questions - All Answered ✅
+- **K)** Settings Integration & Storage Strategy
+- **L)** Current GUI Architecture Analysis & Reuse Strategy
+- **M)** Long-Term Interface Stability Analysis (Git History Review)
+- **N)** Signal Settings Architecture & Implementation Strategy
+
+**Testing & Development**:
+- **O)** Testing Infrastructure & TDD Implementation Strategy
+- **P)** Test Results & Debugging Infrastructure ⭐ **NEW**
+
+**Current Status**: Phase 2.1 Complete ✅ - Ready for SignalStore Integration (Phase 2.2)
