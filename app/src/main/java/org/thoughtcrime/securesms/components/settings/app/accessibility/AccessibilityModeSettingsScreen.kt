@@ -36,12 +36,18 @@ fun AccessibilityModeSettingsScreen(
         .testTag(AccessibilityModeSettingsTestTags.SCROLLER)
     ) {
       item {
-        // Accessibility Mode Toggle
-        Rows.ToggleRow(
-          text = stringResource(R.string.preferences__accessibility_mode_enabled),
-          checked = state.isAccessibilityModeEnabled,
-          onCheckChanged = { enabled -> callbacks.onAccessibilityModeToggled(enabled) },
-          modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.TOGGLE_ACCESSIBILITY_MODE)
+        // Thread Selection Row
+        Rows.TextRow(
+          text = when {
+            org.thoughtcrime.securesms.database.SignalDatabase.threads
+              .getUnarchivedConversationListCount(org.thoughtcrime.securesms.conversationlist.model.ConversationFilter.OFF) == 0 ->
+              stringResource(R.string.preferences__accessibility_mode_no_chats_available)
+            state.threadId == -1L -> stringResource(R.string.preferences__accessibility_mode_no_chat_selected)
+            else -> stringResource(R.string.preferences__accessibility_mode_chat_selected, state.threadId.toString())
+          },
+          icon = ImageVector.vectorResource(R.drawable.symbol_chat_24),
+          onClick = { callbacks.onThreadSelectionClick() },
+          modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.ROW_THREAD_SELECTION)
         )
       }
 
@@ -50,16 +56,13 @@ fun AccessibilityModeSettingsScreen(
       }
 
       item {
-        // Thread Selection Row
-        Rows.TextRow(
-          text = if (state.threadId == -1L) {
-            stringResource(R.string.preferences__accessibility_mode_no_chat_selected)
-          } else {
-            stringResource(R.string.preferences__accessibility_mode_chat_selected, state.threadId.toString())
-          },
-          icon = ImageVector.vectorResource(R.drawable.symbol_chat_24),
-          onClick = { callbacks.onThreadSelectionClick() },
-          modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.ROW_THREAD_SELECTION)
+        // Accessibility Mode Toggle - only enabled when a chat is selected
+        Rows.ToggleRow(
+          text = stringResource(R.string.preferences__accessibility_mode_enabled),
+          checked = state.isAccessibilityModeEnabled,
+          onCheckChanged = { enabled -> callbacks.onAccessibilityModeToggled(enabled) },
+          enabled = state.threadId != -1L,
+          modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.TOGGLE_ACCESSIBILITY_MODE)
         )
       }
 

@@ -42,6 +42,8 @@ class AccessibilityModeSettingsViewModelTest {
     mockkObject(SignalStore)
     every { SignalStore.accessibilityMode } returns mockAccessibilityModeValues
 
+
+
     // Set up default mocks for the ViewModel constructor
     every { mockAccessibilityModeValues.isAccessibilityModeEnabled } returns false
     every { mockAccessibilityModeValues.accessibilityThreadId } returns -1L

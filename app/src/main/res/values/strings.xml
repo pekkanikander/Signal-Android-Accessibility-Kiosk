@@ -8728,9 +8728,10 @@
     <!-- Accessibility Mode Settings -->
     <string name="preferences__accessibility_mode">Accessibility Mode</string>
     <string name="preferences__accessibility_mode_enabled">Enable Accessibility Mode</string>
-    <string name="preferences__accessibility_mode_no_chat_selected">No chat selected</string>
     <string name="preferences__accessibility_mode_chat_selected">Chat %1$s selected</string>
     <string name="preferences__accessibility_mode_description">Accessibility Mode provides a simplified interface for users who need assistance with Signal. When enabled, it will launch a dedicated accessibility interface.</string>
+    <string name="preferences__accessibility_mode_no_chat_selected">No chat selected yet.</string>
+    <string name="preferences__accessibility_mode_no_chats_available">No chats yet. Create a chat first; send a message to someone.</string>
 
     <!-- EOF -->
 </resources>

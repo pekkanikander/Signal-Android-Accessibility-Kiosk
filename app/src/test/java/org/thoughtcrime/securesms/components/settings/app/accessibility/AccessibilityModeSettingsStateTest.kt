@@ -28,6 +28,17 @@ class AccessibilityModeSettingsStateTest {
   }
 
   @Test
+  fun `test state creation with no chats yet`() {
+    val state = AccessibilityModeSettingsState(
+      isAccessibilityModeEnabled = true,
+      threadId = -1L
+    )
+
+    assertTrue(state.isAccessibilityModeEnabled)
+    assertEquals(-1L, state.threadId)
+  }
+
+  @Test
   fun `test state equality`() {
     val state1 = AccessibilityModeSettingsState(
       isAccessibilityModeEnabled = true,
