@@ -360,6 +360,20 @@
         android:id="@+id/accessibilityModeSettingsFragment"
         android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsFragment"
         android:label="Accessibility Mode"
+        tools:layout="@layout/dsl_settings_fragment">
+        <action
+            android:id="@+id/action_accessibilityModeSettingsFragment_to_chatSelectionFragment"
+            app:destination="@id/chatSelectionFragment"
+            app:enterAnim="@anim/fragment_open_enter"
+            app:exitAnim="@anim/fragment_open_exit"
+            app:popEnterAnim="@anim/fragment_close_enter"
+            app:popExitAnim="@anim/fragment_close_exit" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/chatSelectionFragment"
+        android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.ChatSelectionFragment"
+        android:label="Select Chat"
         tools:layout="@layout/dsl_settings_fragment" />
     <!-- endregion -->
 

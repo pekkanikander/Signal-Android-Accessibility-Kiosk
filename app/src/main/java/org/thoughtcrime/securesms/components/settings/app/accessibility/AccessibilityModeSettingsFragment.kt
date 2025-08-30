@@ -5,8 +5,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.fragment.findNavController
 import org.thoughtcrime.securesms.compose.ComposeFragment
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.conversationlist.model.ConversationFilter
+import org.thoughtcrime.securesms.database.SignalDatabase
 
 class AccessibilityModeSettingsFragment : ComposeFragment() {
 
@@ -29,37 +32,21 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     }
 
     override fun onThreadSelectionClick() {
-      // TODO: Navigate to thread selection screen
-      // For now, show a toast to indicate the feature is working
-      val state = viewModel.state.value
-
       // Check if there are any conversations available
-      val hasChatsAvailable = org.thoughtcrime.securesms.database.SignalDatabase.threads
-        .getUnarchivedConversationListCount(org.thoughtcrime.securesms.conversationlist.model.ConversationFilter.OFF) > 0
+      val hasChatsAvailable = SignalDatabase.threads
+        .getUnarchivedConversationListCount(ConversationFilter.OFF) > 0
 
-      when {
-        !hasChatsAvailable -> {
-          android.widget.Toast.makeText(
-            requireContext(),
-            "No chats available yet. Start a conversation first!",
-            android.widget.Toast.LENGTH_LONG
-          ).show()
-        }
-        state.threadId == -1L -> {
-          android.widget.Toast.makeText(
-            requireContext(),
-            "No chat selected yet. Tap to choose a chat.",
-            android.widget.Toast.LENGTH_SHORT
-          ).show()
-        }
-        else -> {
-          android.widget.Toast.makeText(
-            requireContext(),
-            "Chat selection coming soon!",
-            android.widget.Toast.LENGTH_SHORT
-          ).show()
-        }
+      if (!hasChatsAvailable) {
+        android.widget.Toast.makeText(
+          requireContext(),
+          "No chats available yet. Start a conversation first!",
+          android.widget.Toast.LENGTH_LONG
+        ).show()
+        return
       }
+
+      // Navigate to chat selection screen
+      findNavController().navigate(R.id.action_accessibilityModeSettingsFragment_to_chatSelectionFragment)
     }
 
     override fun onAccessibilityModeToggled(enabled: Boolean) {
