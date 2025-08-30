@@ -20,11 +20,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   // Long value for thread ID
   var accessibilityThreadId: Long by longValue(ACCESSIBILITY_THREAD_ID, -1L)
 
-  public override fun onFirstEverAppLaunch() {
-    // Set sensible defaults
-    isAccessibilityModeEnabled = false
-    accessibilityThreadId = -1L
-  }
+  public override fun onFirstEverAppLaunch() = Unit
 
   public override fun getKeysToIncludeInBackup(): List<String> {
     return listOf(

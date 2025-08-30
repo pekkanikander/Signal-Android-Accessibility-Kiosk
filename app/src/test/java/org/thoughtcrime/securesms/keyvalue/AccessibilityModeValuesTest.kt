@@ -43,20 +43,14 @@ class AccessibilityModeValuesTest {
 
   @Test
   fun `test default values on first launch`() {
-    // Mock the beginWrite method that the booleanValue delegate uses
-    val mockWrite = mockk<KeyValueStore.Writer>()
-    every { keyValueStore.beginWrite() } returns mockWrite
-    every { mockWrite.putBoolean(any(), any()) } returns mockWrite
-    every { mockWrite.putLong(any(), any()) } returns mockWrite
-    every { mockWrite.apply() } returns Unit
-
-    // Mock the getters to return the expected default values
+    // Mock the getters that the property delegates use
     every { keyValueStore.getBoolean(AccessibilityModeValues.ACCESSIBILITY_MODE_ENABLED, false) } returns false
     every { keyValueStore.getLong(AccessibilityModeValues.ACCESSIBILITY_THREAD_ID, -1L) } returns -1L
 
+    // onFirstEverAppLaunch() now just returns Unit, defaults are handled by property delegates
     accessibilityModeValues.onFirstEverAppLaunch()
 
-    // These assertions will fail until we implement the defaults
+    // Defaults should still be the same due to property delegate defaults
     assertFalse(accessibilityModeValues.isAccessibilityModeEnabled)
     assertEquals(-1L, accessibilityModeValues.accessibilityThreadId)
   }
@@ -100,5 +94,20 @@ class AccessibilityModeValuesTest {
     assertEquals(2, keys.size)
     assertTrue(keys.contains(AccessibilityModeValues.ACCESSIBILITY_MODE_ENABLED))
     assertTrue(keys.contains(AccessibilityModeValues.ACCESSIBILITY_THREAD_ID))
+  }
+
+  @Test
+  fun `test accessibility mode keys are included in SignalStore backup`() {
+    // This test verifies that our keys are properly included in the backup system
+    val keys = accessibilityModeValues.getKeysToIncludeInBackup()
+
+    // Verify our specific keys are present
+    assertTrue("ACCESSIBILITY_MODE_ENABLED should be in backup keys",
+               keys.contains(AccessibilityModeValues.ACCESSIBILITY_MODE_ENABLED))
+    assertTrue("ACCESSIBILITY_THREAD_ID should be in backup keys",
+               keys.contains(AccessibilityModeValues.ACCESSIBILITY_THREAD_ID))
+
+    // Verify no extra keys were added
+    assertEquals("Should have exactly 2 keys", 2, keys.size)
   }
 }
