@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import android.util.Log
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 
 /**
@@ -25,8 +26,11 @@ class AccessibilityModeSettingsViewModel : ViewModel() {
   }
 
   fun setThreadId(threadId: Long) {
+    Log.d("AccessibilityViewModel", "setThreadId called with: $threadId")
     SignalStore.accessibilityMode.accessibilityThreadId = threadId
+    Log.d("AccessibilityViewModel", "Updated SignalStore, new value: ${SignalStore.accessibilityMode.accessibilityThreadId}")
     store.update { getState() }
+    Log.d("AccessibilityViewModel", "State updated, current state: ${store.value}")
   }
 
   private fun getState(): AccessibilityModeSettingsState {

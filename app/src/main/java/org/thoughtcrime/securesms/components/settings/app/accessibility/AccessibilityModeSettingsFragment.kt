@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
+import android.util.Log
 import org.thoughtcrime.securesms.compose.ComposeFragment
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversationlist.model.ConversationFilter
@@ -14,6 +15,20 @@ import org.thoughtcrime.securesms.database.SignalDatabase
 class AccessibilityModeSettingsFragment : ComposeFragment() {
 
   private val viewModel: AccessibilityModeSettingsViewModel by viewModels()
+
+  override fun onResume() {
+    super.onResume()
+
+    // Check if we received a selected thread ID from chat selection
+    val selectedThreadId = requireActivity().intent.getLongExtra("selected_thread_id", -1L)
+    if (selectedThreadId != -1L) {
+      Log.d("AccessibilityFragment", "Received selected thread ID: $selectedThreadId")
+      viewModel.setThreadId(selectedThreadId)
+
+      // Clear the extra so it doesn't get processed again
+      requireActivity().intent.removeExtra("selected_thread_id")
+    }
+  }
 
   @Composable
   override fun FragmentContent() {
