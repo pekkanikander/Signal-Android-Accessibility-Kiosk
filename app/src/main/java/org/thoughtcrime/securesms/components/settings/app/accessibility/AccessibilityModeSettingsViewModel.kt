@@ -1,0 +1,38 @@
+package org.thoughtcrime.securesms.components.settings.app.accessibility
+
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import org.thoughtcrime.securesms.keyvalue.SignalStore
+
+/**
+ * ViewModel for accessibility mode settings screen.
+ * Manages state and interactions with SignalStore.accessibilityMode.
+ */
+class AccessibilityModeSettingsViewModel : ViewModel() {
+
+  private val store = MutableStateFlow(getState())
+  val state: StateFlow<AccessibilityModeSettingsState> = store
+
+  fun refreshState() {
+    store.update { getState() }
+  }
+
+  fun setAccessibilityMode(enabled: Boolean) {
+    SignalStore.accessibilityMode.isAccessibilityModeEnabled = enabled
+    store.update { getState() }
+  }
+
+  fun setThreadId(threadId: Long) {
+    SignalStore.accessibilityMode.accessibilityThreadId = threadId
+    store.update { getState() }
+  }
+
+  private fun getState(): AccessibilityModeSettingsState {
+    return AccessibilityModeSettingsState(
+      isAccessibilityModeEnabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
+      threadId = SignalStore.accessibilityMode.accessibilityThreadId
+    )
+  }
+}
