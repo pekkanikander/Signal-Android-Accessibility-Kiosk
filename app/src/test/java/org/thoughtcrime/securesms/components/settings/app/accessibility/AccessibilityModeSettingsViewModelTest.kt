@@ -96,6 +96,50 @@ class AccessibilityModeSettingsViewModelTest {
   }
 
   @Test
+  fun `test state reflects no chats available`() {
+    // Given - Default mocks are set in setUp() (no chats available)
+
+    // When - ViewModel is created
+
+    // Then
+    val state = viewModel.state.value
+    assertFalse(state.isAccessibilityModeEnabled)
+    assertEquals(-1L, state.threadId)
+  }
+
+  @Test
+  fun `test state reflects chats available but none selected`() = runTest {
+    // Given
+    every { mockAccessibilityModeValues.isAccessibilityModeEnabled } returns false
+    every { mockAccessibilityModeValues.accessibilityThreadId } returns -1L
+
+    // When
+    viewModel.refreshState()
+    advanceUntilIdle()
+
+    // Then
+    val state = viewModel.state.value
+    assertFalse(state.isAccessibilityModeEnabled)
+    assertEquals(-1L, state.threadId)
+  }
+
+  @Test
+  fun `test state reflects chat selected`() = runTest {
+    // Given
+    every { mockAccessibilityModeValues.isAccessibilityModeEnabled } returns true
+    every { mockAccessibilityModeValues.accessibilityThreadId } returns 123L
+
+    // When
+    viewModel.refreshState()
+    advanceUntilIdle()
+
+    // Then
+    val state = viewModel.state.value
+    assertTrue(state.isAccessibilityModeEnabled)
+    assertEquals(123L, state.threadId)
+  }
+
+  @Test
   fun `test refreshState calls SignalStore getters`() = runTest {
     // Given
     every { mockAccessibilityModeValues.isAccessibilityModeEnabled } returns true
