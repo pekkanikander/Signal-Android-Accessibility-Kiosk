@@ -511,6 +511,16 @@ private fun AppSettingsContent(
             )
           }
         }
+
+        item {
+          Rows.TextRow(
+            text = stringResource(R.string.preferences__accessibility_mode),
+            icon = painterResource(R.drawable.symbol_settings_android_24),
+            onClick = {
+              callbacks.navigate(R.id.action_appSettingsFragment_to_accessibilityModeSettingsFragment)
+            }
+          )
+        }
       }
     }
   }
