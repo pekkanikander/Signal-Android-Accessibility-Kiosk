@@ -184,11 +184,11 @@ Exit gesture → Return to Settings (same location)
 8. **`app/src/main/java/org/thoughtcrime/securesms/components/settings/app/accessibility/ChatSelectionScreen.kt`** - ✅ **COMPLETED** - Chat selection Compose UI
 
 #### **Phase 2 - Accessibility Interface (Next)**
-9. **`app/src/main/java/org/thoughtcrime/securesms/accessibility/AccessibilityActivity.kt`** - Main accessibility interface
-10. **`app/src/main/res/layout/activity_accessibility.xml`** - Accessibility UI layout
-11. **`app/src/main/java/org/thoughtcrime/securesms/accessibility/AccessibilitySettingsFragment.kt`** - Accessibility settings fragment
-12. **`app/src/main/java/org/thoughtcrime/securesms/accessibility/AccessibilitySettingsViewModel.kt`** - Accessibility settings view model
-13. **`app/src/main/java/org/thoughtcrime/securesms/accessibility/AccessibilitySettingsScreen.kt`** - Accessibility settings compose UI
+9. **`app/src/main/java/org/thoughtcrime/securesms/accessibility/AccessibilityModeActivity.kt`** - Main accessibility interface
+10. **`app/src/main/res/layout/activity_accessibility_mode.xml`** - Accessibility UI layout
+11. **`app/src/main/java/org/thoughtcrime/securesms/accessibility/AccessibilityModeSettingsFragment.kt`** - Accessibility settings fragment
+12. **`app/src/main/java/org/thoughtcrime/securesms/accessibility/AccessibilityModeSettingsViewModel.kt`** - Accessibility settings view model
+13. **`app/src/main/java/org/thoughtcrime/securesms/accessibility/AccessibilityModeSettingsScreen.kt`** - Accessibility settings compose UI
 
 ### **Files to Modify (Existing Signal)**
 7. **`app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt`** - ✅ **COMPLETED** - AccessibilityModeValues integration complete
@@ -559,27 +559,116 @@ Phase 1.2 has successfully established:
 
 ---
 
+## **🔍 Phase 2 Implementation Strategy & Analysis**
+
+### **Implementation Approach Decision**
+
+#### **Why Not Extend Existing Chat Fragment?**
+- **Risk Assessment**: Extending existing chat fragment proved too risky
+- **Complexity**: Existing fragment has complex UI logic and dependencies
+- **Maintenance**: Changes to upstream chat fragment could break our implementation
+- **Decision**: **Create new parallel implementation** instead of extending
+
+#### **New Implementation Strategy**
+- **Parallel Fragment**: Create `AccessibilityModeFragment` similar to existing chat fragment
+- **Component Reuse**: Leverage existing backend components (ViewModel, Repository, Services)
+- **Simplified UI**: Build accessibility-optimized interface from scratch
+- **Long-term Maintainability**: Isolated from upstream changes
+
+### **Architecture Analysis Required**
+
+#### **1. Study Existing Chat Fragment Implementation**
+- **Location**: Find and analyze current chat/conversation fragment
+- **Components**: Identify reusable backend components
+- **UI Logic**: Understand message display and input handling
+- **Dependencies**: Map out component relationships and dependencies
+
+#### **2. Evaluate Abstraction Opportunities**
+- **Base Class**: Consider creating abstract base class for common functionality
+- **Interface Extraction**: Identify interfaces that could be shared
+- **Component Reuse**: Determine which classes can be reused directly
+- **UI Simplification**: Plan how to provide simplified UI while reusing logic
+
+#### **3. Multiple Implementation Options to Consider**
+
+##### **Option A: Direct Component Reuse**
+- **Approach**: Create new fragment that directly uses existing components
+- **Pros**: Maximum reuse, minimal new code
+- **Cons**: Tight coupling to existing implementation details
+- **Risk**: Medium - changes to existing components could affect us
+
+##### **Option B: Abstract Base Class**
+- **Approach**: Extract common functionality into abstract base class
+- **Pros**: Clean separation, shared functionality
+- **Cons**: More complex initial implementation
+- **Risk**: Low - well-defined interfaces and contracts
+
+##### **Option C: Interface-Based Composition**
+- **Approach**: Define interfaces for key functionality, implement separately
+- **Pros**: Maximum flexibility, loose coupling
+- **Cons**: Most complex, potential duplication
+- **Risk**: Low - but more development effort
+
+### **Recommended Analysis Steps**
+
+#### **Step 1: Study Existing Implementation**
+1. **Locate existing chat fragment** and analyze its structure
+2. **Identify key components** (ViewModel, Repository, UI components)
+3. **Map dependencies** and understand data flow
+4. **Document reusable patterns** and interfaces
+
+#### **Step 2: Evaluate Reuse Strategy**
+1. **Assess component stability** and change frequency
+2. **Identify abstraction opportunities** for common functionality
+3. **Plan interface extraction** for key behaviors
+4. **Determine optimal implementation approach**
+
+#### **Step 3: Design Implementation Architecture**
+1. **Choose implementation strategy** based on analysis
+2. **Design component interfaces** and contracts
+3. **Plan testing strategy** for new implementation
+4. **Document architecture decisions** and rationale
+
+### **Success Criteria for Architecture Decision**
+
+#### **Maintainability**
+- **Isolation**: Changes to existing chat fragment don't affect accessibility mode
+- **Clarity**: Clear separation of concerns and responsibilities
+- **Testing**: Easy to test accessibility mode independently
+
+#### **Reusability**
+- **Component Reuse**: Maximum reuse of stable backend components
+- **Logic Sharing**: Shared business logic where appropriate
+- **UI Independence**: Custom accessibility UI without affecting existing UI
+
+#### **Long-term Viability**
+- **Upstream Changes**: Resilient to Signal upstream modifications
+- **Feature Evolution**: Easy to add new accessibility features
+- **Code Maintenance**: Clear ownership and maintenance responsibilities
+
+---
+
 ## **🎯 Phase 2: Next Steps & Roadmap**
 
-### **Phase 2.1: AccessibilityActivity Foundation**
+### **Phase 2.1: AccessibilityModeActivity Foundation**
 
 #### **Core Components to Create**
-1. **`AccessibilityActivity.kt`** - Main accessibility interface
+1. **`AccessibilityModeActivity.kt`** - Main accessibility interface
    - **Purpose**: Parallel conversation interface with accessibility-optimized UI
    - **Layout**: Custom accessibility-optimized UI (large buttons, simplified interface)
    - **Navigation**: No back button, no menus, no escape routes
 
-2. **`activity_accessibility.xml`** - Accessibility UI layout
+2. **`activity_accessibility_mode.xml`** - Accessibility UI layout
    - **Design**: Large, high-contrast controls
-   - **Components**: Large send button, voice note button, message display, input field
+   - **Components**: Large send button, message display, input field (voice note button in Phase 2.4)
    - **Accessibility**: Screen reader support, high contrast, large text options
 
 #### **UI Components to Implement**
 - **Large Send Button**: Prominent text sending control
-- **Large Voice Note Button**: Hold-to-record with visual feedback
 - **Message Display**: Simplified conversation view (reuse existing logic)
 - **Input Field**: Large, high-contrast text input
 - **No Menus**: Zero menu inflation or navigation options
+- **Voice Note Button**: Hold-to-record with visual feedback (Phase 2.4)
 
 ### **Phase 2.2: Component Reuse Integration**
 
@@ -590,14 +679,22 @@ Phase 1.2 has successfully established:
 - **UI Logic**: Reuse existing conversation display and input handling
 
 #### **Integration Strategy**
-- **ViewModel Binding**: Connect AccessibilityActivity to existing ConversationViewModel
+- **ViewModel Binding**: Connect AccessibilityModeActivity to existing ConversationViewModel
 - **Repository Access**: Use existing ConversationRepository for data operations
 - **Message Handling**: Reuse existing message sending/receiving logic
 - **Thread Management**: Leverage existing thread selection and management
 
 ### **Phase 2.3: Accessibility UI Refinement**
 
-#### **Accessibility Features**
+### **Phase 2.4: Voice Notes & Advanced Features**
+
+#### **Voice Note Implementation**
+- **Voice Recording**: Hold-to-record interface with visual feedback
+- **Audio Playback**: Simple audio playback controls
+- **Accessibility**: Large controls, clear visual indicators
+- **Integration**: Use existing audio recording infrastructure
+
+#### **Advanced Accessibility Features**
 - **Large Text**: Configurable text size options
 - **High Contrast**: Enhanced visual contrast for better visibility
 - **Voice Notes**: Simplified voice recording interface
@@ -632,13 +729,13 @@ Phase 1.2 has successfully established:
 ### **📅 Phase 2 Timeline**
 
 #### **Week 3: Core Implementation**
-- **Days 1-2**: Create AccessibilityActivity and basic layout
+- **Days 1-2**: Create AccessibilityModeActivity and basic layout
 - **Days 3-4**: Integrate with existing ConversationViewModel
 - **Day 5**: Basic message sending/receiving functionality
 
 #### **Week 4: UI Refinement**
 - **Days 1-2**: Implement accessibility-optimized UI components
-- **Days 3-4**: Add voice notes and attachment handling
+- **Days 3-4**: Add attachment handling (voice notes in Phase 2.4)
 - **Day 5**: Testing and bug fixes
 
 ### **🚀 Ready to Begin Phase 2**
