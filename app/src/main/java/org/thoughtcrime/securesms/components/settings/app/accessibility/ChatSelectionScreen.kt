@@ -69,7 +69,7 @@ fun ChatSelectionScreen(
             modifier = Modifier.testTag(ChatSelectionTestTags.CHAT_ROW)
           )
         }
-        
+
         // Add dividers between items
         if (chats.size > 1) {
           items(chats.size - 1) {

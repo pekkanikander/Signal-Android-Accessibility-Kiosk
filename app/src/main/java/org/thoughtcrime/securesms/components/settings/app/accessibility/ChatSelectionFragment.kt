@@ -7,6 +7,8 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.thoughtcrime.securesms.compose.ComposeFragment
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsFragment
+import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsViewModel
 
 class ChatSelectionFragment : ComposeFragment() {
 
@@ -26,15 +28,31 @@ class ChatSelectionFragment : ComposeFragment() {
     )
   }
 
-    private inner class Callbacks {
+      private inner class Callbacks {
     fun onChatSelected(chat: ChatSelectionItem) {
-      // For now, just show a toast and navigate back
-      // The user will need to manually refresh the accessibility settings
-      android.widget.Toast.makeText(
-        requireContext(),
-        "Chat selected: ${chat.recipient.getShortDisplayName(requireContext())}",
-        android.widget.Toast.LENGTH_SHORT
-      ).show()
+      // Find the accessibility settings fragment and update its ViewModel
+      val accessibilityFragment = requireActivity()
+        .supportFragmentManager
+        .fragments
+        .filterIsInstance<AccessibilityModeSettingsFragment>()
+        .firstOrNull()
+
+      if (accessibilityFragment != null) {
+        // Use reflection to access the private viewModel property
+        val viewModelField = AccessibilityModeSettingsFragment::class.java.getDeclaredField("viewModel")
+        viewModelField.isAccessible = true
+        val viewModel = viewModelField.get(accessibilityFragment) as AccessibilityModeSettingsViewModel
+        
+        // Update the selected thread ID
+        viewModel.setThreadId(chat.threadId)
+        
+        // Show success message
+        android.widget.Toast.makeText(
+          requireContext(),
+          "Chat selected: ${chat.recipient.getShortDisplayName(requireContext())}",
+          android.widget.Toast.LENGTH_SHORT
+        ).show()
+      }
       
       // Navigate back
       requireActivity().onBackPressedDispatcher.onBackPressed()

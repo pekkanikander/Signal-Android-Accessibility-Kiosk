@@ -43,16 +43,16 @@ class ChatSelectionViewModel : ViewModel() {
 
         val chats = mutableListOf<ChatSelectionItem>()
 
-                cursor.use { 
+                cursor.use {
           val reader = SignalDatabase.threads.readerFor(it)
           while (it.moveToNext()) {
             val threadRecord = reader.getCurrent()
             if (threadRecord != null) {
               val recipient = threadRecord.recipient
-              
+
               // Get last message preview
               val lastMessagePreview = getLastMessagePreview(threadRecord.threadId)
-              
+
               chats.add(
                 ChatSelectionItem(
                   threadId = threadRecord.threadId,
@@ -74,7 +74,7 @@ class ChatSelectionViewModel : ViewModel() {
     private fun getLastMessagePreview(threadId: Long): String {
     return try {
       val cursor = SignalDatabase.messages.getConversation(threadId, 0L, 1L)
-      cursor.use { 
+      cursor.use {
         if (it.moveToFirst()) {
           val messageRecord = org.thoughtcrime.securesms.database.MessageTable.mmsReaderFor(it).getCurrent()
           messageRecord.body ?: ""
