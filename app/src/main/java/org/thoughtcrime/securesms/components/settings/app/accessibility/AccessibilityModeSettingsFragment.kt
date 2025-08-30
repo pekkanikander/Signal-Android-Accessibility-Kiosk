@@ -24,14 +24,22 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
   }
 
   private inner class Callbacks : AccessibilityModeSettingsCallbacks {
+    override fun onNavigationClick() {
+      requireActivity().onBackPressedDispatcher.onBackPressed()
+    }
+
     override fun onAccessibilityModeToggled(enabled: Boolean) {
       viewModel.setAccessibilityMode(enabled)
     }
 
     override fun onThreadSelectionClick() {
       // TODO: Navigate to thread selection screen
-      // For now, just log the action
-      // callbacks.navigate(R.id.action_accessibilityModeSettingsFragment_to_threadSelectionFragment)
+      // For now, show a toast to indicate the feature is working
+      android.widget.Toast.makeText(
+        requireContext(),
+        "Thread selection coming soon!",
+        android.widget.Toast.LENGTH_SHORT
+      ).show()
     }
   }
 }

@@ -7,6 +7,7 @@ import androidx.compose.runtime.Stable
 @VisibleForTesting
 interface AccessibilityModeSettingsCallbacks {
 
+  fun onNavigationClick() = Unit
   fun onAccessibilityModeToggled(enabled: Boolean) = Unit
   fun onThreadSelectionClick() = Unit
 

@@ -27,7 +27,7 @@ fun AccessibilityModeSettingsScreen(
 ) {
   Scaffolds.Settings(
     title = stringResource(R.string.preferences__accessibility_mode),
-    onNavigationClick = { /* Navigation handled by Fragment */ },
+    onNavigationClick = { callbacks.onNavigationClick() },
     navigationIcon = ImageVector.vectorResource(R.drawable.ic_arrow_left_24)
   ) { contentPadding ->
     LazyColumn(
@@ -53,9 +53,9 @@ fun AccessibilityModeSettingsScreen(
         // Thread Selection Row
         Rows.TextRow(
           text = if (state.threadId == -1L) {
-            stringResource(R.string.preferences__accessibility_mode_no_thread_selected)
+            stringResource(R.string.preferences__accessibility_mode_no_chat_selected)
           } else {
-            stringResource(R.string.preferences__accessibility_mode_thread_selected, state.threadId.toString())
+            stringResource(R.string.preferences__accessibility_mode_chat_selected, state.threadId.toString())
           },
           icon = ImageVector.vectorResource(R.drawable.symbol_chat_24),
           onClick = { callbacks.onThreadSelectionClick() },

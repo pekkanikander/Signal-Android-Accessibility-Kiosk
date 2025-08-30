@@ -8728,8 +8728,8 @@
     <!-- Accessibility Mode Settings -->
     <string name="preferences__accessibility_mode">Accessibility Mode</string>
     <string name="preferences__accessibility_mode_enabled">Enable Accessibility Mode</string>
-    <string name="preferences__accessibility_mode_no_thread_selected">No thread selected</string>
-    <string name="preferences__accessibility_mode_thread_selected">Thread %1$s selected</string>
+    <string name="preferences__accessibility_mode_no_chat_selected">No chat selected</string>
+    <string name="preferences__accessibility_mode_chat_selected">Chat %1$s selected</string>
     <string name="preferences__accessibility_mode_description">Accessibility Mode provides a simplified interface for users who need assistance with Signal. When enabled, it will launch a dedicated accessibility interface.</string>
 
     <!-- EOF -->
