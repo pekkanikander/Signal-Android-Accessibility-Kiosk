@@ -16,7 +16,7 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
   override fun FragmentContent() {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val callbacks = remember { Callbacks() }
-    
+
     AccessibilityModeSettingsScreen(
       state = state,
       callbacks = callbacks
