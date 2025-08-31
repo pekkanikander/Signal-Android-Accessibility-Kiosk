@@ -15,6 +15,8 @@ import kotlinx.coroutines.Dispatchers
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.database.model.MessageRecord
 import org.thoughtcrime.securesms.recipients.Recipient
+import org.thoughtcrime.securesms.database.DatabaseObserver
+import org.thoughtcrime.securesms.database.MessageTypes
 
 /**
  * ViewModel for the accessibility conversation interface.
@@ -30,16 +32,33 @@ class AccessibilityModeViewModel : ViewModel() {
     private val _state = MutableStateFlow(AccessibilityModeState())
     val state: StateFlow<AccessibilityModeState> = _state.asStateFlow()
 
+    // Database observers for real-time updates
+    private var messageInsertObserver: DatabaseObserver.MessageObserver? = null
+    private var messageUpdateObserver: DatabaseObserver.MessageObserver? = null
+    private var conversationObserver: DatabaseObserver.Observer? = null
+
     /**
      * Set the thread ID for the current conversation.
      * This will trigger loading of messages for this thread.
      */
     fun setThreadId(threadId: Long) {
         android.util.Log.d("AccessibilityViewModel", "setThreadId called with: $threadId")
+        
+        // Unregister previous observers if any
+        unregisterObservers()
+        
         _state.value = _state.value.copy(threadId = threadId, isLoading = true)
+
+        // Suppress notifications for this thread while in accessibility mode
+        org.thoughtcrime.securesms.notifications.v2.ConversationId.forConversation(threadId)?.let { conversationId ->
+            org.thoughtcrime.securesms.dependencies.AppDependencies.messageNotifier.setVisibleThread(conversationId)
+        }
 
         // Load real messages from Signal's database
         loadMessages()
+        
+        // Register observers for real-time updates
+        registerObservers(threadId)
     }
 
     /**
@@ -104,9 +123,12 @@ class AccessibilityModeViewModel : ViewModel() {
                     SignalDatabase.messages.getConversation(threadId, 0L, 50L)
                 ).use { reader ->
                     reader.forEach { record ->
+                        android.util.Log.d("AccessibilityViewModel", "Message type: ${record.type}, JOINED_TYPE: ${MessageTypes.JOINED_TYPE}")
                         // Filter out system messages like "You started this chat"
-                        if (record.type != org.thoughtcrime.securesms.database.MessageTypes.JOINED_TYPE) {
+                        if (record.type != MessageTypes.JOINED_TYPE) {
                             messageRecords.add(record)
+                        } else {
+                            android.util.Log.d("AccessibilityViewModel", "Filtered out JOINED_TYPE message: ${record.getDisplayBody(org.thoughtcrime.securesms.dependencies.AppDependencies.application)}")
                         }
                     }
                 }
@@ -137,7 +159,59 @@ class AccessibilityModeViewModel : ViewModel() {
         }
     }
 
-    // This method is now implemented above
+    /**
+     * Register database observers for real-time updates
+     */
+    private fun registerObservers(threadId: Long) {
+        messageInsertObserver = DatabaseObserver.MessageObserver { messageId ->
+            android.util.Log.d("AccessibilityViewModel", "New message inserted: $messageId")
+            // Reload messages when new message is inserted
+            loadMessages()
+        }
+        
+        messageUpdateObserver = DatabaseObserver.MessageObserver { messageId ->
+            android.util.Log.d("AccessibilityViewModel", "Message updated: $messageId")
+            // Reload messages when message is updated
+            loadMessages()
+        }
+        
+        conversationObserver = DatabaseObserver.Observer {
+            android.util.Log.d("AccessibilityViewModel", "Conversation updated")
+            // Reload messages when conversation changes
+            loadMessages()
+        }
+        
+        // Register observers
+        org.thoughtcrime.securesms.dependencies.AppDependencies.databaseObserver.registerMessageInsertObserver(threadId, messageInsertObserver!!)
+        org.thoughtcrime.securesms.dependencies.AppDependencies.databaseObserver.registerMessageUpdateObserver(messageUpdateObserver!!)
+        org.thoughtcrime.securesms.dependencies.AppDependencies.databaseObserver.registerConversationObserver(threadId, conversationObserver!!)
+    }
+    
+    /**
+     * Unregister database observers
+     */
+    private fun unregisterObservers() {
+        messageInsertObserver?.let { 
+            org.thoughtcrime.securesms.dependencies.AppDependencies.databaseObserver.unregisterObserver(it)
+            messageInsertObserver = null
+        }
+        messageUpdateObserver?.let { 
+            org.thoughtcrime.securesms.dependencies.AppDependencies.databaseObserver.unregisterObserver(it)
+            messageUpdateObserver = null
+        }
+        conversationObserver?.let { 
+            org.thoughtcrime.securesms.dependencies.AppDependencies.databaseObserver.unregisterObserver(it)
+            conversationObserver = null
+        }
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        unregisterObservers()
+        
+        // Clear visible thread to restore notifications
+        org.thoughtcrime.securesms.dependencies.AppDependencies.messageNotifier.clearVisibleThread()
+    }
 }
 
 /**
