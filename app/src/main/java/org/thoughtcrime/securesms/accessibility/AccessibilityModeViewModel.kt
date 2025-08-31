@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * ViewModel for the accessibility conversation interface.
- * 
+ *
  * Manages:
  * - Thread ID (selected conversation)
  * - Message list

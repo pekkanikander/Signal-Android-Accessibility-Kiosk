@@ -9,7 +9,14 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.EditText
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.launch
 import org.thoughtcrime.securesms.R
 
 /**
@@ -23,6 +30,11 @@ import org.thoughtcrime.securesms.R
  */
 class AccessibilityModeFragment : Fragment() {
 
+    private val viewModel: AccessibilityModeViewModel by viewModels()
+    private lateinit var messageList: RecyclerView
+    private lateinit var messageInput: EditText
+    private lateinit var sendButton: Button
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -33,8 +45,32 @@ class AccessibilityModeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Initialize the conversation UI
-        // TODO: Add ViewModel integration and conversation logic
+        
+        // Initialize views
+        messageList = view.findViewById(R.id.message_list)
+        messageInput = view.findViewById(R.id.message_input)
+        sendButton = view.findViewById(R.id.send_button)
+        
+        // Setup RecyclerView
+        messageList.layoutManager = LinearLayoutManager(context)
+        // TODO: Add adapter for messages
+        
+        // Setup send button
+        sendButton.setOnClickListener {
+            val messageText = messageInput.text.toString().trim()
+            if (messageText.isNotEmpty()) {
+                viewModel.sendMessage(messageText)
+                messageInput.text.clear()
+            }
+        }
+        
+        // Observe ViewModel state
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.state.collect { state ->
+                // TODO: Update UI based on state
+                // For now, just log the state changes
+                android.util.Log.d("AccessibilityFragment", "State updated: $state")
+            }
+        }
     }
 }

@@ -13,7 +13,7 @@ import org.thoughtcrime.securesms.testutil.ShadowSqlCipherLibraryLoader
 
 /**
  * Unit tests for AccessibilityModeViewModel.
- * 
+ *
  * Following TDD approach and ChatGPT-5's testing strategy:
  * - Use ShadowSqlCipherLibraryLoader to prevent native library loading
  * - Test ViewModel logic without triggering full application initialization
@@ -30,7 +30,7 @@ class AccessibilityModeViewModelTest {
     @Test
     fun `test AccessibilityModeViewModel class exists and can be instantiated`() {
         // Given - ViewModel class exists
-        
+
         // When & Then
         // Just verify the class can be referenced (compilation test)
         val viewModelClass = AccessibilityModeViewModel::class.java
@@ -40,7 +40,7 @@ class AccessibilityModeViewModelTest {
     @Test
     fun `test AccessibilityModeViewModel extends ViewModel`() {
         // Given - ViewModel class exists
-        
+
         // When & Then
         // Verify it extends the correct base class
         val viewModelClass = AccessibilityModeViewModel::class.java
@@ -50,7 +50,7 @@ class AccessibilityModeViewModelTest {
     @Test
     fun `test AccessibilityModeState data class exists`() {
         // Given - State class exists
-        
+
         // When & Then
         // Verify the state class can be referenced
         val stateClass = AccessibilityModeState::class.java
