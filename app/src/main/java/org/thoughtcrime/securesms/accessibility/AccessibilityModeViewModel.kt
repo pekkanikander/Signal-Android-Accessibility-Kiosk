@@ -31,7 +31,9 @@ class AccessibilityModeViewModel : ViewModel() {
     fun setThreadId(threadId: Long) {
         android.util.Log.d("AccessibilityViewModel", "setThreadId called with: $threadId")
         _state.value = _state.value.copy(threadId = threadId)
-        // TODO: Load messages for this thread
+        
+        // Load test messages for now
+        loadTestMessages()
     }
 
     /**
@@ -40,6 +42,35 @@ class AccessibilityModeViewModel : ViewModel() {
     fun sendMessage(messageText: String) {
         // TODO: Implement message sending
         // This will integrate with Signal's messaging system
+    }
+
+    /**
+     * Load test messages for demonstration.
+     */
+    private fun loadTestMessages() {
+        val testMessages = listOf(
+            AccessibilityMessage(
+                id = 1L,
+                text = "Hello! This is a test message.",
+                isFromSelf = false,
+                timestamp = System.currentTimeMillis() - 60000
+            ),
+            AccessibilityMessage(
+                id = 2L,
+                text = "Hi there! How are you doing?",
+                isFromSelf = true,
+                timestamp = System.currentTimeMillis() - 30000
+            ),
+            AccessibilityMessage(
+                id = 3L,
+                text = "I'm doing great, thanks for asking!",
+                isFromSelf = false,
+                timestamp = System.currentTimeMillis()
+            )
+        )
+        
+        _state.value = _state.value.copy(messages = testMessages)
+        android.util.Log.d("AccessibilityViewModel", "Loaded ${testMessages.size} test messages")
     }
 
     /**
