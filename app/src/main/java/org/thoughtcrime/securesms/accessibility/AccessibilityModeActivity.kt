@@ -11,7 +11,7 @@ import org.thoughtcrime.securesms.R
 
 /**
  * Main accessibility interface for Signal conversations.
- * 
+ *
  * Features:
  * - No back button or navigation options
  * - Large, high-contrast controls
@@ -23,7 +23,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_accessibility_mode)
-        
+
         // Hide action bar to remove back button
         supportActionBar?.hide()
     }
