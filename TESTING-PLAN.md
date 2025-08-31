@@ -65,6 +65,47 @@
 - **Pattern**: Helper functions for database access
 - **Result**: Clean, efficient data flow
 
+### **4. SQLCipher Native Library Testing Issues** ⚠️
+
+#### **Problem Description**
+- **Error**: `UnsatisfiedLinkError: no sqlcipher in java.library.path`
+- **Root Cause**: SQLCipher native library not available in Robolectric test environment
+- **Impact**: All database-related tests fail in unit test environment
+- **Components Affected**: ConversationViewModel, ConversationRepository, any component using SignalDatabase
+
+#### **Attempted Solutions**
+1. **SignalDatabaseRule**: Added `@get:Rule val signalDatabaseRule = SignalDatabaseRule()`
+   - **Result**: Initially resolved SQLCipher error but introduced new MockK exceptions
+   - **Issue**: Missing mocks for `ConversationRecipientRepository.getGroupRecord()`
+
+2. **MockAppDependenciesRule**: Used `@get:Rule val mockAppDependenciesRule = MockAppDependenciesRule()`
+   - **Result**: Still fails with SQLCipher error
+   - **Issue**: MockAppDependenciesRule doesn't prevent SQLCipher library loading
+
+3. **Test Configuration**: Updated `@Config(manifest = Config.NONE, application = Application::class)`
+   - **Result**: No improvement
+   - **Issue**: Application class still tries to load SQLCipher in `onCreate()`
+
+#### **Current Status**
+- **ConversationViewModelTest**: Created but all tests fail due to SQLCipher issues
+- **Branch**: `fix-conversation-viewmodel-test` contains the problematic test file
+- **Main Branch**: Clean state without the test file
+- **Decision**: Abandon ConversationViewModelTest for now, focus on implementation
+
+#### **Future Investigation**
+- **Parallel Work**: ChatGPT-5 investigating alternative solutions
+- **Potential Solutions**:
+  - Mock the entire database layer instead of using real database
+  - Use instrumentation tests instead of unit tests for database components
+  - Create a test-specific database implementation that doesn't require SQLCipher
+  - Use dependency injection to swap database implementation in tests
+
+#### **Workaround Strategy**
+- **Focus on Business Logic**: Test components that don't directly use database
+- **Manual Testing**: Verify database integration manually in emulator
+- **Integration Tests**: Use instrumentation tests for database-dependent functionality
+- **Documentation**: Document expected behavior for future reference
+
 ---
 
 ## **🎯 Phase 2 Testing Strategy**
@@ -214,6 +255,12 @@ fun `test ConversationRecipientRepository group handling`()
 - **Risk**: Accessibility features not working correctly
 - **Mitigation**: Dedicated accessibility testing checklist
 - **Tools**: Accessibility testing tools and screen reader testing
+
+#### **4. SQLCipher Testing Issues**
+- **Risk**: Database-dependent components can't be unit tested
+- **Mitigation**: Focus on business logic testing, manual verification
+- **Alternative**: Instrumentation tests for database functionality
+- **Monitoring**: Parallel investigation by ChatGPT-5 for solutions
 
 ### **Testing Mitigation Strategies**
 
