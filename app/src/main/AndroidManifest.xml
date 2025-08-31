@@ -1063,6 +1063,11 @@
               android:resizeableActivity="true"
               android:exported="false"/>
 
+    <activity android:name=".accessibility.AccessibilityModeActivity"
+              android:theme="@style/Theme.Signal.DayNight.NoActionBar"
+              android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"
+              android:exported="false"/>
+
     <activity android:name=".pin.PinRestoreActivity"
               android:theme="@style/Theme.Signal.DayNight.NoActionBar"
               android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"
