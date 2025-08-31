@@ -78,8 +78,9 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     }
 
     override fun onStartAccessibilityModeClick() {
-      // Launch the accessibility activity
+      // Launch the accessibility activity with the selected thread ID
       val intent = android.content.Intent(requireContext(), org.thoughtcrime.securesms.accessibility.AccessibilityModeActivity::class.java)
+      intent.putExtra("selected_thread_id", viewModel.state.value.threadId)
       startActivity(intent)
     }
   }

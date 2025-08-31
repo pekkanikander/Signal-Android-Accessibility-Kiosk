@@ -20,17 +20,27 @@ import org.thoughtcrime.securesms.R
  */
 class AccessibilityModeActivity : AppCompatActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+        override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_accessibility_mode)
 
         // Hide action bar to remove back button
         supportActionBar?.hide()
 
+        // Get the selected thread ID from intent
+        val selectedThreadId = intent.getLongExtra("selected_thread_id", -1L)
+
         // Add the accessibility fragment if this is the first creation
         if (savedInstanceState == null) {
+            val fragment = AccessibilityModeFragment()
+
+            // Pass the thread ID to the fragment via arguments
+            val args = Bundle()
+            args.putLong("selected_thread_id", selectedThreadId)
+            fragment.arguments = args
+
             supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, AccessibilityModeFragment())
+                .replace(R.id.fragment_container, fragment)
                 .commit()
         }
     }

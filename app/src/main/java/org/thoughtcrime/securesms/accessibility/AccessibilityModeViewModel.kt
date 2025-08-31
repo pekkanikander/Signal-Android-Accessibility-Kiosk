@@ -29,6 +29,7 @@ class AccessibilityModeViewModel : ViewModel() {
      * This will trigger loading of messages for this thread.
      */
     fun setThreadId(threadId: Long) {
+        android.util.Log.d("AccessibilityViewModel", "setThreadId called with: $threadId")
         _state.value = _state.value.copy(threadId = threadId)
         // TODO: Load messages for this thread
     }

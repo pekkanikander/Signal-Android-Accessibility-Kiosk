@@ -43,18 +43,18 @@ class AccessibilityModeFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_accessibility_mode, container, false)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         // Initialize views
         messageList = view.findViewById(R.id.message_list)
         messageInput = view.findViewById(R.id.message_input)
         sendButton = view.findViewById(R.id.send_button)
-        
+
         // Setup RecyclerView
         messageList.layoutManager = LinearLayoutManager(context)
         // TODO: Add adapter for messages
-        
+
         // Setup send button
         sendButton.setOnClickListener {
             val messageText = messageInput.text.toString().trim()
@@ -63,7 +63,16 @@ class AccessibilityModeFragment : Fragment() {
                 messageInput.text.clear()
             }
         }
-        
+
+        // Get the selected thread ID from arguments and set it in the ViewModel
+        arguments?.let { args ->
+            val selectedThreadId = args.getLong("selected_thread_id", -1L)
+            if (selectedThreadId != -1L) {
+                android.util.Log.d("AccessibilityFragment", "Setting thread ID: $selectedThreadId")
+                viewModel.setThreadId(selectedThreadId)
+            }
+        }
+
         // Observe ViewModel state
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.state.collect { state ->
