@@ -48,8 +48,29 @@ class AccessibilityModeViewModel : ViewModel() {
      * Load test messages for demonstration.
      */
     private fun loadTestMessages() {
-        // TODO: Load actual messages from SignalDatabase
-        android.util.Log.d("AccessibilityViewModel", "Loading messages for thread: ${_state.value.threadId}")
+        val testMessages = listOf(
+            AccessibilityMessage(
+                id = 1L,
+                text = "Hello! This is a test message using Signal's existing layouts.",
+                isFromSelf = false,
+                timestamp = System.currentTimeMillis() - 60000
+            ),
+            AccessibilityMessage(
+                id = 2L,
+                text = "Hi there! How are you doing? This uses Signal's outgoing message layout.",
+                isFromSelf = true,
+                timestamp = System.currentTimeMillis() - 30000
+            ),
+            AccessibilityMessage(
+                id = 3L,
+                text = "I'm doing great, thanks for asking! The accessibility mode now uses Signal's existing UI components.",
+                isFromSelf = false,
+                timestamp = System.currentTimeMillis()
+            )
+        )
+
+        _state.value = _state.value.copy(messages = testMessages)
+        android.util.Log.d("AccessibilityViewModel", "Loaded ${testMessages.size} test messages using Signal layouts")
     }
 
     /**
@@ -66,6 +87,7 @@ class AccessibilityModeViewModel : ViewModel() {
  */
 data class AccessibilityModeState(
     val threadId: Long = -1L,
+    val messages: List<AccessibilityMessage> = emptyList(),
     val isLoading: Boolean = false
 )
 

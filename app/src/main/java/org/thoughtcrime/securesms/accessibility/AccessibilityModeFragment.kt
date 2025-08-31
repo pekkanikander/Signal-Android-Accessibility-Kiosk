@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.accessibility.AccessibilityMessageAdapter
 
 /**
  * Fragment for the accessibility conversation interface.
@@ -34,6 +35,7 @@ class AccessibilityModeFragment : Fragment() {
     private lateinit var messageList: RecyclerView
     private lateinit var messageInput: EditText
     private lateinit var sendButton: Button
+    private lateinit var messageAdapter: AccessibilityMessageAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,9 +53,10 @@ class AccessibilityModeFragment : Fragment() {
         messageInput = view.findViewById(R.id.message_input)
         sendButton = view.findViewById(R.id.send_button)
 
-        // Setup RecyclerView
+        // Setup RecyclerView with Signal's existing message layouts
         messageList.layoutManager = LinearLayoutManager(context)
-        // TODO: Add adapter for messages using Signal's existing components
+        messageAdapter = AccessibilityMessageAdapter()
+        messageList.adapter = messageAdapter
 
         // Setup send button
         sendButton.setOnClickListener {
@@ -77,6 +80,7 @@ class AccessibilityModeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.state.collect { state ->
                 // Update UI based on state
+                messageAdapter.updateMessages(state.messages)
                 android.util.Log.d("AccessibilityFragment", "State updated: $state")
             }
         }

@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@android:color/white">
+    android:background="?attr/colorSurface">
 
     <!-- Message display area -->
     <androidx.recyclerview.widget.RecyclerView
@@ -13,13 +13,13 @@
         android:layout_weight="1"
         android:padding="16dp" />
 
-    <!-- Input area -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:background="#DDDDDD">
+               <!-- Input area -->
+           <LinearLayout
+               android:layout_width="match_parent"
+               android:layout_height="wrap_content"
+               android:orientation="horizontal"
+               android:padding="16dp"
+               android:background="?attr/colorSurfaceVariant">
 
         <EditText
             android:id="@+id/message_input"
