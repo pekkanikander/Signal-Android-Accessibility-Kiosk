@@ -6,9 +6,15 @@
 package org.thoughtcrime.securesms.accessibility
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.database.model.MessageRecord
+import org.thoughtcrime.securesms.recipients.Recipient
 
 /**
  * ViewModel for the accessibility conversation interface.
@@ -30,56 +36,103 @@ class AccessibilityModeViewModel : ViewModel() {
      */
     fun setThreadId(threadId: Long) {
         android.util.Log.d("AccessibilityViewModel", "setThreadId called with: $threadId")
-        _state.value = _state.value.copy(threadId = threadId)
+        _state.value = _state.value.copy(threadId = threadId, isLoading = true)
 
-        // Load test messages for now
-        loadTestMessages()
+        // Load real messages from Signal's database
+        loadMessages()
     }
 
     /**
      * Send a message to the current conversation.
      */
     fun sendMessage(messageText: String) {
-        // TODO: Implement message sending
-        // This will integrate with Signal's messaging system
+        val threadId = _state.value.threadId
+        if (threadId == -1L) {
+            android.util.Log.e("AccessibilityViewModel", "Cannot send message: no thread selected")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Get the recipient for this thread
+                val recipient = SignalDatabase.threads.getRecipientForThreadId(threadId)
+                if (recipient == null) {
+                    android.util.Log.e("AccessibilityViewModel", "Cannot send message: recipient not found")
+                    return@launch
+                }
+
+                // Send the message using Signal's MessageSender
+                org.thoughtcrime.securesms.sms.MessageSender.send(
+                    org.thoughtcrime.securesms.dependencies.AppDependencies.application,
+                    org.thoughtcrime.securesms.mms.OutgoingMessage(
+                        threadRecipient = recipient,
+                        sentTimeMillis = System.currentTimeMillis(),
+                        body = messageText,
+                        expiresIn = recipient.expiresInSeconds * 1000L,
+                        isUrgent = true,
+                        isSecure = true
+                    ),
+                    threadId,
+                    org.thoughtcrime.securesms.sms.MessageSender.SendType.SIGNAL,
+                    null
+                ) {
+                    android.util.Log.d("AccessibilityViewModel", "Message sent successfully")
+                    // Reload messages to show the new message
+                    loadMessages()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AccessibilityViewModel", "Failed to send message", e)
+            }
+        }
     }
 
-        /**
-     * Load test messages for demonstration.
-     */
-    private fun loadTestMessages() {
-        val testMessages = listOf(
-            AccessibilityMessage(
-                id = 1L,
-                text = "Hello! This is a test message using Signal's existing layouts.",
-                isFromSelf = false,
-                timestamp = System.currentTimeMillis() - 60000
-            ),
-            AccessibilityMessage(
-                id = 2L,
-                text = "Hi there! How are you doing? This uses Signal's outgoing message layout.",
-                isFromSelf = true,
-                timestamp = System.currentTimeMillis() - 30000
-            ),
-            AccessibilityMessage(
-                id = 3L,
-                text = "I'm doing great, thanks for asking! The accessibility mode now uses Signal's existing UI components.",
-                isFromSelf = false,
-                timestamp = System.currentTimeMillis()
-            )
-        )
-
-        _state.value = _state.value.copy(messages = testMessages)
-        android.util.Log.d("AccessibilityViewModel", "Loaded ${testMessages.size} test messages using Signal layouts")
-    }
-
-    /**
-     * Load messages for the current thread.
+            /**
+     * Load real messages from Signal's database.
      */
     private fun loadMessages() {
-        // TODO: Implement message loading from SignalDatabase
-        // This will load messages for the current threadId
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val threadId = _state.value.threadId
+                if (threadId == -1L) {
+                    android.util.Log.e("AccessibilityViewModel", "Cannot load messages: no thread selected")
+                    return@launch
+                }
+
+                // Load messages from Signal's database
+                val messageRecords = mutableListOf<MessageRecord>()
+                org.thoughtcrime.securesms.database.MessageTable.mmsReaderFor(
+                    SignalDatabase.messages.getConversation(threadId, 0L, 50L)
+                ).use { reader ->
+                    reader.forEach { record ->
+                        messageRecords.add(record)
+                    }
+                }
+
+                // Convert MessageRecord to AccessibilityMessage
+                val accessibilityMessages = messageRecords.map { record ->
+                    AccessibilityMessage(
+                        id = record.id,
+                        text = record.getDisplayBody(org.thoughtcrime.securesms.dependencies.AppDependencies.application).toString(),
+                        isFromSelf = record.isOutgoing,
+                        timestamp = record.dateReceived
+                    )
+                }
+
+                // Update state on main thread
+                _state.value = _state.value.copy(
+                    messages = accessibilityMessages,
+                    isLoading = false
+                )
+
+                android.util.Log.d("AccessibilityViewModel", "Loaded ${accessibilityMessages.size} real messages from database")
+            } catch (e: Exception) {
+                android.util.Log.e("AccessibilityViewModel", "Failed to load messages", e)
+                _state.value = _state.value.copy(isLoading = false)
+            }
+        }
     }
+
+    // This method is now implemented above
 }
 
 /**
