@@ -30,7 +30,7 @@ fun AccessibilityModeSettingsScreen(
   callbacks: AccessibilityModeSettingsCallbacks
 ) {
   val context = LocalContext.current
-  
+
   Scaffolds.Settings(
     title = stringResource(R.string.preferences__accessibility_mode),
     onNavigationClick = { callbacks.onNavigationClick() },
@@ -66,7 +66,7 @@ fun AccessibilityModeSettingsScreen(
             // Chat is selected - show ChatRow
             val recipient = getRecipientForThread(state.threadId)
             val lastMessage = getLastMessageForThread(state.threadId)
-            
+
             ChatRow(
               recipient = recipient,
               lastMessage = lastMessage,
@@ -144,7 +144,7 @@ private fun getRecipientForThread(threadId: Long): Recipient {
 private fun getLastMessageForThread(threadId: Long): String {
   return try {
     val cursor = SignalDatabase.messages.getConversation(threadId, 0L, 1L)
-    cursor.use { 
+    cursor.use {
       if (cursor.moveToFirst()) {
         // For now, return empty string as we need to find the right way to read message body
         // This is a placeholder - we'll implement proper message reading later
@@ -169,7 +169,7 @@ private fun ChatRow(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
-  
+
   Rows.TextRow(
     text = if (recipient.isSelf) {
       stringResource(R.string.note_to_self)
