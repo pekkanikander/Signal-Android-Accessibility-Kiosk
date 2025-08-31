@@ -7,47 +7,52 @@
 2. **Accessibility UI Layer** (this fork + potential upstream PR) - Simplified interface, large controls, high contrast, cognitive accessibility
 
 **Upstream PR Goals:**
-- Contribute accessibility improvements to main Signal repo
+- Contribute an "Accessibility Mode" feature to the main Signal repo
 - Focus on UI/UX enhancements for people with dementia and other disabilities
 - Keep changes minimal and focused on accessibility, not device management
 - Separate from kiosk/launcher functionality
 
 **This Fork Scope:**
-- **NEW**: Parallel accessibility interface (AccessibilityActivity) that reuses existing components
-- Settings integration for accessibility mode toggle
+- Parallel accessibility interface (AccessibilityModeActivity) that reuses existing components
+- Settings integration for accessibility mode toggle and other settings associated with it
 - Component reuse strategy (ViewModel, Repository, backend services)
+- Going back to Settings via a gesture that is hard to do by accident / sloppy fingers / demented mind
+  - Guesture shall still be clearly documented and may be visible in the UI
+Separate:
 - **Kiosk features**: System-level restrictions (HOME launcher, boot auto-start, background recovery)
-- Hidden admin access via gesture
 
 ---
 
 ## A) New Architecture: Parallel Accessibility Interface ✅ **ONGOING**
 
-**Core Concept**: Instead of intercepting and modifying existing Signal UI, create a completely separate accessibility interface that leverages existing backend components while providing dedicated accessibility features.
+**Core Concept**: Instead of intercepting and modifying existing Signal UI, create a completely separate accessibility mode interface that leverages existing (backend) components while providing dedicated accessibility-oriented highly simplified experience.
 
-**Current Implementation Status**: ✅ **Phase 2.2 Core Components Complete**
+**Current Implementation Status**: ✅ **Phase 1 complete**
 
 ```
-Settings → Enable Accessibility Mode → Switch to AccessibilityActivity
+Settings → Enable Accessibility Mode → Switch to AccessibilityModeActivity
     ↓
-AccessibilityActivity (parallel accessibility interface)
+AccessibilityModeActivity (parallel accessibility interface)
     ↓
 Reuse existing components:
 - ConversationViewModel (message logic) ✅ **READY FOR REUSE**
 - ConversationRepository (data access) ✅ **READY FOR REUSE**
-- Attachment handling (but with accessibility UI) ✅ **READY FOR REUSE**
+- ConversationRecipientRepository (for recipient managment)  ✅ **READY FOR REUSE**
+- Attachment display (but with accessibility UI) ✅ **READY FOR REUSE**
+  - No attachment sending for the first version
 - Backend services (crypto, network, etc.) ✅ **READY FOR REUSE**
     ↓
 Exit gesture → Return to Settings (same location)
 ```
 
-**✅ IMPLEMENTED COMPONENTS**:
-- `AccessibilityModeValues` - Settings storage (Phase 2.1 ✅)
-- `AccessibilityModeSettingsState` - UI state management (Phase 2.2 ✅)
-- `AccessibilityModeSettingsViewModel` - Business logic (Phase 2.2 ✅)
-- SignalStore integration - Complete settings system (Phase 2.1 ✅)
+**✅ IMPLEMENTED SETTINGS COMPONENTS**:
+- `AccessibilityModeValues` - Settings storage
+- `AccessibilityModeSettingsState` - UI state management
+- `AccessibilityModeSettingsViewModel` - Business logic
+- SignalStore integration - Complete settings system
+- Settings UI layer
 
-**🔄 NEXT PHASE**: UI Layer Implementation (Fragment, Screen, Callbacks)
+**🔄 NEXT PHASE**: Conversation UI Layer Implementation (Fragment, Screen, Callbacks)
 
 **Key Benefits**:
 - **Minimal Risk**: No complex UI interception required
@@ -58,87 +63,82 @@ Exit gesture → Return to Settings (same location)
 
 ---
 
-## B) Settings Integration & Accessibility Mode Toggle ✅ **ONGOING**
+## B) Settings Integration & Accessibility Mode Toggle ✅ **ALMOST COMPLETE**
 
 **Integration Point**: Add accessibility mode toggle in existing Signal settings
 **Storage**: Use existing `SignalStore` preferences system ✅ **COMPLETE**
-**Toggle**: Simple boolean flag `accessibility_mode.enabled` ✅ **IMPLEMENTED**
+**Toggle**: Simple boolean flag `accessibility_mode.enabled` ✅ **COMPLETE**
 
 **Implementation Details**:
-- **Location**: Existing Signal settings hierarchy ✅ **READY FOR INTEGRATION**
-- **UI**: Simple toggle switch with descriptive text ✅ **READY FOR IMPLEMENTATION**
-- **Behavior**: When enabled, immediately launch `AccessibilityActivity` ✅ **READY FOR IMPLEMENTATION**
-- **State**: Preserve settings location for return navigation ✅ **READY FOR IMPLEMENTATION**
+- **Location**: Existing Signal settings hierarchy ✅ **COMPLETE**
+- **UI**: Simple toggle switch with descriptive text, thread selection ✅ **ALMOST COMPLETE**
+- **Behavior**: When enabled, launch `AccessibilityModeActivity` when going back from Settings ✅ **READY FOR IMPLEMENTATION**
 
 **✅ COMPLETED FILES**:
 - `app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt` - ✅ **AccessibilityModeValues integration complete**
 - `app/src/main/java/org/thoughtcrime/securesms/keyvalue/AccessibilityModeValues.kt` - ✅ **New class implemented with full test coverage**
+- `app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt` ✅ **New Settings UI class integrated**
+- `app/src/main/res/navigation/app_settings_with_change_number.xml` - ✅ **New Chat selection UI class integrated**
+- `app/src/main/java/org/thoughtcrime/securesms/components/settings/app/accessibility/AccessibilityModeSettingsFragment.kt` - ✅ **Settings UI implementation**
 
-**🔄 NEXT FILES TO IMPLEMENT**:
-- `app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt` - Add accessibility settings entry
-- `app/src/main/res/navigation/app_settings_with_change_number.xml` - Add navigation action
-- `app/src/main/java/org/thoughtcrime/securesms/components/settings/app/accessibility/AccessibilityModeSettingsFragment.kt` - UI implementation
-
-**✅ IMPLEMENTATION STATUS**: Core settings infrastructure complete, ready for UI integration
+**✅ IMPLEMENTATION STATUS**: First version of the Settings UI complete, UX testing and needs some polishing
 
 ---
 
-## C) AccessibilityActivity Design & Implementation
+## C) AccessibilityModeActivity Design & Implementation
 
 **Purpose**: Complete parallel conversation interface with accessibility-optimized UI
 **Layout**: Custom accessibility-optimized UI (large buttons, simplified interface)
 **Navigation**: No back button, no menus, no escape routes
 
 **UI Components**:
-- **Large Send Button**: Prominent text sending control
-- **Large Voice Note Button**: Hold-to-record with visual feedback
+- **Large Send Button**: Prominent text sending control, trembling tolerant
 - **Message Display**: Simplified conversation view (reuse existing logic)
-- **Input Field**: Large, high-contrast text input
+- **Input Field**: Large, high-contrast, easy to type keyboard / text input
 - **No Menus**: Zero menu inflation or navigation options
+- Deferred: **Large Voice Note Button**: Hold-to-record with visual feedback, needs UX and UI testing
 
 **Component Reuse Strategy**:
 - **ConversationViewModel**: Existing message handling, thread management
 - **ConversationRepository**: Existing data access, message sending
+- **ConversationRecipientRepository**: Existing data access, recipient management
 - **Backend Services**: Zero changes to crypto, network, storage
-- **UI Logic**: Reuse existing conversation display and input handling
+- **UI Logic**: If feasible, reuse existing conversation display and input handling — needs more studying
 
 ---
 
-## D) Thread Selection & Configuration
+## D) Settings: Thread Selection & Configuration
 
-**Thread ID Storage**: Use existing Signal preferences system
-**Configuration**: Simple thread selection in accessibility settings
-**Default Behavior**: Use last active conversation or prompt for selection
+**Thread ID Storage**: Use existing Signal preferences system ✅ **COMPLETE**
+**Configuration**: Simple thread selection in accessibility mode settings ✅ **ALMOST COMPLETE**
+**Default Behavior**: Use last active conversation or prompt for selection ✅ **COMPLETE**
 
 **Implementation**:
 - Store selected thread ID in `SignalStore` preferences
 - Provide thread selection UI in accessibility settings
-- Handle missing/invalid thread IDs gracefully
 - Support both individual and group conversations
 
 ---
 
 ## E) Exit Mechanism & Return Navigation
 
-**Hidden Gesture**: Same design (5 taps + 3s press in corner)
-**Return Path**: `finish()` AccessibilityActivity, return to Settings
-**State Preservation**: Settings location maintained, accessibility mode can be disabled
+**Hidden Gesture**: E.g. 5 taps + 3s press in corner  Something easy to do but hard to enter by accident
+**Return Path**: `finish()` AccessibilityModeActivity, return to Settings
 
 **Implementation**:
-- Gesture detector on AccessibilityActivity root view
-- Return to exact settings location
+- Gesture detector on AccessibilityModeActivity root view
+- Return to where AccessibilityModeActivity was entered, i.e. "return" from Settings
 - Clean state cleanup on exit
-- Option to disable accessibility mode from settings
 
 ---
 
 ## F) Kiosk Features vs. Accessibility Features
 
 ### **Accessibility Features (UI Level)**
-- Large, high-contrast controls
+- Large, high-contrast, trembling tolerant controls
 - Simplified conversation interface
 - Reduced cognitive load design
-- Easy-to-use attachment handling
+- Easy-to-use and easy-to-understand attachment viewing
 - Clear visual feedback
 
 ### **Kiosk Features (System Level)**
@@ -157,6 +157,8 @@ Exit gesture → Return to Settings (same location)
 
 ## G) Risk Assessment: Parallel vs. Interception
 
+We studied earlier on an Interception based approach on current UI vs. a new parallel UI.
+
 | Risk Category | Interception Approach | Parallel Accessibility Interface Approach |
 |---------------|----------------------|-------------------------------------------|
 | **Menu System** | ⚠️ **CRITICAL** - Complex MenuProvider interception | ✅ **LOW** - No existing menus to intercept |
@@ -164,6 +166,8 @@ Exit gesture → Return to Settings (same location)
 | **Attachments** | ⚠️ **MODERATE-HIGH** - Multiple entry points | ✅ **LOW** - Custom attachment UI, reuse backend logic |
 | **Navigation** | ⚠️ **MODERATE** - Back button interception | ✅ **LOW** - No back button in accessibility UI |
 | **Upstream Changes** | ⚠️ **HIGH** - UI refactors break our hooks | ✅ **LOW** - Minimal coupling to existing UI |
+
+Outcome is clear: A new parallel UI has much lower risks.
 
 **Overall Risk**: **LOW** ✅ (vs. MODERATE-HIGH for interception approach)
 
@@ -198,8 +202,9 @@ Exit gesture → Return to Settings (same location)
 ### **Component Reuse (No Changes Required)**
 - **ConversationViewModel** - Existing message handling
 - **ConversationRepository** - Existing data operations
+- **ConversationRecipientRepository** - Existing data operations
 - **Backend Services** - All Signal services remain untouched
-- **UI Logic** - Reuse existing conversation display components
+- **UI Logic** - Reuse existing conversation display components if feasible
 
 ---
 
@@ -227,27 +232,25 @@ Exit gesture → Return to Settings (same location)
 - Basic accessibility UI refinement
 
 ### **Phase 3: Polish & Testing (Week 4)**
+- Settings UI polishing
+  - Chat/thread selection needs a visual lable
+  - Selected Chat should show Icon/photo and other info, to match with visuals elsewhere in the app
+  - Maybe an exit gesture tutorial or at least explanation
 - Voice notes and attachment handling
 - Exit gesture implementation
 - Testing and bug fixes
 
-**Current Status**: Phase 1.2 Complete ✅ - Settings UI Layer Fully Implemented and Working
+**Current Status**: Phase 1.2 Complete ✅ - Settings UI Layer Implemented and Working, more polishing needed later
 
 ---
 
 ## J) Critical Questions - All Answered ✅
 
 1. **Thread Selection**: ✅ **ANSWERED** - Start with last active conversation, revise later if needed
-
 2. **Voice Note Permissions**: ✅ **ANSWERED** - If microphone denied, text-only mode with voice button hidden. Also add as setting for users who cannot speak
-
-3. **Exit Gesture**: ✅ **ANSWERED** - Start with proposed gesture (5 taps + 3s press in corner), revise later if needed
-
+3. **Exit Gesture**: ✅ **ANSWERED** - Start with 5 taps + 3s press in corner, revise later if needed
 4. **Settings Location**: ✅ **ANSWERED** - Add as new top-level item in main settings screen, following existing pattern
-
 5. **Default Behavior**: ✅ **ANSWERED** - Store thread ID in AccessibilityValues, remember last selection, prompt only if no valid thread stored
-
-**Status**: All critical questions resolved. Ready for implementation.
 
 ---
 
@@ -284,7 +287,8 @@ Exit gesture → Return to Settings (same location)
 #### **Current Architecture Status**:
 - **Data Layer**: ✅ **COMPLETE** - Ready for UI consumption
 - **Business Logic**: ✅ **COMPLETE** - Ready for UI binding
-- **UI Layer**: ✅ **COMPLETE** - Fully implemented and working
+- **Settings UI Layer**: ✅ **COMPLETE** - Fully implemented and working
+- **Conversatoin UI Layer**: **READY FOR IMPLEMENTATION**
 - **Integration**: ✅ **COMPLETE** - Fully integrated into main settings
 
 ### **🎯 Implementation Confidence: VERY HIGH**
@@ -325,309 +329,82 @@ This **parallel accessibility interface approach** provides a significantly lowe
 - **Ready for implementation** - Settings UI layer complete and tested
 - **Next milestone**: Create parallel accessibility interface with message functionality
 
----
+# **🔍 Phase 2 Conversation UI Implementation Strategy & Analysis**
 
-## **📋 Phase 1.2 Implementation Summary & Learnings**
+## **Implementation Approach Decision**
 
-### **✅ Successfully Implemented Features**
-
-#### **1. Complete Settings Integration**
-- **Main Settings Menu**: Added "Accessibility Mode" entry in `AppSettingsFragment.kt`
-- **Navigation**: Integrated into existing navigation graph with proper animations
-- **Positioning**: Placed between "Appearance" and "Chats" for logical grouping
-
-#### **2. Accessibility Mode Settings Screen**
-- **Fragment**: `AccessibilityModeSettingsFragment.kt` with Compose UI
-- **Screen**: `AccessibilityModeSettingsScreen.kt` with proper Material Design 3
-- **State Management**: `AccessibilityModeSettingsState.kt` and `AccessibilityModeSettingsViewModel.kt`
-- **Callbacks**: `AccessibilityModeSettingsCallbacks.kt` for user interactions
-
-#### **3. Chat Selection System**
-- **Chat Selection Screen**: `ChatSelectionFragment.kt` and `ChatSelectionScreen.kt`
-- **UI Components**: Proper `ChatRow` with recipient name, icon, and last message preview
-- **Navigation Flow**: Settings → Chat Selection → Return with selected chat
-- **State Persistence**: Selected thread ID properly stored and retrieved
-
-#### **4. End-to-End Functionality**
-- **Chat Selection**: User can select from available conversations
-- **State Updates**: Selected chat properly updates accessibility settings
-- **Toggle Behavior**: Accessibility mode toggle only enabled when chat is selected
-- **UI Feedback**: Proper visual feedback for all user actions
-
-### **🔧 Technical Implementation Details**
-
-#### **Data Flow Architecture**
-```
-User selects chat → ChatSelectionFragment → Activity Intent Extras →
-AccessibilityModeSettingsFragment.onResume() → ViewModel.setThreadId() →
-SignalStore update → UI state refresh → ChatRow display
-```
-
-#### **Key Technical Solutions**
-1. **Activity Intent Extras**: Used for passing selected thread ID between fragments
-2. **Database Integration**: Direct database queries for recipient and message data
-3. **Compose UI**: Modern Material Design 3 components with proper accessibility
-4. **State Management**: Clean MVVM pattern with StateFlow and SignalStore integration
-
-#### **UI Components Used**
-- **`Rows.TextRow`**: For clickable settings items
-- **`Rows.ToggleRow`**: For accessibility mode toggle
-- **`Scaffolds.Settings`**: For consistent settings screen layout
-- **`Dividers.Default`**: For visual separation
-- **Custom `ChatRow`**: For displaying selected chat information
-
-### **🧪 Testing & Quality Assurance**
-
-#### **Test Coverage**
-- **Unit Tests**: Comprehensive coverage of ViewModel and State classes
-- **Integration Tests**: End-to-end chat selection flow working
-- **Manual Testing**: Verified in emulator with real navigation
-
-#### **Quality Metrics**
-- **Compilation**: Clean builds with no warnings
-- **Runtime**: Stable performance with proper error handling
-- **UI/UX**: Consistent with existing Signal settings patterns
-- **Accessibility**: Proper test tags and screen reader support
-
-### **📚 Key Learnings & Best Practices**
-
-#### **1. Fragment Communication**
-- **Problem**: Direct ViewModel access between fragments doesn't work
-- **Solution**: Use activity intent extras for simple data passing
-- **Learning**: Keep fragment communication simple and explicit
-
-#### **2. Database Integration**
-- **Approach**: Fetch data on-demand rather than storing in state
-- **Benefit**: Keeps state minimal and always up-to-date
-- **Pattern**: Helper functions for database queries in UI layer
-
-#### **3. Compose UI Patterns**
-- **Structure**: Use `Scaffolds.Settings` for consistency
-- **State**: Bind ViewModel state to UI with `collectAsStateWithLifecycle`
-- **Callbacks**: Implement callback interfaces for user interactions
-
-#### **4. Navigation Integration**
-- **XML Navigation**: Add actions and fragments to existing navigation graphs
-- **Animations**: Use standard Signal animations for consistency
-- **Positioning**: Follow existing settings menu patterns
-
-### **🚀 Ready for Phase 2**
-
-Phase 1.2 has successfully established:
-- **Complete settings infrastructure** for accessibility mode
-- **Working chat selection system** with proper UI
-- **Proven architecture patterns** for Compose UI and state management
-- **Solid foundation** for building the parallel accessibility interface
-
-**Next Phase Focus**: Create `AccessibilityActivity` that leverages existing conversation components while providing dedicated accessibility UI.
-
----
-
-## **🧪 Testing Status & Findings**
-
-### **✅ Testing Infrastructure**
-
-#### **Unit Tests**
-- **AccessibilityModeValues**: 5 comprehensive tests covering all functionality
-- **AccessibilityModeSettingsState**: 6 tests covering state management
-- **AccessibilityModeSettingsViewModel**: 5 tests covering business logic
-- **Total Test Coverage**: 16 tests with 100% pass rate
-
-#### **Integration Tests**
-- **Chat Selection Flow**: End-to-end testing verified working
-- **State Persistence**: SignalStore integration tested and working
-- **Navigation Flow**: Settings → Chat Selection → Return flow verified
-
-#### **Manual Testing**
-- **Emulator Testing**: Verified in Android emulator with real navigation
-- **UI Behavior**: All user interactions working as expected
-- **State Updates**: Chat selection properly updates accessibility settings
-- **Toggle Behavior**: Accessibility mode toggle only enabled when chat selected
-
-### **🔍 Key Testing Findings**
-
-#### **1. Fragment Communication**
-- **Initial Approach**: Direct ViewModel access between fragments
-- **Problem**: Fragments not accessible when replaced in navigation
-- **Solution**: Activity intent extras for simple data passing
-- **Result**: Reliable, simple communication pattern
-
-#### **2. Database Integration**
-- **Approach**: Direct database queries in UI layer
-- **Benefit**: Always up-to-date data, minimal state
-- **Pattern**: Helper functions for database access
-- **Result**: Clean, efficient data flow
-
-#### **3. Compose UI Testing**
-- **Challenge**: Robolectric compatibility issues with Compose UI
-- **Solution**: Focus on unit tests for business logic
-- **Result**: Comprehensive coverage of core functionality
-
-### **📊 Quality Metrics**
-
-#### **Code Quality**
-- **Compilation**: Clean builds with no warnings
-- **Architecture**: Follows established Signal patterns
-- **Error Handling**: Proper exception handling and fallbacks
-- **Documentation**: Comprehensive inline documentation
-
-#### **Performance**
-- **State Updates**: Efficient StateFlow-based updates
-- **Database Queries**: Minimal, targeted database access
-- **Memory Usage**: No memory leaks, proper lifecycle management
-- **UI Responsiveness**: Smooth, responsive user interactions
-
-#### **Accessibility**
-- **Test Tags**: Proper test tags for UI testing
-- **Screen Reader**: Compatible with accessibility services
-- **Navigation**: Logical tab order and focus management
-- **Visual Design**: High contrast, clear visual hierarchy
-
----
-
-## **🚧 Challenges & Solutions Discovered**
-
-### **1. Fragment Communication Challenge**
-
-#### **Problem**
-- **Initial Approach**: Direct ViewModel access between fragments using reflection
-- **Issue**: Fragments not accessible when replaced in navigation stack
-- **Impact**: Chat selection couldn't update accessibility settings
-
-#### **Solution**
-- **Pattern**: Use activity intent extras for simple data passing
-- **Implementation**: Store selected thread ID in activity intent, read in onResume()
-- **Benefits**: Simple, reliable, follows Android patterns
-
-### **2. Compose UI Testing Challenges**
-
-#### **Problem**
-- **Robolectric**: Incompatible with Compose UI testing
-- **Instrumentation Tests**: Complex setup and execution
-- **Result**: Limited UI-level testing coverage
-
-#### **Solution**
-- **Focus**: Comprehensive unit tests for business logic
-- **UI Testing**: Manual testing in emulator for UI behavior
-- **Coverage**: 16 unit tests covering all core functionality
-- **Strategy**: Test business logic thoroughly, verify UI manually
-
-### **3. Database Integration Complexity**
-
-#### **Problem**
-- **Message Reading**: Complex cursor handling for last message
-- **Recipient Resolution**: Thread record access patterns
-- **Error Handling**: Database exceptions and edge cases
-
-#### **Solution**
-- **Helper Functions**: Clean, focused database access functions
-- **Error Handling**: Graceful fallbacks with try-catch blocks
-- **Pattern**: Fetch data on-demand, keep state minimal
-- **Result**: Reliable data access with proper error handling
-
-### **4. Navigation Integration**
-
-#### **Problem**
-- **XML Navigation**: Complex navigation graph modifications
-- **Fragment Positioning**: Logical placement in settings hierarchy
-- **Animation Consistency**: Matching existing Signal animations
-
-#### **Solution**
-- **Pattern Following**: Study existing settings navigation patterns
-- **Logical Placement**: Position between "Appearance" and "Chats"
-- **Animation Reuse**: Use standard Signal animation resources
-- **Result**: Seamless integration with existing settings
-
-### **📚 Lessons Learned**
-
-#### **1. Keep It Simple**
-- **Fragment Communication**: Use simple patterns (intent extras) over complex ones (reflection)
-- **State Management**: Minimal state, compute derived data on-demand
-- **Error Handling**: Graceful fallbacks, don't over-engineer
-
-#### **2. Follow Established Patterns**
-- **SignalStore**: Use existing preferences system
-- **Navigation**: Follow existing navigation patterns
-- **UI Components**: Use established Compose UI patterns
-- **Testing**: Focus on business logic, verify UI manually
-
-#### **3. Test Early and Often**
-- **Unit Tests**: Comprehensive coverage of all business logic
-- **Integration Tests**: Verify end-to-end flows
-- **Manual Testing**: Regular testing in emulator
-- **Result**: High confidence in implementation quality
-
----
-
-## **🔍 Phase 2 Implementation Strategy & Analysis**
-
-### **Implementation Approach Decision**
-
-#### **Why Not Extend Existing Chat Fragment?**
+### **Why Not Extend Existing Chat Fragment?**
 - **Risk Assessment**: Extending existing chat fragment proved too risky
 - **Complexity**: Existing fragment has complex UI logic and dependencies
 - **Maintenance**: Changes to upstream chat fragment could break our implementation
 - **Decision**: **Create new parallel implementation** instead of extending
 
-#### **New Implementation Strategy**
+### **Parallel UI approach**
 - **Parallel Fragment**: Create `AccessibilityModeFragment` similar to existing chat fragment
 - **Component Reuse**: Leverage existing backend components (ViewModel, Repository, Services)
 - **Simplified UI**: Build accessibility-optimized interface from scratch
 - **Long-term Maintainability**: Isolated from upstream changes
 
-### **Architecture Analysis Required**
+## **Architecture Analysis Required** ✅ **ONGOING**
 
-#### **1. Study Existing Chat Fragment Implementation**
+### **1. Study Existing Chat Fragment Implementation**
 - **Location**: Find and analyze current chat/conversation fragment
 - **Components**: Identify reusable backend components
 - **UI Logic**: Understand message display and input handling
 - **Dependencies**: Map out component relationships and dependencies
 
-#### **2. Evaluate Abstraction Opportunities**
+### **2. Evaluate Abstraction Opportunities**
 - **Base Class**: Consider creating abstract base class for common functionality
 - **Interface Extraction**: Identify interfaces that could be shared
 - **Component Reuse**: Determine which classes can be reused directly
 - **UI Simplification**: Plan how to provide simplified UI while reusing logic
 
-#### **3. Multiple Implementation Options to Consider**
+### **3. Multiple Implementation Options to Consider**
 
-##### **Option A: Direct Component Reuse**
+#### **Option A: Direct Component Reuse**
 - **Approach**: Create new fragment that directly uses existing components
 - **Pros**: Maximum reuse, minimal new code
 - **Cons**: Tight coupling to existing implementation details
 - **Risk**: Medium - changes to existing components could affect us
 
-##### **Option B: Abstract Base Class**
+#### **Option B: Abstract Base Class**
 - **Approach**: Extract common functionality into abstract base class
 - **Pros**: Clean separation, shared functionality
 - **Cons**: More complex initial implementation
 - **Risk**: Low - well-defined interfaces and contracts
 
-##### **Option C: Interface-Based Composition**
+#### **Option C: Interface-Based Composition**
 - **Approach**: Define interfaces for key functionality, implement separately
 - **Pros**: Maximum flexibility, loose coupling
 - **Cons**: Most complex, potential duplication
 - **Risk**: Low - but more development effort
 
-### **Recommended Analysis Steps**
+**Option A preliminarily selected**
 
-#### **Step 1: Study Existing Implementation**
+### **Analysis Steps**
+
+#### **Step 1: Study Existing Implementation** ✅ **COMPLETE**
 1. **Locate existing chat fragment** and analyze its structure
 2. **Identify key components** (ViewModel, Repository, UI components)
 3. **Map dependencies** and understand data flow
 4. **Document reusable patterns** and interfaces
 
-#### **Step 2: Evaluate Reuse Strategy**
+#### **Step 2: Evaluate Reuse Strategy** ✅ **ONGOING**
 1. **Assess component stability** and change frequency
 2. **Identify abstraction opportunities** for common functionality
 3. **Plan interface extraction** for key behaviors
 4. **Determine optimal implementation approach**
 
-#### **Step 3: Design Implementation Architecture**
+#### **Step 3: Design Implementation Architecture**  ✅ **NEXT**
 1. **Choose implementation strategy** based on analysis
 2. **Design component interfaces** and contracts
 3. **Plan testing strategy** for new implementation
 4. **Document architecture decisions** and rationale
+
+#### **Step 4: Design testing strategy for component strategy checking**
+1. **Consider potential long term maintenance burden**
+2. **Identify existing component features we will rely on**
+3. **Design a test case for each each identified feature**
 
 ### **Success Criteria for Architecture Decision**
 
@@ -664,17 +441,18 @@ Phase 1.2 has successfully established:
    - **Accessibility**: Screen reader support, high contrast, large text options
 
 #### **UI Components to Implement**
-- **Large Send Button**: Prominent text sending control
+- **Large Send Button**: Prominent, trembling tolerant text sending control
 - **Message Display**: Simplified conversation view (reuse existing logic)
 - **Input Field**: Large, high-contrast text input
 - **No Menus**: Zero menu inflation or navigation options
-- **Voice Note Button**: Hold-to-record with visual feedback (Phase 2.4)
+- Deferred: **Voice Note Button**: Hold-to-record with visual feedback (Phase 2.4)
 
 ### **Phase 2.2: Component Reuse Integration**
 
 #### **Existing Components to Leverage**
 - **ConversationViewModel**: Existing message handling, thread management
 - **ConversationRepository**: Existing data access, message sending
+- **ConversationRecipientRepository**: Existing data access, recipient management
 - **Backend Services**: Zero changes to crypto, network, storage
 - **UI Logic**: Reuse existing conversation display and input handling
 
@@ -689,6 +467,7 @@ Phase 1.2 has successfully established:
 ### **Phase 2.4: Voice Notes & Advanced Features**
 
 #### **Voice Note Implementation**
+- **UX and UI**: May require several UX and UI design rounds
 - **Voice Recording**: Hold-to-record interface with visual feedback
 - **Audio Playback**: Simple audio playback controls
 - **Accessibility**: Large controls, clear visual indicators
@@ -726,18 +505,6 @@ Phase 1.2 has successfully established:
 - ✅ **Stability**: Reliable message handling without crashes
 - ✅ **Integration**: Seamless integration with existing Signal infrastructure
 
-### **📅 Phase 2 Timeline**
-
-#### **Week 3: Core Implementation**
-- **Days 1-2**: Create AccessibilityModeActivity and basic layout
-- **Days 3-4**: Integrate with existing ConversationViewModel
-- **Day 5**: Basic message sending/receiving functionality
-
-#### **Week 4: UI Refinement**
-- **Days 1-2**: Implement accessibility-optimized UI components
-- **Days 3-4**: Add attachment handling (voice notes in Phase 2.4)
-- **Day 5**: Testing and bug fixes
-
 ### **🚀 Ready to Begin Phase 2**
 
 Phase 1.2 has successfully established:
@@ -746,9 +513,9 @@ Phase 1.2 has successfully established:
 - **Proven architecture patterns** for Compose UI and state management
 - **Solid foundation** for building the parallel accessibility interface
 
-**Next Phase Focus**: Create `AccessibilityActivity` that leverages existing conversation components while providing dedicated accessibility UI.
+**Next Phase Focus**: Create `AccessibilityModeActivity` that leverages existing conversation components while providing dedicated accessibility UI.
 
-**Confidence Level**: **VERY HIGH** - All Phase 1.2 objectives completed successfully, architecture proven, ready for Phase 2 implementation.
+**Confidence Level**: **VERY HIGH** - Phase basic 1.2 objectives completed successfully, architecture proven, ready for Phase 2 implementation.
 
 ---
 
@@ -787,58 +554,7 @@ Phase 1.2 has successfully established:
 
 #### **2. SignalStore Integration ✅ IMPLEMENTED**
 - **Integration**: AccessibilityModeValues fully integrated into SignalStore
-- **Backup Support**: Settings automatically included in Signal backups
-- **Initialization**: Proper initialization sequence implemented
 
-**✅ IMPLEMENTATION STATUS**:
-- **Complete Integration**: AccessibilityModeValues fully integrated into SignalStore
-- **Backup Support**: Settings automatically included in Signal backups
-- **Initialization**: Proper initialization sequence implemented
-- **Ready for Use**: Can be accessed via `SignalStore.accessibilityMode`
-
-#### **3. Settings UI Integration ✅ IMPLEMENTED**
-- **Main Settings Screen**: Added accessibility mode entry in AppSettingsFragment
-- **Navigation Graph**: Integrated into existing navigation with proper animations
-- **Positioning**: Placed between "Appearance" and "Chats" for logical grouping
-
-#### **4. AccessibilitySettingsFragment Implementation ✅ IMPLEMENTED**
-- **Fragment**: `AccessibilityModeSettingsFragment.kt` with Compose UI
-- **Callbacks**: `AccessibilityModeSettingsCallbacks.kt` for user interactions
-- **Integration**: Properly integrated with ViewModel and navigation
-
-#### **5. AccessibilitySettingsViewModel ✅ IMPLEMENTED**
-- **ViewModel**: `AccessibilityModeSettingsViewModel.kt` with StateFlow and SignalStore integration
-- **State Management**: Proper state updates and UI binding
-- **Business Logic**: Clean separation of concerns with ViewModel pattern
-```
-
-### **Benefits of This Approach**
-
-1. **Follows Existing Pattern**: Uses same architecture as other Signal settings
-2. **Data-Driven**: Minimal changes to existing code, mostly new additions
-3. **Encrypted Storage**: Settings automatically encrypted and backed up
-4. **Type Safety**: Compile-time checking of setting types
-5. **Upstream Friendly**: Easy to rebase and maintain
-6. **Consistent UI**: Follows existing settings UI patterns
-
-### **Implementation Steps ✅ COMPLETED**
-
-1. ✅ **Create AccessibilityValues class** following SignalStore pattern
-2. ✅ **Integrate with SignalStore** (minimal changes to existing files)
-3. ✅ **Add navigation entry** in main settings screen
-4. ✅ **Create AccessibilitySettingsFragment** with Compose UI
-5. ✅ **Implement AccessibilitySettingsViewModel** with SignalStore integration
-6. ✅ **Add navigation action** in XML navigation graph
-
-### **Risk Assessment: LOW**
-
-- **Pattern Consistency**: Follows established Signal settings architecture
-- **Minimal Changes**: Only adds new code, doesn't modify existing patterns
-- **Data Safety**: Uses existing encrypted storage system
-- **UI Consistency**: Follows established settings UI patterns
-- **Maintenance**: Easy to rebase and maintain with upstream changes
-
----
 
 ## L) Current GUI Architecture Analysis & Reuse Strategy
 
@@ -1460,232 +1176,4 @@ item {
 
 ---
 
-## O) Testing Infrastructure & TDD Implementation Strategy
 
-### **Current Test Coverage Status** ✅
-
-**Total Tests**: 19 tests across 4 test classes
-**Pass Rate**: 100% ✅
-**Coverage**: Data layer, business logic, UI state, and Fragment structure
-
-#### **1. Completed Test Classes**
-- **`AccessibilityModeValuesTest`** - 6 tests ✅ (SignalStore integration, CRUD operations)
-- **`AccessibilityModeSettingsViewModelTest`** - 5 tests ✅ (ViewModel state management, SignalStore interactions)
-- **`AccessibilityModeSettingsStateTest`** - 6 tests ✅ (Data class equality, copying, hash codes)
-- **`AccessibilityModeSettingsFragmentTest`** - 2 tests ✅ (Class inheritance, compilation verification)
-
-### **Signal Testing Framework - Lessons Learned**
-
-#### **1. Testing Dependencies & Configuration**
-**Gradle Configuration** (`app/build.gradle.kts`):
-```kotlin
-testImplementation(libs.junit.junit)                    // JUnit 4
-testImplementation(testLibs.robolectric.robolectric)   // Android framework mocking
-testImplementation(testLibs.mockk)                      // Mocking framework
-testImplementation(testLibs.assertk)                    // Assertion library
-testImplementation(testLibs.androidx.test.core)         // Android test core
-testImplementation(testLibs.androidx.test.core.ktx)    // Android test core KTX
-testImplementation(libs.androidx.compose.ui.test.junit4) // Compose UI testing (limited)
-```
-
-#### **2. Test Runner & Configuration**
-**Unit Tests (Robolectric)**:
-```kotlin
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE, application = Application::class)
-class AccessibilityModeValuesTest {
-  @get:Rule
-  val appDependencies = MockAppDependenciesRule()
-
-  // Test implementation
-}
-```
-
-**Instrumentation Tests (Android)**:
-```kotlin
-@RunWith(AndroidJUnit4::class)
-class AccessibilityModeSettingsScreenTest {
-  @get:Rule
-  val composeTestRule = createEmptyComposeRule()
-
-  // UI testing with actual device/emulator
-}
-```
-
-#### **3. MockK Usage Patterns - Refined**
-**SignalStore Mocking**:
-```kotlin
-// Mock the store
-val keyValueStore = mockk<KeyValueStore>()
-
-// Mock the Writer for write operations
-val mockWrite = mockk<KeyValueStore.Writer>()
-every { keyValueStore.beginWrite() } returns mockWrite
-every { mockWrite.putBoolean(any(), any()) } returns mockWrite
-every { mockWrite.putLong(any(), any()) } returns mockWrite
-every { mockWrite.putString(any(), any()) } returns mockWrite
-every { mockWrite.apply() } returns Unit
-
-// Mock the getters
-every { keyValueStore.getBoolean(AccessibilityModeValues.ACCESSIBILITY_MODE_ENABLED, false) } returns false
-every { keyValueStore.getLong(AccessibilityModeValues.ACCESSIBILITY_THREAD_ID, -1L) } returns -1L
-every { keyValueStore.getString(AccessibilityModeValues.ACCESSIBILITY_THREAD_TYPE, "") } returns ""
-```
-
-**ViewModel Mocking**:
-```kotlin
-// Mock SignalStore.accessibilityMode
-val mockAccessibilityModeValues = mockk<AccessibilityModeValues>()
-mockkObject(SignalStore)
-every { SignalStore.accessibilityMode } returns mockAccessibilityModeValues
-
-// Mock getters and setters
-every { mockAccessibilityModeValues.isAccessibilityModeEnabled } returns false
-every { mockAccessibilityModeValues.accessibilityThreadId } returns -1L
-every { mockAccessibilityModeValues.isAccessibilityModeEnabled = any() } answers { }
-every { mockAccessibilityModeValues.accessibilityThreadId = any() } answers { }
-```
-
-### **Critical Testing Limitations Discovered** ⚠️
-
-#### **1. Compose UI Testing with Robolectric**
-**Problem**: `createComposeRule()` is fundamentally incompatible with Robolectric unit tests
-- **Root Cause**: `createComposeRule()` tries to launch `ActivityScenario` internally
-- **Robolectric Limitation**: Cannot resolve activities in unit test context
-- **Error**: `java.lang.RuntimeException: Unable to resolve activity for Intent`
-
-**Attempted Solutions**:
-- ❌ Adding `MockAppDependenciesRule()` - Doesn't fix activity resolution
-- ❌ Using `createEmptyComposeRule()` - Only works in instrumentation tests
-- ❌ Different test configurations - No combination works with Robolectric
-
-#### **2. Compose UI Testing Alternatives**
-**Option 1: Instrumentation Tests** (Recommended)
-- Move UI tests to `androidTest` directory
-- Use `@RunWith(AndroidJUnit4::class)` and `createEmptyComposeRule()`
-- Requires actual device/emulator (slower, more complex)
-
-**Option 2: Test UI Logic Without Compose**
-- Test ViewModel and State classes thoroughly ✅ (IMPLEMENTED)
-- Test Fragment lifecycle and ViewModel integration ✅ (IMPLEMENTED)
-- Skip actual Compose UI rendering tests for now
-
-**Option 3: Use Robolectric's Compose Support**
-- Try `createAndroidComposeRule()` with Robolectric
-- May require additional configuration (untested)
-
-### **Current Testing Strategy** 🎯
-
-#### **Phase 1: Unit Testing (COMPLETED ✅)**
-- **Data Layer**: `AccessibilityModeValues` with SignalStore integration
-- **Business Logic**: `AccessibilityModeSettingsViewModel` with state management
-- **UI State**: `AccessibilityModeSettingsState` data classes
-- **Fragment Structure**: Basic class verification and inheritance
-
-#### **Phase 2: Integration Testing (COMPLETED ✅)**
-- **Fragment-ViewModel Integration**: Verify proper lifecycle management
-- **SignalStore Integration**: Test data persistence and retrieval
-- **State Flow**: Test reactive updates and UI state changes
-
-#### **Phase 3: UI Testing (DEFERRED)**
-- **Compose UI Testing**: Move to instrumentation tests when needed
-- **End-to-End Testing**: Test complete user flows
-- **Accessibility Testing**: Test with actual accessibility tools
-
-### **Testing Best Practices - Refined**
-
-#### **1. Test Structure & Organization**
-```kotlin
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE, application = Application::class)
-class ComponentTest {
-  @get:Rule
-  val appDependencies = MockAppDependenciesRule()
-
-  private lateinit var mockDependency: Dependency
-
-  @Before
-  fun setUp() {
-    mockDependency = mockk<Dependency>()
-    // Setup mocks
-  }
-
-  @After
-  fun tearDown() {
-    unmockkAll()
-  }
-
-  @Test
-  fun testFunctionality() {
-    // Given
-    // When
-    // Then
-  }
-}
-```
-
-#### **2. MockK Best Practices**
-- **Setup Order**: Mock dependencies before instantiating test subjects
-- **Cleanup**: Always use `unmockkAll()` to prevent test interference
-- **Type Safety**: Use `any()` with proper type parameters
-- **Verification**: Use `verify` to ensure expected interactions
-
-#### **3. SignalStore Testing Patterns**
-- **Object Mocking**: `mockkObject(SignalStore)` for companion object access
-- **Instance Mocking**: `mockk<Component>()` for instance methods
-- **Property Delegates**: Mock underlying `KeyValueStore` calls
-- **State Verification**: Test both getter and setter operations
-
-### **Running Tests** 🚀
-
-#### **Command Line**:
-```bash
-# Run all tests
-./gradlew :Signal-Android:testPlayProdDebugUnitTest
-
-# Run specific test class
-./gradlew :Signal-Android:testPlayProdDebugUnitTest --tests "org.thoughtcrime.securesms.components.settings.app.accessibility.*"
-
-# Run specific test method
-./gradlew :Signal-Android:testPlayProdDebugUnitTest --tests "AccessibilityModeValuesTest.test_default_values_on_first_launch"
-```
-
-#### **Android Studio**:
-- Right-click on test file → "Run 'AccessibilityModeValuesTest'"
-- Right-click on test method → "Run 'test_default_values_on_first_launch'"
-- Use test runner for debugging and step-through testing
-
-### **Testing Infrastructure Benefits** 💪
-
-#### **1. Quality Assurance**
-- **Regression Prevention**: 19 tests catch breaking changes
-- **Refactoring Safety**: Tests ensure functionality preservation
-- **Documentation**: Tests serve as living documentation of expected behavior
-
-#### **2. Development Confidence**
-- **TDD Implementation**: Clear boundaries and testable components
-- **Incremental Building**: Can build and test step by step
-- **Integration Safety**: Tests verify components work with Signal's architecture
-
-#### **3. Maintenance & Upstream Compatibility**
-- **Change Detection**: Tests identify when Signal interfaces change
-- **Rebase Safety**: Tests verify our code works after Signal updates
-- **Regression Detection**: Automated testing catches integration issues
-
-### **Next Testing Priorities** 📋
-
-#### **Immediate (Phase 1.2)**
-1. **Navigation Integration Testing** - Test Fragment navigation and menu integration
-2. **Settings Menu Testing** - Verify accessibility mode appears in main settings
-3. **State Persistence Testing** - Test settings survive app restarts
-
-#### **Future (Phase 2+)**
-1. **Instrumentation Tests** - Move UI tests to `androidTest` directory
-2. **End-to-End Testing** - Test complete user flows from settings to functionality
-3. **Accessibility Testing** - Test with actual accessibility tools and screen readers
-
-### **Conclusion** 🎯
-
-Our current testing infrastructure provides **comprehensive coverage** of core functionality with **100% test pass rate**. The Compose UI testing limitations are **architectural constraints**, not implementation problems. We can continue building with confidence using our robust unit and integration test suite.
-
-**Recommendation**: Continue with current testing approach for Phase 1.2, defer UI testing until we have a working UI and can properly implement instrumentation tests.
