@@ -14,7 +14,7 @@ import org.thoughtcrime.securesms.R
 
 /**
  * Fragment for the accessibility conversation interface.
- * 
+ *
  * This fragment will host the conversation UI components:
  * - Message display area
  * - Input field
@@ -33,7 +33,7 @@ class AccessibilityModeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         // Initialize the conversation UI
         // TODO: Add ViewModel integration and conversation logic
     }

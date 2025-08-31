@@ -8733,6 +8733,7 @@
     <string name="preferences__accessibility_mode_no_chat_selected">No chat selected yet.</string>
     <string name="preferences__accessibility_mode_no_chats_available">No chats yet. Create a chat first; send a message to someone.</string>
     <string name="preferences__accessibility_mode_select_chat">Select Chat</string>
+    <string name="preferences__accessibility_mode_start">Start Accessibility Mode</string>
 
     <!-- EOF -->
 </resources>

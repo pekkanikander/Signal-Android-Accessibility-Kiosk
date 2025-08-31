@@ -10,6 +10,7 @@ interface AccessibilityModeSettingsCallbacks {
   fun onNavigationClick() = Unit
   fun onAccessibilityModeToggled(enabled: Boolean) = Unit
   fun onThreadSelectionClick() = Unit
+  fun onStartAccessibilityModeClick() = Unit
 
   object Empty : AccessibilityModeSettingsCallbacks
 }

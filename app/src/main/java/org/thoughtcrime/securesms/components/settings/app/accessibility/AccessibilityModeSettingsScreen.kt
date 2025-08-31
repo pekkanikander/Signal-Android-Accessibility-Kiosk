@@ -97,6 +97,21 @@ fun AccessibilityModeSettingsScreen(
       }
 
       item {
+        // Start Accessibility Mode button - only enabled when accessibility mode is enabled and chat is selected
+        Rows.TextRow(
+          text = stringResource(R.string.preferences__accessibility_mode_start),
+          icon = ImageVector.vectorResource(R.drawable.symbol_arrow_right_24),
+          onClick = { callbacks.onStartAccessibilityModeClick() },
+          enabled = state.isAccessibilityModeEnabled && state.threadId != -1L,
+          modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.BUTTON_START_ACCESSIBILITY_MODE)
+        )
+      }
+
+      item {
+        Dividers.Default()
+      }
+
+      item {
         // Description text
         Text(
           text = stringResource(R.string.preferences__accessibility_mode_description),

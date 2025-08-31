@@ -23,10 +23,10 @@ class AccessibilityModeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_accessibility_mode)
-        
+
         // Hide action bar to remove back button
         supportActionBar?.hide()
-        
+
         // Add the accessibility fragment if this is the first creation
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()

@@ -76,5 +76,11 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
       }
       viewModel.setAccessibilityMode(enabled)
     }
+
+    override fun onStartAccessibilityModeClick() {
+      // Launch the accessibility activity
+      val intent = android.content.Intent(requireContext(), org.thoughtcrime.securesms.accessibility.AccessibilityModeActivity::class.java)
+      startActivity(intent)
+    }
   }
 }
