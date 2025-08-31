@@ -104,19 +104,24 @@ class AccessibilityModeViewModel : ViewModel() {
                     SignalDatabase.messages.getConversation(threadId, 0L, 50L)
                 ).use { reader ->
                     reader.forEach { record ->
-                        messageRecords.add(record)
+                        // Filter out system messages like "You started this chat"
+                        if (record.type != org.thoughtcrime.securesms.database.MessageTypes.JOINED_TYPE) {
+                            messageRecords.add(record)
+                        }
                     }
                 }
 
-                // Convert MessageRecord to AccessibilityMessage
-                val accessibilityMessages = messageRecords.map { record ->
-                    AccessibilityMessage(
-                        id = record.id,
-                        text = record.getDisplayBody(org.thoughtcrime.securesms.dependencies.AppDependencies.application).toString(),
-                        isFromSelf = record.isOutgoing,
-                        timestamp = record.dateReceived
-                    )
-                }
+                // Convert MessageRecord to AccessibilityMessage and sort by timestamp (oldest first)
+                val accessibilityMessages = messageRecords
+                    .sortedBy { it.dateReceived } // Sort by timestamp, oldest first
+                    .map { record ->
+                        AccessibilityMessage(
+                            id = record.id,
+                            text = record.getDisplayBody(org.thoughtcrime.securesms.dependencies.AppDependencies.application).toString(),
+                            isFromSelf = record.isOutgoing,
+                            timestamp = record.dateReceived
+                        )
+                    }
 
                 // Update state on main thread
                 _state.value = _state.value.copy(
