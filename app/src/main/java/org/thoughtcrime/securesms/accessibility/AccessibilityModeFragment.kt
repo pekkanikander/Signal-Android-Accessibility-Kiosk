@@ -12,30 +12,71 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.kotlin.subscribeBy
 import kotlinx.coroutines.launch
 import org.thoughtcrime.securesms.R
-import org.thoughtcrime.securesms.accessibility.AccessibilityMessageAdapter
+import org.thoughtcrime.securesms.conversation.colors.ChatColors
+import org.thoughtcrime.securesms.conversation.colors.ChatColorsPalette
+import org.thoughtcrime.securesms.conversation.v2.ConversationAdapterV2
+import org.thoughtcrime.securesms.conversation.v2.ConversationRecipientRepository
+import org.thoughtcrime.securesms.conversation.v2.ConversationRepository
+import org.thoughtcrime.securesms.conversation.v2.ConversationViewModel
+import org.thoughtcrime.securesms.conversation.ScheduledMessagesRepository
+import org.thoughtcrime.securesms.messagerequests.MessageRequestRepository
 
 /**
  * Fragment for the accessibility conversation interface.
  *
- * This fragment will host the conversation UI components:
- * - Message display area
- * - Input field
- * - Send button
- * - Accessibility-optimized controls
+ * This fragment uses Signal's proven components directly:
+ * - ConversationViewModel for data management
+ * - ConversationAdapterV2 for message display
+ * - AccessibilityItemClickListener for simplified interaction
  */
 class AccessibilityModeFragment : Fragment() {
 
-    private val viewModel: AccessibilityModeViewModel by viewModels()
     private lateinit var messageList: RecyclerView
     private lateinit var messageInput: EditText
     private lateinit var sendButton: Button
-    private lateinit var messageAdapter: AccessibilityMessageAdapter
+    private var threadId: Long = -1L
+
+    // Use Signal's components directly
+    private val conversationRecipientRepository: ConversationRecipientRepository by lazy {
+        ConversationRecipientRepository(threadId)
+    }
+
+    private val messageRequestRepository: MessageRequestRepository by lazy {
+        MessageRequestRepository(requireContext())
+    }
+
+    private val viewModel: ConversationViewModel by lazy {
+        ConversationViewModel(
+            threadId = threadId,
+            requestedStartingPosition = 0, // Start from beginning
+            repository = ConversationRepository(localContext = requireContext(), isInBubble = false),
+            recipientRepository = conversationRecipientRepository,
+            messageRequestRepository = messageRequestRepository,
+            scheduledMessagesRepository = ScheduledMessagesRepository(),
+            initialChatColors = ChatColorsPalette.Bubbles.default.withId(ChatColors.Id.Auto)
+        )
+    }
+
+    private val adapter: ConversationAdapterV2 by lazy {
+        ConversationAdapterV2(
+            lifecycleOwner = viewLifecycleOwner,
+            requestManager = Glide.with(this),
+            clickListener = AccessibilityItemClickListener(),
+            hasWallpaper = false, // No wallpaper for accessibility
+            colorizer = org.thoughtcrime.securesms.conversation.colors.Colorizer(),
+            startExpirationTimeout = viewModel::startExpirationTimeout,
+            chatColorsDataProvider = viewModel::chatColorsSnapshot,
+            displayDialogFragment = { /* No dialogs for accessibility */ }
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -45,44 +86,73 @@ class AccessibilityModeFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_accessibility_mode, container, false)
     }
 
-        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Get the selected thread ID from arguments
+        threadId = arguments?.getLong("selected_thread_id", -1L) ?: -1L
+        if (threadId == -1L) {
+            android.util.Log.e("AccessibilityFragment", "No thread ID provided")
+            return
+        }
+
+        android.util.Log.d("AccessibilityFragment", "Setting up accessibility mode for thread: $threadId")
 
         // Initialize views
         messageList = view.findViewById(R.id.message_list)
         messageInput = view.findViewById(R.id.message_input)
         sendButton = view.findViewById(R.id.send_button)
 
-        // Setup RecyclerView with Signal's existing message layouts
+        // Setup RecyclerView with Signal's adapter
         messageList.layoutManager = LinearLayoutManager(context)
-        messageAdapter = AccessibilityMessageAdapter()
-        messageList.adapter = messageAdapter
+        messageList.adapter = adapter
+        adapter.setPagingController(viewModel.pagingController)
 
         // Setup send button
         sendButton.setOnClickListener {
             val messageText = messageInput.text.toString().trim()
             if (messageText.isNotEmpty()) {
-                viewModel.sendMessage(messageText)
+                // Use Signal's sendMessage method with minimal parameters
+                viewModel.recipient
+                    .firstElement()
+                    .subscribeBy(
+                        onSuccess = { recipient ->
+                            viewModel.sendMessage(
+                                metricId = null,
+                                threadRecipient = recipient,
+                                body = messageText,
+                                slideDeck = null,
+                                scheduledDate = 0L,
+                                messageToEdit = null,
+                                quote = null,
+                                mentions = emptyList(),
+                                bodyRanges = null,
+                                contacts = emptyList(),
+                                linkPreviews = emptyList(),
+                                preUploadResults = emptyList(),
+                                isViewOnce = false
+                            ).subscribe()
+                        }
+                    )
                 messageInput.text.clear()
             }
         }
 
-        // Get the selected thread ID from arguments and set it in the ViewModel
-        arguments?.let { args ->
-            val selectedThreadId = args.getLong("selected_thread_id", -1L)
-            if (selectedThreadId != -1L) {
-                android.util.Log.d("AccessibilityFragment", "Setting thread ID: $selectedThreadId")
-                viewModel.setThreadId(selectedThreadId)
-            }
-        }
+        // Observe recipient for UI updates
+        viewModel.recipient
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeBy(
+                onNext = { recipient ->
+                    android.util.Log.d("AccessibilityFragment", "Recipient updated: ${recipient.getDisplayName(requireContext())}")
+                    // Could update conversation header here if needed
+                }
+            )
 
-        // Observe ViewModel state
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.state.collect { state ->
-                // Update UI based on state
-                messageAdapter.updateMessages(state.messages)
-                android.util.Log.d("AccessibilityFragment", "State updated: $state")
-            }
-        }
+        // For now, keep send button always enabled for accessibility
+        // We can add proper input state handling later if needed
+        sendButton.isEnabled = true
+        messageInput.isEnabled = true
+
+        android.util.Log.d("AccessibilityFragment", "Accessibility mode setup complete")
     }
 }
