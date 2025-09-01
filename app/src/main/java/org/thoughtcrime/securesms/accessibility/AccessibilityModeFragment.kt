@@ -28,6 +28,7 @@ import org.thoughtcrime.securesms.conversation.v2.ConversationRepository
 import org.thoughtcrime.securesms.conversation.v2.ConversationViewModel
 import org.thoughtcrime.securesms.conversation.ScheduledMessagesRepository
 import org.thoughtcrime.securesms.messagerequests.MessageRequestRepository
+import org.thoughtcrime.securesms.util.SignalLocalMetrics
 
 /**
  * Fragment for the accessibility conversation interface.
@@ -49,6 +50,12 @@ class AccessibilityModeFragment : Fragment() {
     private lateinit var messageRequestRepository: MessageRequestRepository
     private lateinit var viewModel: ConversationViewModel
     private lateinit var adapter: ConversationAdapterV2
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Initialize Signal's metrics system before creating ViewModel
+        SignalLocalMetrics.ConversationOpen.start()
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
