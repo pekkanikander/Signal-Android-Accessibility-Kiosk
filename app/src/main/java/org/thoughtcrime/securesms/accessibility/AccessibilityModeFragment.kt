@@ -44,39 +44,11 @@ class AccessibilityModeFragment : Fragment() {
     private lateinit var sendButton: Button
     private var threadId: Long = -1L
 
-    // Use Signal's components directly
-    private val conversationRecipientRepository: ConversationRecipientRepository by lazy {
-        ConversationRecipientRepository(threadId)
-    }
-
-    private val messageRequestRepository: MessageRequestRepository by lazy {
-        MessageRequestRepository(requireContext())
-    }
-
-    private val viewModel: ConversationViewModel by lazy {
-        ConversationViewModel(
-            threadId = threadId,
-            requestedStartingPosition = 0, // Start from beginning
-            repository = ConversationRepository(localContext = requireContext(), isInBubble = false),
-            recipientRepository = conversationRecipientRepository,
-            messageRequestRepository = messageRequestRepository,
-            scheduledMessagesRepository = ScheduledMessagesRepository(),
-            initialChatColors = ChatColorsPalette.Bubbles.default.withId(ChatColors.Id.Auto)
-        )
-    }
-
-    private val adapter: ConversationAdapterV2 by lazy {
-        ConversationAdapterV2(
-            lifecycleOwner = viewLifecycleOwner,
-            requestManager = Glide.with(this),
-            clickListener = AccessibilityItemClickListener(),
-            hasWallpaper = false, // No wallpaper for accessibility
-            colorizer = org.thoughtcrime.securesms.conversation.colors.Colorizer(),
-            startExpirationTimeout = viewModel::startExpirationTimeout,
-            chatColorsDataProvider = viewModel::chatColorsSnapshot,
-            displayDialogFragment = { /* No dialogs for accessibility */ }
-        )
-    }
+    // Signal's components - initialized after we have threadId
+    private lateinit var conversationRecipientRepository: ConversationRecipientRepository
+    private lateinit var messageRequestRepository: MessageRequestRepository
+    private lateinit var viewModel: ConversationViewModel
+    private lateinit var adapter: ConversationAdapterV2
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -97,6 +69,31 @@ class AccessibilityModeFragment : Fragment() {
         }
 
         android.util.Log.d("AccessibilityFragment", "Setting up accessibility mode for thread: $threadId")
+
+        // Initialize Signal's components with the correct threadId
+        conversationRecipientRepository = ConversationRecipientRepository(threadId)
+        messageRequestRepository = MessageRequestRepository(requireContext())
+        
+        viewModel = ConversationViewModel(
+            threadId = threadId,
+            requestedStartingPosition = 0, // Start from beginning
+            repository = ConversationRepository(localContext = requireContext(), isInBubble = false),
+            recipientRepository = conversationRecipientRepository,
+            messageRequestRepository = messageRequestRepository,
+            scheduledMessagesRepository = ScheduledMessagesRepository(),
+            initialChatColors = ChatColorsPalette.Bubbles.default.withId(ChatColors.Id.Auto)
+        )
+
+        adapter = ConversationAdapterV2(
+            lifecycleOwner = viewLifecycleOwner,
+            requestManager = Glide.with(this),
+            clickListener = AccessibilityItemClickListener(),
+            hasWallpaper = false, // No wallpaper for accessibility
+            colorizer = org.thoughtcrime.securesms.conversation.colors.Colorizer(),
+            startExpirationTimeout = viewModel::startExpirationTimeout,
+            chatColorsDataProvider = viewModel::chatColorsSnapshot,
+            displayDialogFragment = { /* No dialogs for accessibility */ }
+        )
 
         // Initialize views
         messageList = view.findViewById(R.id.message_list)
