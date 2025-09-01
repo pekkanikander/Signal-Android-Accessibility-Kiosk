@@ -13,11 +13,12 @@ import android.widget.Button
 import android.widget.EditText
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.ConcatAdapter
 import com.bumptech.glide.Glide
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.kotlin.subscribeBy
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.launch
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversation.colors.ChatColors
@@ -29,6 +30,9 @@ import org.thoughtcrime.securesms.conversation.v2.ConversationViewModel
 import org.thoughtcrime.securesms.conversation.ScheduledMessagesRepository
 import org.thoughtcrime.securesms.messagerequests.MessageRequestRepository
 import org.thoughtcrime.securesms.util.SignalLocalMetrics
+import org.thoughtcrime.securesms.dependencies.AppDependencies
+import org.thoughtcrime.securesms.notifications.v2.ConversationId
+import androidx.recyclerview.widget.ConversationLayoutManager
 
 /**
  * Fragment for the accessibility conversation interface.
@@ -44,12 +48,14 @@ class AccessibilityModeFragment : Fragment() {
     private lateinit var messageInput: EditText
     private lateinit var sendButton: Button
     private var threadId: Long = -1L
+    private var previousMessageCount = 0
 
     // Signal's components - initialized after we have threadId
     private lateinit var conversationRecipientRepository: ConversationRecipientRepository
     private lateinit var messageRequestRepository: MessageRequestRepository
     private lateinit var viewModel: ConversationViewModel
     private lateinit var adapter: ConversationAdapterV2
+    private lateinit var layoutManager: ConversationLayoutManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,10 +83,13 @@ class AccessibilityModeFragment : Fragment() {
 
         android.util.Log.d("AccessibilityFragment", "Setting up accessibility mode for thread: $threadId")
 
+        // Suppress notifications for this thread to prevent popups
+        AppDependencies.messageNotifier.setVisibleThread(ConversationId.forConversation(threadId))
+
         // Initialize Signal's components with the correct threadId
         conversationRecipientRepository = ConversationRecipientRepository(threadId)
         messageRequestRepository = MessageRequestRepository(requireContext())
-        
+
         viewModel = ConversationViewModel(
             threadId = threadId,
             requestedStartingPosition = 0, // Start from beginning
@@ -107,10 +116,41 @@ class AccessibilityModeFragment : Fragment() {
         messageInput = view.findViewById(R.id.message_input)
         sendButton = view.findViewById(R.id.send_button)
 
-        // Setup RecyclerView with Signal's adapter
-        messageList.layoutManager = LinearLayoutManager(context)
+        // Setup RecyclerView with Signal's configuration
+        layoutManager = ConversationLayoutManager(requireContext())
+        messageList.setHasFixedSize(false)
+        messageList.layoutManager = layoutManager
         messageList.adapter = adapter
         adapter.setPagingController(viewModel.pagingController)
+
+        // Observe conversation data and update adapter
+        viewModel.conversationThreadState
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .flatMapObservable { it.items.data }
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeBy(
+                onNext = { messages ->
+                    android.util.Log.d("AccessibilityFragment", "Received ${messages.size} messages, updating adapter")
+                    adapter.submitList(messages) {
+                        android.util.Log.d("AccessibilityFragment", "Adapter updated with ${messages.size} messages")
+
+                        // Auto-scroll to bottom if new messages were added
+                        if (messages.size > previousMessageCount) {
+                            android.util.Log.d("AccessibilityFragment", "New messages detected, scrolling to bottom")
+                            messageList.post {
+                                layoutManager.scrollToPositionWithOffset(0, 0) {
+                                    android.util.Log.d("AccessibilityFragment", "Scrolled to bottom")
+                                }
+                            }
+                        }
+                        previousMessageCount = messages.size
+                    }
+                },
+                onError = { error ->
+                    android.util.Log.e("AccessibilityFragment", "Error loading conversation data", error)
+                }
+            )
 
         // Setup send button
         sendButton.setOnClickListener {
@@ -158,5 +198,11 @@ class AccessibilityModeFragment : Fragment() {
         messageInput.isEnabled = true
 
         android.util.Log.d("AccessibilityFragment", "Accessibility mode setup complete")
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Clear the visible thread when leaving accessibility mode
+        AppDependencies.messageNotifier.setVisibleThread(null)
     }
 }
