@@ -19,6 +19,7 @@ import com.bumptech.glide.Glide
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.kotlin.subscribeBy
 import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
 import kotlinx.coroutines.launch
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversation.colors.ChatColors
@@ -33,6 +34,7 @@ import org.thoughtcrime.securesms.util.SignalLocalMetrics
 import org.thoughtcrime.securesms.dependencies.AppDependencies
 import org.thoughtcrime.securesms.notifications.v2.ConversationId
 import androidx.recyclerview.widget.ConversationLayoutManager
+import org.thoughtcrime.securesms.conversation.MarkReadHelper
 
 /**
  * Fragment for the accessibility conversation interface.
@@ -41,6 +43,7 @@ import androidx.recyclerview.widget.ConversationLayoutManager
  * - ConversationViewModel for data management
  * - ConversationAdapterV2 for message display
  * - AccessibilityItemClickListener for simplified interaction
+ * - MarkReadHelper for proper read status management
  */
 class AccessibilityModeFragment : Fragment() {
 
@@ -56,6 +59,10 @@ class AccessibilityModeFragment : Fragment() {
     private lateinit var viewModel: ConversationViewModel
     private lateinit var adapter: ConversationAdapterV2
     private lateinit var layoutManager: ConversationLayoutManager
+    private lateinit var markReadHelper: MarkReadHelper
+
+    // RxJava subscription management
+    private val disposables = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,6 +118,10 @@ class AccessibilityModeFragment : Fragment() {
             displayDialogFragment = { /* No dialogs for accessibility */ }
         )
 
+        // Initialize MarkReadHelper for proper read status management
+        markReadHelper = MarkReadHelper(ConversationId.forConversation(threadId), requireContext(), viewLifecycleOwner)
+        markReadHelper.ignoreViewReveals() // Ignore during initial setup
+
         // Initialize views
         messageList = view.findViewById(R.id.message_list)
         messageInput = view.findViewById(R.id.message_input)
@@ -123,74 +134,96 @@ class AccessibilityModeFragment : Fragment() {
         messageList.adapter = adapter
         adapter.setPagingController(viewModel.pagingController)
 
-        // Observe conversation data and update adapter
-        viewModel.conversationThreadState
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .flatMapObservable { it.items.data }
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribeBy(
-                onNext = { messages ->
-                    android.util.Log.d("AccessibilityFragment", "Received ${messages.size} messages, updating adapter")
-                    adapter.submitList(messages) {
-                        android.util.Log.d("AccessibilityFragment", "Adapter updated with ${messages.size} messages")
+        // Add scroll listener for mark as read functionality
+        messageList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                // Mark messages as read when scrolled to them
+                val timestamp = MarkReadHelper.getLatestTimestamp(adapter, layoutManager)
+                timestamp.ifPresent(markReadHelper::onViewsRevealed)
+            }
+        })
 
-                        // Auto-scroll to bottom if new messages were added
-                        if (messages.size > previousMessageCount) {
-                            android.util.Log.d("AccessibilityFragment", "New messages detected, scrolling to bottom")
-                            messageList.post {
-                                layoutManager.scrollToPositionWithOffset(0, 0) {
-                                    android.util.Log.d("AccessibilityFragment", "Scrolled to bottom")
+        // Observe conversation data and update adapter
+        disposables.add(
+            viewModel.conversationThreadState
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .flatMapObservable { it.items.data }
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeBy(
+                    onNext = { messages ->
+                        android.util.Log.d("AccessibilityFragment", "Received ${messages.size} messages, updating adapter")
+                        adapter.submitList(messages) {
+                            android.util.Log.d("AccessibilityFragment", "Adapter updated with ${messages.size} messages")
+
+                            // Auto-scroll to bottom if new messages were added
+                            if (messages.size > previousMessageCount) {
+                                android.util.Log.d("AccessibilityFragment", "New messages detected, scrolling to bottom")
+                                messageList.post {
+                                    layoutManager.scrollToPositionWithOffset(0, 0) {
+                                        android.util.Log.d("AccessibilityFragment", "Scrolled to bottom")
+                                    }
                                 }
                             }
+                            previousMessageCount = messages.size
+
+                            // Stop ignoring view reveals after initial setup
+                            if (messages.isNotEmpty()) {
+                                markReadHelper.stopIgnoringViewReveals(MarkReadHelper.getLatestTimestamp(adapter, layoutManager).orElse(null))
+                            }
                         }
-                        previousMessageCount = messages.size
+                    },
+                    onError = { error ->
+                        android.util.Log.e("AccessibilityFragment", "Error loading conversation data", error)
                     }
-                },
-                onError = { error ->
-                    android.util.Log.e("AccessibilityFragment", "Error loading conversation data", error)
-                }
-            )
+                )
+        )
 
         // Setup send button
         sendButton.setOnClickListener {
             val messageText = messageInput.text.toString().trim()
             if (messageText.isNotEmpty()) {
                 // Use Signal's sendMessage method with minimal parameters
-                viewModel.recipient
-                    .firstElement()
-                    .subscribeBy(
-                        onSuccess = { recipient ->
-                            viewModel.sendMessage(
-                                metricId = null,
-                                threadRecipient = recipient,
-                                body = messageText,
-                                slideDeck = null,
-                                scheduledDate = 0L,
-                                messageToEdit = null,
-                                quote = null,
-                                mentions = emptyList(),
-                                bodyRanges = null,
-                                contacts = emptyList(),
-                                linkPreviews = emptyList(),
-                                preUploadResults = emptyList(),
-                                isViewOnce = false
-                            ).subscribe()
-                        }
-                    )
+                disposables.add(
+                    viewModel.recipient
+                        .firstElement()
+                        .subscribeBy(
+                            onSuccess = { recipient ->
+                                disposables.add(
+                                    viewModel.sendMessage(
+                                        metricId = null,
+                                        threadRecipient = recipient,
+                                        body = messageText,
+                                        slideDeck = null,
+                                        scheduledDate = 0L,
+                                        messageToEdit = null,
+                                        quote = null,
+                                        mentions = emptyList(),
+                                        bodyRanges = null,
+                                        contacts = emptyList(),
+                                        linkPreviews = emptyList(),
+                                        preUploadResults = emptyList(),
+                                        isViewOnce = false
+                                    ).subscribe()
+                                )
+                            }
+                        )
+                )
                 messageInput.text.clear()
             }
         }
 
         // Observe recipient for UI updates
-        viewModel.recipient
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribeBy(
-                onNext = { recipient ->
-                    android.util.Log.d("AccessibilityFragment", "Recipient updated: ${recipient.getDisplayName(requireContext())}")
-                    // Could update conversation header here if needed
-                }
-            )
+        disposables.add(
+            viewModel.recipient
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeBy(
+                    onNext = { recipient ->
+                        android.util.Log.d("AccessibilityFragment", "Recipient updated: ${recipient.getDisplayName(requireContext())}")
+                        // Could update conversation header here if needed
+                    }
+                )
+        )
 
         // For now, keep send button always enabled for accessibility
         // We can add proper input state handling later if needed
@@ -202,6 +235,8 @@ class AccessibilityModeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Dispose all RxJava subscriptions to prevent memory leaks and crashes
+        disposables.clear()
         // Clear the visible thread when leaving accessibility mode
         AppDependencies.messageNotifier.setVisibleThread(null)
     }
