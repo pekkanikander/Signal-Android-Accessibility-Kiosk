@@ -44,23 +44,29 @@
 
 ### **Phase 2.2: Exit Gesture Implementation** 🔄 **NEXT**
 
-#### **Step 1: Technical Exit Gesture Design**
-- [ ] **Define "Exit Accessibility Mode" as "Launch AppSettingsActivity"**
-- [ ] Implement gesture detection in `AccessibilityModeActivity`
-- [ ] Add gesture configuration options (swipe, long press, etc.)
-- [ ] Ensure proper Intent stack management when launching Settings
+#### **Step 1: Exit Gesture Detection System**
+- [ ] **Implement `ExitGestureDetector` class** with Gesture A (opposite corners hold)
+- [ ] **Add gesture configuration** to existing Accessibility Mode settings screen
+- [ ] **Create `AccessibilityModeConfirmExitActivity`** for confirmation overlay
+- [ ] **Integrate gesture detection** into `AccessibilityModeActivity`
 
-#### **Step 2: Settings Integration Enhancement**
-- [ ] Modify accessibility settings to control mode switching
-- [ ] Add conversation selection when enabling Accessibility Mode
-- [ ] Implement "Enable Accessibility Mode" button in settings
-- [ ] Add proper state management for mode switching
+#### **Step 2: Confirmation & PIN System**
+- [ ] **Implement press-and-hold confirmation slider** (1.5s default)
+- [ ] **Create dedicated PIN system** for Accessibility Mode (separate from Signal's PIN)
+- [ ] **Add PIN entry UI** with 4-6 digit numeric keypad
+- [ ] **Implement PIN validation** with salted hash storage
 
-#### **Step 3: Mode Transition Implementation**
-- [ ] Implement Settings → Accessibility Mode transition when exiting settings
-- [ ] Add proper activity lifecycle handling for mode switching
-- [ ] Ensure smooth transition without app restart
-- [ ] Handle conversation selection and validation
+#### **Step 3: Settings Integration Enhancement**
+- [ ] **Add gesture type selection** (Gesture A/B) to Accessibility Mode settings
+- [ ] **Add PIN requirement toggle** to Accessibility Mode settings
+- [ ] **Implement conversation selection** when enabling Accessibility Mode
+- [ ] **Add proper state management** for mode switching and gesture configuration
+
+#### **Step 4: Advanced Gesture Features** (Phase 2.5)
+- [ ] **Implement Gesture B** (two-finger header hold) as alternative option
+- [ ] **Add advanced configuration** (hold duration, corner size, drift tolerance)
+- [ ] **Implement accessibility testing** (TalkBack, screen reader support)
+- [ ] **Add gesture telemetry** (debug-only, no sensitive data)
 
 ### **Phase 2.3: Accessibility Mode UX Refinement** 📋 **PLANNED**
 
@@ -95,7 +101,28 @@
 - [ ] Custom accessibility gestures
 - [ ] Advanced theming options
 
-### **Phase 2.5: Kiosk Features** 📋 **FUTURE**
+### **Phase 2.5: Advanced Gesture Features** 📋 **FUTURE**
+
+#### **Step 1: Gesture B Implementation**
+- [ ] **Implement two-finger header hold** as alternative to opposite corners
+- [ ] **Add gesture type selection** in settings (A vs B)
+- [ ] **Optimize for different device sizes** and orientations
+- [ ] **Test with various accessibility tools** (TalkBack, screen readers)
+
+#### **Step 2: Advanced Configuration**
+- [ ] **Add hold duration configuration** (default A=2500ms, B=1800ms)
+- [ ] **Add confirmation duration** (default 1500ms)
+- [ ] **Add timeout configuration** (default 10s)
+- [ ] **Add corner hit-rect size** (default 72dp, adjustable for small devices)
+- [ ] **Add drift tolerance** (default 24dp)
+
+#### **Step 3: Accessibility & Testing**
+- [ ] **Implement comprehensive TalkBack support** with proper announcements
+- [ ] **Add haptic feedback** during gesture detection
+- [ ] **Create automated tests** for gesture detection logic
+- [ ] **Add gesture telemetry** (debug-only, no sensitive data)
+
+### **Phase 2.6: Kiosk Features** 📋 **FUTURE**
 
 #### **Step 1: Device-Level Restrictions**
 - [ ] Auto-start Signal on device boot
@@ -157,31 +184,32 @@
 
 ## 📈 **Next Steps**
 
-1. **Implement exit gesture** - "Launch AppSettingsActivity" in AccessibilityModeActivity
-2. **Add gesture configuration** - Allow customizing the exit gesture
-3. **Test all scenarios** - Verify Intent stack behavior across all flows
-4. **Refine UX** - Hide Signal branding, improve mental model
+1. **Implement Gesture A detection** - Opposite corners hold in `AccessibilityModeActivity`
+2. **Create confirmation overlay** - Press-and-hold slider with timeout
+3. **Add PIN system** - Dedicated 4-6 digit PIN for Accessibility Mode
+4. **Integrate with settings** - Add gesture configuration to Accessibility Mode settings
+5. **Test all scenarios** - Verify gesture detection and confirmation flows
 
-**The Accessibility Mode Router is complete and ready for exit gesture implementation!** 🎉
+**Ready to implement the comprehensive exit gesture system!** 🎯
 
 ## 🔧 **Technical Implementation Notes**
 
 ### **Exit Gesture Architecture**
 - **Technical Definition**: "Exit Accessibility Mode" = "Launch AppSettingsActivity"
-- **Gesture Detection**: Implement in `AccessibilityModeActivity`
-- **Intent Stack**: Proper management when launching Settings
-- **Configuration**: Allow customizing gesture type and sensitivity
+- **Gesture Detection**: Implement in `AccessibilityModeActivity` with `ExitGestureDetector`
+- **Confirmation Flow**: Trigger → Hold slider → (Optional PIN) → Settings
+- **Configuration**: Gesture type (A/B), PIN requirement, timing parameters
 
-### **Exit Gesture Options**
-- **Long Press**: Simple, discoverable gesture
-- **Swipe Gesture**: More sophisticated, configurable
-- **Hidden Button**: Minimal UI impact
-- **Configurable**: Allow assisting user to choose
+### **Gesture Options**
+- **Gesture A (Opposite corners hold)**: Very strict, hard to trigger accidentally
+- **Gesture B (Two-finger header hold)**: More learnable but still intentional
+- **PIN Gate**: Optional 4-6 digit PIN for additional security
+- **Multi-stage Confirmation**: Multiple barriers against accidental activation
 
 ### **Settings Integration**
-- **Immediate Rebase**: When toggling Accessibility Mode in Settings
-- **State Persistence**: Store selected conversation and mode state
+- **Gesture Configuration**: Add to existing Accessibility Mode settings screen
+- **PIN Management**: Separate from Signal's PIN system
+- **State Persistence**: Store gesture preferences and PIN hash
 - **Validation**: Ensure selected conversation still exists
-- **Error Handling**: Graceful fallbacks for edge cases
 
-**Ready to implement the exit gesture that completes the Accessibility Mode mental model!**
+**Ready to implement the comprehensive exit gesture system with ChatGPT-5's design!**
