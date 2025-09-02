@@ -31,7 +31,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
 ) : View.OnTouchListener {
 
   companion object {
-    private val TAG = Log.tag(AccessibilityModeExitToSettingsGestureDetector::class)
+    private val TAG = "ExitGesture"
 
     // Timing constraints
     private const val POINTER_TIMEOUT_MS = 150L
@@ -58,7 +58,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private val cornerSizeDp: Int get() = SignalStore.accessibilityMode.exitGestureCornerDp
   private val driftToleranceDp: Int get() = SignalStore.accessibilityMode.exitGestureDriftDp
 
-    override fun onTouch(view: View, event: MotionEvent): Boolean {
+      override fun onTouch(view: View, event: MotionEvent): Boolean {
     Log.d(TAG, "Touch event: action=${event.actionMasked}, pointerCount=${event.pointerCount}, actionIndex=${event.actionIndex}")
 
     when (event.actionMasked) {
@@ -79,7 +79,10 @@ class AccessibilityModeExitToSettingsGestureDetector(
       MotionEvent.ACTION_MOVE -> {
         if (event.pointerCount > 0) {
           Log.d(TAG, "ACTION_MOVE: pointerCount=${event.pointerCount}, firstPointerId=${event.getPointerId(0)}")
-          handlePointerMove(event)
+          val consumed = handlePointerMove(event)
+          if (consumed) {
+            return true // Consume the event if gesture is active
+          }
         }
         return false
       }
@@ -162,10 +165,10 @@ class AccessibilityModeExitToSettingsGestureDetector(
     }
   }
 
-    private fun handlePointerMove(event: MotionEvent) {
+    private fun handlePointerMove(event: MotionEvent): Boolean {
     if (!isGestureActive || firstPointerId == -1 || secondPointerId == -1) {
       Log.d(TAG, "handlePointerMove: gesture not active or pointers missing - active=$isGestureActive, first=$firstPointerId, second=$secondPointerId")
-      return
+      return false
     }
 
     val firstIndex = event.findPointerIndex(firstPointerId)
@@ -174,7 +177,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     if (firstIndex == -1 || secondIndex == -1) {
       Log.d(TAG, "handlePointerMove: pointer indices not found - firstIndex=$firstIndex, secondIndex=$secondIndex")
       resetGesture()
-      return
+      return false
     }
 
     val firstX = event.getX(firstIndex)
@@ -194,7 +197,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     if (firstDrift > maxDriftPx || secondDrift > maxDriftPx) {
       Log.d(TAG, "Drift exceeded: first=$firstDrift, second=$secondDrift, max=$maxDriftPx")
       resetGesture()
-      return
+      return false
     }
 
     // Check hold duration
@@ -206,7 +209,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     if (holdTime >= holdDurationMs) {
       Log.d(TAG, "Gesture triggered after ${holdTime}ms")
       triggerGesture()
-      return
+      return true
     }
 
     // Provide haptic feedback during hold
@@ -215,6 +218,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
       lastHapticTime = currentTime
       Log.d(TAG, "Haptic feedback triggered")
     }
+
+    return true // Consume the event when gesture is active
   }
 
   private fun handlePointerUp(event: MotionEvent, pointerIndex: Int) {
