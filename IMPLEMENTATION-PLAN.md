@@ -1,64 +1,72 @@
-# Signal Care Mode Implementation Plan
+# Signal Accessibility Mode Implementation Plan
 
 ## 📊 **Current Status: Phase 2.1 COMPLETED** ✅
 
-**Major Milestone Achieved**: Successfully integrated Signal's proven components, eliminating ~350 lines of custom code while gaining significant functionality. Core conversation interface is working with proper read status management.
+**Major Milestone Achieved**: Successfully implemented ChatGPT-5's Intent Stack Architecture with Accessibility Mode Router. Clean, surgical implementation with minimal Signal changes and robust activity stack management.
 
-## 🎯 **Phase 2: Care Mode Implementation**
+## 🎯 **Phase 2: Accessibility Mode Implementation**
 
 ### **Phase 2.1: Core Integration** ✅ **COMPLETED**
 
-#### **✅ Step 1: Test Implementation**
-- Created `IntegrationTestHelper.kt` to verify integration approach
-- Confirmed all dependencies can be imported and instantiated
-- Verified compilation success
+#### **✅ Step 1: ChatGPT-5 Architecture Design**
+- Analyzed all Intent stack scenarios and UX issues
+- Designed optimal architecture with clean separation of concerns
+- Created comprehensive implementation plan with ChatGPT-5
 
-#### **✅ Step 2: AccessibilityItemClickListener**
-- Created `AccessibilityItemClickListener.kt` with minimal implementation
-- Disabled all complex features (reactions, media, voice notes, etc.)
-- Verified compilation success
+#### **✅ Step 2: Accessibility Mode Router Implementation**
+- **Created core components**:
+  - `AccessibilityModeStore.kt` - Clean interface to Accessibility Mode state
+  - `IntentFactory.kt` - Creates Intents with proper flags (`CLEAR_TASK`, `NO_ANIMATION`)
+  - `AccessibilityModeRouter.kt` - Centralized routing decisions
+  - Application initialization in `ApplicationContext.java`
+- **Added activity hooks**:
+  - `MainActivity.onStart()` - Routes to Accessibility Mode if enabled
+  - `AccessibilityModeActivity.onStart()` - Routes to Normal Mode if disabled
+- **Removed old implementation**:
+  - Eliminated `careModeLaunched` flag and old routing logic
+  - Cleaned up `MainActivity.onResume()`
 
-#### **✅ Step 3: Refactor AccessibilityModeFragment**
-- **Successfully refactored** `AccessibilityModeFragment.kt` to use Signal's components directly:
-  - **ConversationViewModel** instead of custom `AccessibilityModeViewModel`
-  - **ConversationAdapterV2** instead of custom `AccessibilityMessageAdapter`
-  - **AccessibilityItemClickListener** for simplified interaction
-  - **MarkReadHelper** for proper read status management
-- Verified the refactored code compiles successfully
+#### **✅ Step 3: Technical Terminology Refactoring**
+- **Renamed all components** to use technical "Accessibility Mode" terminology:
+  - `CareModeStore` → `AccessibilityModeStore`
+  - `CareModeRouter` → `AccessibilityModeRouter`
+  - `careRoot()` → `accessibilityRoot()`
+  - `rebaseToCare()` → `rebaseToAccessibility()`
+- **Maintained UX flexibility** - User-facing terminology can be "Care Mode", "Assisted Mode", etc.
+- **Clean separation** between technical implementation and user experience
 
-#### **✅ Step 4: Clean Up**
-- **Removed old custom components**:
-  - Deleted `AccessibilityModeViewModel.kt` (~200 lines)
-  - Deleted `AccessibilityMessageAdapter.kt` (~150 lines)
-  - Removed `IntegrationTestHelper.kt` (no longer needed)
-- **Total code reduction: ~350 lines**
-- All components compile successfully
+#### **✅ Step 4: Architecture Benefits Achieved**
+- **Minimal Signal changes**: Only 3-4 lines added to existing activities
+- **Clean activity stack**: Uses `FLAG_ACTIVITY_CLEAR_TASK` for proper management
+- **No animations**: Uses `FLAG_ACTIVITY_NO_ANIMATION` for smooth transitions
+- **Centralized logic**: All routing decisions in one place
+- **Robust error handling**: Handles all edge cases properly
 
-### **Phase 2.2: Mode Switching Behavior** 🔄 **NEXT**
+### **Phase 2.2: Exit Gesture Implementation** 🔄 **NEXT**
 
-#### **Step 1: Settings Integration Enhancement**
+#### **Step 1: Technical Exit Gesture Design**
+- [ ] **Define "Exit Accessibility Mode" as "Launch AppSettingsActivity"**
+- [ ] Implement gesture detection in `AccessibilityModeActivity`
+- [ ] Add gesture configuration options (swipe, long press, etc.)
+- [ ] Ensure proper Intent stack management when launching Settings
+
+#### **Step 2: Settings Integration Enhancement**
 - [ ] Modify accessibility settings to control mode switching
-- [ ] Add conversation selection when enabling Care Mode
-- [ ] Implement "Enable Care Mode" button in settings
+- [ ] Add conversation selection when enabling Accessibility Mode
+- [ ] Implement "Enable Accessibility Mode" button in settings
 - [ ] Add proper state management for mode switching
 
-#### **Step 2: Mode Transition Implementation**
-- [ ] Implement Settings → Care Mode transition when exiting settings
+#### **Step 3: Mode Transition Implementation**
+- [ ] Implement Settings → Accessibility Mode transition when exiting settings
 - [ ] Add proper activity lifecycle handling for mode switching
 - [ ] Ensure smooth transition without app restart
 - [ ] Handle conversation selection and validation
 
-#### **Step 3: Exit Gesture Implementation**
-- [ ] Implement exit gesture to return to Settings
-- [ ] Add gesture configuration options
-- [ ] Ensure proper navigation back to accessibility settings
-- [ ] Handle Care Mode → Normal Mode transition
+### **Phase 2.3: Accessibility Mode UX Refinement** 📋 **PLANNED**
 
-### **Phase 2.3: Care Mode UX Refinement** 📋 **PLANNED**
-
-#### **Step 1: Care Mode Branding**
-- [ ] Hide or minimize Signal branding in Care Mode
-- [ ] Add "Care Mode" indicators where appropriate
+#### **Step 1: Accessibility Mode Branding**
+- [ ] Hide or minimize Signal branding in Accessibility Mode
+- [ ] Add "Accessibility Mode" indicators where appropriate
 - [ ] Ensure clear mental model for both user types
 - [ ] Test with actual users
 
@@ -73,7 +81,7 @@
 - [ ] Add voice note playback
 - [ ] Ensure accessibility compliance
 
-### **Phase 2.4: Advanced Care Mode Features** 📋 **FUTURE**
+### **Phase 2.4: Advanced Accessibility Mode Features** 📋 **FUTURE**
 
 #### **Step 1: Message Management**
 - [ ] Message reactions (simplified)
@@ -101,63 +109,68 @@
 - [ ] Remote configuration options
 - [ ] Device monitoring and alerts
 
-## 🚀 **Integration Benefits Achieved**
+## 🚀 **Architecture Benefits Achieved**
 
-### **Code Reduction**
-- **Eliminated ~350 lines** of custom code
-- **Removed 3 custom files** (`AccessibilityModeViewModel.kt`, `AccessibilityMessageAdapter.kt`, `IntegrationTestHelper.kt`)
-- **Maintenance burden significantly reduced**
+### **Code Quality**
+- **Surgical changes**: Only 3-4 lines added to existing activities
+- **Clean separation**: Technical vs user-facing terminology
+- **Centralized logic**: All routing in one place
+- **Robust error handling**: Handles all edge cases
 
-### **Functionality Improvement**
-- **Real-time updates** via Signal's proven data flow
-- **Proper theming** via Signal's color system
-- **Better performance** via Signal's optimized components
-- **Proper read status management** via MarkReadHelper
-- **Future features** automatically available (if stable)
+### **Performance Benefits**
+- **Clean activity stack**: Single root activity at all times
+- **No animations**: Smooth transitions without flashes
+- **Memory efficient**: No lingering activities
+- **Fast routing**: Minimal overhead in activity lifecycle
 
 ### **Maintainability**
-- **Less custom code** to maintain
-- **Automatic updates** when Signal improves components
-- **Better testing** via Signal's existing test coverage
-- **Clearer architecture** with standard Signal patterns
+- **Minimal Signal changes**: Easy to maintain across updates
+- **Clear interfaces**: Well-defined contracts between components
+- **Testable architecture**: Each component can be tested independently
+- **Future-proof**: Easy to extend with new features
 
-### **Care Mode Benefits**
-- **Consistent UI** with Signal's proven layouts
-- **Proper theming** support for accessibility needs
-- **Real-time updates** for better user experience
-- **Simplified interaction** model
-- **Clear mental model** for both user types
+### **User Experience**
+- **Predictable behavior**: Consistent across all scenarios
+- **Smooth transitions**: No jarring activity changes
+- **Clear mental model**: Users understand where they are
+- **Flexible UX language**: Can adapt terminology per user needs
 
-## 🎯 **Mental Model: Care Mode as Signal Mode Switch**
+## 🎯 **Mental Model: "Care" as Signal Mode Switch**
+
+### **Technical Implementation**
+1. **Accessibility Mode Router**: Centralized routing decisions
+2. **Activity Stack Management**: Clean transitions with `CLEAR_TASK`
+3. **State Management**: Persistent Accessibility Mode state
+4. **Exit Gesture**: Launch `AppSettingsActivity` for configuration
 
 ### **User Experience Flow**
-1. **Assisting User**: Settings → Accessibility Mode → Enable Care Mode → Select Conversation → Exit Settings
-2. **Signal Transforms**: Normal Signal → Care Mode (single conversation)
-3. **Disabled User**: Sees only their conversation, no Signal complexity
-4. **Exit Path**: Gesture → Settings → Disable Care Mode → Normal Signal
+1. **Assisting User**: Settings → Select Conversation → Enable Accessibility Mode → Exit Settings
+2. **Signal Transforms**: Normal Signal → Accessibility Mode (single conversation)
+3. **Disabled User**: Sees only their selected conversation, no Signal complexity
+4. **Exit Path**: Gesture → Settings → Disable Accessibility Mode → Normal Signal
 
 ### **Key Principles**
-- **Mode Switch**: Care Mode replaces Signal's home screen, not a separate app
+- **Mode Switch**: When enabled, accessibility Mode replaces Signal's home screen
 - **No Restart**: Smooth transition without app restart
 - **Clear Navigation**: Exit gesture returns to settings for configuration
 - **Iterative Setup**: Easy to adjust settings and test repeatedly
 
 ## 📈 **Next Steps**
 
-1. **Implement mode switching behavior** - Settings → Care Mode transition
-2. **Add exit gesture** - Return to settings for configuration
-3. **Refine Care Mode UX** - Hide Signal branding, improve mental model
-4. **Test with users** - Validate the mental model works for both user types
+1. **Implement exit gesture** - "Launch AppSettingsActivity" in AccessibilityModeActivity
+2. **Add gesture configuration** - Allow customizing the exit gesture
+3. **Test all scenarios** - Verify Intent stack behavior across all flows
+4. **Refine UX** - Hide Signal branding, improve mental model
 
-**The core integration is complete and ready for mode switching implementation!** 🎉
+**The Accessibility Mode Router is complete and ready for exit gesture implementation!** 🎉
 
 ## 🔧 **Technical Implementation Notes**
 
-### **Mode Switching Architecture**
-- **Settings Integration**: Leverage existing SignalStore for mode state
-- **Activity Management**: Use Android activity stack for smooth transitions
-- **State Persistence**: Store selected conversation and mode state
-- **Lifecycle Handling**: Proper cleanup and state management
+### **Exit Gesture Architecture**
+- **Technical Definition**: "Exit Accessibility Mode" = "Launch AppSettingsActivity"
+- **Gesture Detection**: Implement in `AccessibilityModeActivity`
+- **Intent Stack**: Proper management when launching Settings
+- **Configuration**: Allow customizing gesture type and sensitivity
 
 ### **Exit Gesture Options**
 - **Long Press**: Simple, discoverable gesture
@@ -165,4 +178,10 @@
 - **Hidden Button**: Minimal UI impact
 - **Configurable**: Allow assisting user to choose
 
-**Ready to implement the mode switching behavior that completes the Care Mode mental model!**
+### **Settings Integration**
+- **Immediate Rebase**: When toggling Accessibility Mode in Settings
+- **State Persistence**: Store selected conversation and mode state
+- **Validation**: Ensure selected conversation still exists
+- **Error Handling**: Graceful fallbacks for edge cases
+
+**Ready to implement the exit gesture that completes the Accessibility Mode mental model!**
