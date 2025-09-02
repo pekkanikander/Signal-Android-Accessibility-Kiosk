@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import android.util.Log
 import org.thoughtcrime.securesms.keyvalue.SignalStore
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 
 /**
  * ViewModel for accessibility mode settings screen.
@@ -33,10 +34,22 @@ class AccessibilityModeSettingsViewModel : ViewModel() {
     Log.d("AccessibilityViewModel", "State updated, current state: ${store.value}")
   }
 
+  fun setExitGestureType(gestureType: AccessibilityModeExitGestureType) {
+    SignalStore.accessibilityMode.exitGestureType = gestureType.value
+    store.update { getState() }
+  }
+
+  fun setExitGestureRequirePin(requirePin: Boolean) {
+    SignalStore.accessibilityMode.exitGestureRequirePin = requirePin
+    store.update { getState() }
+  }
+
   private fun getState(): AccessibilityModeSettingsState {
     return AccessibilityModeSettingsState(
       isAccessibilityModeEnabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
-      threadId = SignalStore.accessibilityMode.accessibilityThreadId
+      threadId = SignalStore.accessibilityMode.accessibilityThreadId,
+      exitGestureType = AccessibilityModeExitGestureType.fromValue(SignalStore.accessibilityMode.exitGestureType),
+      exitGestureRequirePin = SignalStore.accessibilityMode.exitGestureRequirePin
     )
   }
 }

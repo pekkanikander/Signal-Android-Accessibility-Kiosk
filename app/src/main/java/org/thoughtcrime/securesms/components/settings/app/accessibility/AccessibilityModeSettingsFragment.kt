@@ -11,6 +11,7 @@ import org.thoughtcrime.securesms.compose.ComposeFragment
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversationlist.model.ConversationFilter
 import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 
 class AccessibilityModeSettingsFragment : ComposeFragment() {
 
@@ -82,6 +83,22 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
       val intent = android.content.Intent(requireContext(), org.thoughtcrime.securesms.accessibility.AccessibilityModeActivity::class.java)
       intent.putExtra("selected_thread_id", viewModel.state.value.threadId)
       startActivity(intent)
+    }
+
+    override fun onExitGestureTypeClick() {
+      // TODO: Show gesture type selection dialog
+      // For now, just toggle between the two options
+      val currentType = viewModel.state.value.exitGestureType
+      val newType = if (currentType == org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD) {
+        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD
+      } else {
+        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD
+      }
+      viewModel.setExitGestureType(newType)
+    }
+
+    override fun onExitGestureRequirePinToggled(requirePin: Boolean) {
+      viewModel.setExitGestureRequirePin(requirePin)
     }
   }
 }

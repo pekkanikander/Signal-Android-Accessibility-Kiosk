@@ -1,6 +1,7 @@
 package org.thoughtcrime.securesms.keyvalue
 
 import org.thoughtcrime.securesms.keyvalue.SignalStoreValues
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 
 /**
  * Stores accessibility mode settings for the Signal app.
@@ -12,6 +13,10 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     // Setting keys
     const val ACCESSIBILITY_MODE_ENABLED = "accessibility_mode.enabled"
     const val ACCESSIBILITY_THREAD_ID = "accessibility_thread.id"
+    const val EXIT_GESTURE_TYPE = "accessibility_mode.exit_gesture_type"
+    const val EXIT_GESTURE_REQUIRE_PIN = "accessibility_mode.exit_gesture_require_pin"
+    const val EXIT_GESTURE_PIN_HASH = "accessibility_mode.exit_gesture_pin_hash"
+    const val EXIT_GESTURE_PIN_SALT = "accessibility_mode.exit_gesture_pin_salt"
   }
 
   // Boolean values using booleanValue delegate
@@ -20,12 +25,22 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   // Long value for thread ID
   var accessibilityThreadId: Long by longValue(ACCESSIBILITY_THREAD_ID, -1L)
 
+  // Exit gesture configuration
+  var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD.value)
+  var exitGestureRequirePin: Boolean by booleanValue(EXIT_GESTURE_REQUIRE_PIN, false)
+  var exitGesturePinHash: String by stringValue(EXIT_GESTURE_PIN_HASH, "")
+  var exitGesturePinSalt: String by stringValue(EXIT_GESTURE_PIN_SALT, "")
+
   public override fun onFirstEverAppLaunch() = Unit
 
   public override fun getKeysToIncludeInBackup(): List<String> {
     return listOf(
       ACCESSIBILITY_MODE_ENABLED,
-      ACCESSIBILITY_THREAD_ID
+      ACCESSIBILITY_THREAD_ID,
+      EXIT_GESTURE_TYPE,
+      EXIT_GESTURE_REQUIRE_PIN,
+      EXIT_GESTURE_PIN_HASH,
+      EXIT_GESTURE_PIN_SALT
     )
   }
 }

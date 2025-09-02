@@ -8734,6 +8734,8 @@
     <string name="preferences__accessibility_mode_no_chats_available">No chats yet. Create a chat first; send a message to someone.</string>
     <string name="preferences__accessibility_mode_select_chat">Select Chat</string>
     <string name="preferences__accessibility_mode_start">Start Accessibility Mode</string>
+  <string name="preferences__accessibility_mode_exit_gesture_type">Exit Gesture</string>
+  <string name="preferences__accessibility_mode_exit_gesture_require_pin">Require PIN to exit</string>
 
     <!-- EOF -->
 </resources>

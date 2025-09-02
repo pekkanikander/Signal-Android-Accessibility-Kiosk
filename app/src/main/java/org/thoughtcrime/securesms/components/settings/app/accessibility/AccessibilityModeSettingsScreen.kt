@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 import org.signal.core.ui.compose.Dividers
 import org.signal.core.ui.compose.Rows
 import org.signal.core.ui.compose.Scaffolds
@@ -112,6 +113,35 @@ fun AccessibilityModeSettingsScreen(
       }
 
       item {
+        // Exit Gesture Type Selection
+        Rows.TextRow(
+          text = stringResource(R.string.preferences__accessibility_mode_exit_gesture_type),
+          label = state.exitGestureType.displayName,
+          icon = ImageVector.vectorResource(R.drawable.symbol_settings_android_24),
+          onClick = { callbacks.onExitGestureTypeClick() },
+          modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.ROW_EXIT_GESTURE_TYPE)
+        )
+      }
+
+      item {
+        Dividers.Default()
+      }
+
+      item {
+        // Exit Gesture PIN Requirement Toggle
+        Rows.ToggleRow(
+          text = stringResource(R.string.preferences__accessibility_mode_exit_gesture_require_pin),
+          checked = state.exitGestureRequirePin,
+          onCheckChanged = { requirePin -> callbacks.onExitGestureRequirePinToggled(requirePin) },
+          modifier = Modifier.testTag(AccessibilityModeSettingsTestTags.TOGGLE_EXIT_GESTURE_REQUIRE_PIN)
+        )
+      }
+
+      item {
+        Dividers.Default()
+      }
+
+      item {
         // Description text
         Text(
           text = stringResource(R.string.preferences__accessibility_mode_description),
@@ -130,7 +160,9 @@ private fun AccessibilityModeSettingsScreenPreview() {
     AccessibilityModeSettingsScreen(
       state = AccessibilityModeSettingsState(
         isAccessibilityModeEnabled = true,
-        threadId = 123L
+        threadId = 123L,
+        exitGestureType = AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD,
+        exitGestureRequirePin = false
       ),
       callbacks = AccessibilityModeSettingsCallbacks.Empty
     )

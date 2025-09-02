@@ -11,6 +11,8 @@ interface AccessibilityModeSettingsCallbacks {
   fun onAccessibilityModeToggled(enabled: Boolean) = Unit
   fun onThreadSelectionClick() = Unit
   fun onStartAccessibilityModeClick() = Unit
+  fun onExitGestureTypeClick() = Unit
+  fun onExitGestureRequirePinToggled(requirePin: Boolean) = Unit
 
   object Empty : AccessibilityModeSettingsCallbacks
 }
