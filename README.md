@@ -1,165 +1,271 @@
-# Signal Care Mode
-
-A Signal feature that provides a **simplified, single-conversation experience**
-for users with reduced cognitive capacity (elderly, dementia, etc.)
-while maintaining full Signal security and functionality.
-
-> The original upstream README is preserved as **`README-SIGNAL.md`**.
 
 ---
 
-## For Caregivers & Family Members
+# Care Mode — Optimal Intent Stack Architecture (Proposed Design)
 
-### What is Signal Care Mode?
+This section provides the requested deliverables: intent-stack designs per scenario, implementation code, state management, testing plan, edge-case handling, and performance notes. It assumes the current triad of activities (`MainActivity`, `AccessibilityModeActivity`, `AppSettingsActivity`) and aims for minimal, surgical changes.
 
-Signal Care Mode transforms Signal into a **simple messaging app** for your loved one.
-Instead of seeing all their conversations, they see only **one selected conversation** -
-typically with their primary caregiver or family member, or a group chat with a few people.
+## Design Summary
 
-### How It Works
+- Treat **Care Mode** as a **root-level mode** with its own root activity (`AccessibilityModeActivity`).
+- When toggling mode (either direction), **rebase the task**: start the new root with `NEW_TASK | CLEAR_TASK` and finish the old stack. This guarantees predictable Back/App Switcher behaviour and avoids ghost activities.
+- Do **not** rely on opportunistic redirects in random lifecycle callbacks. Centralise routing in a tiny `CareModeRouter` invoked only in:
+  - `MainActivity.onStart()`
+  - `AccessibilityModeActivity.onStart()`
+  - Immediately after a toggle in `AppSettingsActivity` (to rebase proactively)
+- Keep all other flows (notifications, deeplinks) funneled through a single router method so they respect Care Mode.
 
-1. **Setup**: You enable Care Mode in Signal Settings and select which conversation to show
-2. **Simplified Interface**: Your loved one sees only their conversation - no complex menus, popups, or multiple chats
-3. **Easy Communication**: Large, clear buttons for sending messages and voice notes
-4. **No Confusion**: No back buttons, settings, popups, or other apps to accidentally tap
 
-### Key Benefits
+## Components
 
-- **Reduces Cognitive Load**: No complex navigation or multiple conversations
-- **Maintains Privacy**: Uses Signal's secure messaging protocol
-- **Familiar Technology**: Works with existing Signal contacts and groups
-- **Easy Setup**: Simple toggle in Signal settings
+- **CareModeStore**: persistent source of truth `{ enabled: Boolean, threadId: Long? }` (backed by existing `SignalStore.accessibilityMode`).
+- **CareModeRouter**: centralises all routing decisions and task-rebasing.
+- **IntentFactory**: creates intents with the correct flags/extras for both modes.
 
-### Getting Started
 
-1. Open Signal on your loved one's device
-2. Go to **Settings** → **Accessibility Mode**
-3. Select the conversation you want them to see
-4. Select **Enable Care Mode**
-5. Exit Settings - Signal will switch to Care Mode
-6. Your loved one can now use the simplified interface
+## Intent Flags & Behaviour (Canonical)
 
-### Customization
+- **Rebase to Care Mode root**: `Intent(AccessibilityModeActivity) + flags(NEW_TASK | CLEAR_TASK | NO_ANIMATION)`; `overridePendingTransition(0,0)`.
+- **Rebase to Normal root**: `Intent(MainActivity) + flags(NEW_TASK | CLEAR_TASK | NO_ANIMATION)`; `overridePendingTransition(0,0)`.
+- **Open Settings**: default `startActivity(Intent(AppSettingsActivity))` (no stack manipulation). Returning from Settings lets the router decide if a rebase is required (if mode changed).
+- **Back in Care Mode root**: exit app (`finishAndRemoveTask()` or default since it is root).
 
-You can adjust, using the default settings:
-- **Text size** for better readability
-- **Theme** for dark, light, or dynamic
-New settings, to be implemented:
-- **Contrast** for visual clarity
-- **Touch sensitivity** for easier interaction
-- **Voice note settings** for audio communication
+Rationale: This pattern avoids flashes, prevents duplicate instances, and ensures the **task reflects the chosen mode** at all times.
 
-### Exiting Care Mode
 
-To return to normal Signal:
-- Use the exit gesture to return to Settings
-- Go to **Accessibility Mode** → **Disable Care Mode**
+## Detailed Intent Stack per Scenario
 
----
+Notation: `[`top → bottom`]`. *Root* is the last element.
 
-## For Engineers
+### Scenario 1 — Fresh Launch with Care Mode **Disabled**
+**Flow**: Launch → Normal UI → Settings → Enable → Return.
+- **Initial launch**: `[`MainActivity (root)`]`.
+- **Open Settings**: `[`AppSettingsActivity, MainActivity (root)`]`.
+- **Enable Care Mode & Return**: on save/toggle, **rebase**:
+  - Before returning: `CareModeRouter.rebaseToCare(context, threadId)`.
+  - **After rebase**: `[`AccessibilityModeActivity (root)`]`.
 
-### Technical Overview
+### Scenario 2 — Fresh Launch with Care Mode **Enabled**
+**Flow**: Launch → Care UI → Settings → Disable → Return.
+- **Initial launch**: `[`AccessibilityModeActivity (root)`]`.
+- **Open Settings**: `[`AppSettingsActivity, AccessibilityModeActivity (root)`]`.
+- **Disable Care Mode & Return**: `rebaseToNormal()`.
+  - **After rebase**: `[`MainActivity (root)`]`.
 
-This implementation adds a **parallel accessibility interface** to Signal without modifying existing functionality.
-The approach maintains Signal's user experience and security model while providing a simplified user experience.
+### Scenario 3 — Care Mode Active → Settings → Return (**No changes**)
+**Flow**: Care UI → Settings → Back.
+- **Before**: `[`AppSettingsActivity, AccessibilityModeActivity (root)`]`.
+- **Back**: No rebase since mode unchanged → `[`AccessibilityModeActivity (root)`]`.
 
-### Architecture
+### Scenario 4 — Normal → Settings → **Enable Care Mode**
+Same as Scenario 1 → ends with `[`AccessibilityModeActivity (root)`]`.
 
-**Parallel Interface Design:**
-- New `AccessibilityModeActivity` and `AccessibilityModeFragment`
-- Reuses existing `ConversationViewModel`, `ConversationRepository`, and backend services
-- Zero changes to existing Signal functionality
-- Minimal patchset that rebases cleanly onto upstream
+### Scenario 5 — **Back Button** in Care Mode
+- Stack is just `[`AccessibilityModeActivity (root)`]`.
+- Back exits app. (Optionally call `finishAndRemoveTask()` in `onBackPressedDispatcher` for clarity.)
 
-**Component Reuse Strategy:**
-- **Existing**: Message handling, crypto, network, storage, conversation logic
-- **New**: Accessibility UI, simplified attachment handling, accessibility-specific navigation
-- **Minimal changes** to existing Signal code
+### Scenario 6 — **App Switcher**
+- Returning to Signal restores the **current root** (Care or Normal) because only that root is in the task.
 
-### Implementation Status
+### Scenario 7 — **Deep Links**
+- If **Care Mode enabled**: ignore deep link target; route to `AccessibilityModeActivity` with the selected thread ID. (Provide gentle UX: optional toast “Care Mode is active”.)
+- If **Care Mode disabled**: handle deep link normally through existing flows.
 
-**✅ Completed:**
-- Accessibility interface design and implementation
-- AccessibilityMode settings integration
-- Conversation display with Signal's proven components
-- Message sending/receiving functionality
-- Auto-scrolling to newest messages
-- Proper read status management (MarkReadHelper integration)
-- Notification suppression during conversation
-- RxJava subscription management
 
-**🔄 In Progress:**
-- Mode switching behavior (Settings → Care Mode transition)
-- Exit gesture implementation
-- Additional accessibility features
+## Code Implementation
 
-### Key Technical Decisions
+### 1) CareModeState & Store
+```kotlin
+@Immutable
+data class CareModeState(val enabled: Boolean, val threadId: Long?)
 
-1. **Parallel Interface**: Instead of modifying existing UI, created separate accessibility components
-2. **Component Reuse**: Direct integration of `ConversationViewModel` and `ConversationAdapterV2`
-3. **Settings Integration**: Leverages existing Signal settings infrastructure
-4. **Lifecycle Management**: Proper RxJava subscription cleanup and fragment lifecycle handling
+interface CareModeStore {
+    fun state(): Flow<CareModeState>
+    fun current(): CareModeState // synchronous read (cached)
+    fun setEnabled(enabled: Boolean, threadId: Long?): Unit
+}
 
-### Build & Development
-
-- **JDK:** 17 (Temurin recommended)
-- **Compile/Target SDK:** 35 (Android 15)
-- **Min SDK:** as per upstream
-- **Build:** Gradle wrapper; Android SDK command-line tools
-- **IDE:** Cursor/VS Code or Android Studio; builds are CLI-driven
-
-Example CLI:
-```bash
-# From repo root
-./gradlew assembleDebug
-./gradlew installDebug
-adb shell monkey -p org.thoughtcrime.securesms -c android.intent.category.LAUNCHER 1
+class SignalCareModeStore(private val signalStore: SignalStore) : CareModeStore {
+    override fun state(): Flow<CareModeState> = signalStore.accessibilityMode.stateFlow()
+    override fun current(): CareModeState = signalStore.accessibilityMode.read()
+    override fun setEnabled(enabled: Boolean, threadId: Long?) =
+        signalStore.accessibilityMode.write(enabled, threadId)
+}
 ```
 
-### Development Workflow
+### 2) IntentFactory
+```kotlin
+object IntentFactory {
+    fun careRoot(context: Context, threadId: Long?): Intent =
+        Intent(context, AccessibilityModeActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            .putExtra("selected_thread_id", threadId)
 
-- Fork → clone your fork → `upstream` remote tracking → small feature branches → frequent rebases
-- Keep every change as isolated commits (settings integration, accessibility interface, component reuse)
-- This minimizes merge friction with upstream Signal
+    fun normalRoot(context: Context): Intent =
+        Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
 
-### Security & Privacy
+    fun settings(context: Context): Intent = Intent(context, AppSettingsActivity::class.java)
+}
+```
 
-- **No protocol changes**: This fork does not alter Signal's protocol or servers
-- **Pure UI/UX enhancement**: Only modifies the user interface layer
-- **Same security model**: Maintains all Signal's encryption and privacy features
-- **Production use**: Governed by Signal's own terms
+### 3) CareModeRouter
+```kotlin
+object CareModeRouter {
+    lateinit var store: CareModeStore
 
-### Terminology
+    /** Call from MainActivity.onStart() and AccessibilityModeActivity.onStart(). */
+    fun routeIfNeeded(host: Activity) {
+        val s = store.current()
+        val isCare = s.enabled
+        when (host) {
+            is AccessibilityModeActivity -> {
+                // Care expected; verify thread selection remains valid and correct.
+                val hostThread = host.intent.getLongExtra("selected_thread_id", -1L).takeIf { it > 0 }
+                if (!isCare) {
+                    host.startActivity(IntentFactory.normalRoot(host))
+                    host.overridePendingTransition(0, 0); host.finish()
+                } else if (s.threadId != hostThread) {
+                    host.startActivity(IntentFactory.careRoot(host, s.threadId))
+                    host.overridePendingTransition(0, 0); host.finish()
+                }
+            }
+            is MainActivity -> {
+                if (isCare) {
+                    host.startActivity(IntentFactory.careRoot(host, s.threadId))
+                    host.overridePendingTransition(0, 0); host.finish()
+                }
+            }
+            else -> { /* no-op for other activities */ }
+        }
+    }
 
-- **Care Mode**: User-facing term for the simplified interface
-- **Accessibility Mode**: Technical implementation term
-- **Kiosk Features**: System-level restrictions (future implementation)
+    /** Call directly from Settings when user toggles mode for immediate rebase. */
+    fun rebaseToCare(context: Context, threadId: Long?) {
+        context.startActivity(IntentFactory.careRoot(context, threadId))
+        if (context is Activity) context.overridePendingTransition(0, 0)
+    }
 
----
+    fun rebaseToNormal(context: Context) {
+        context.startActivity(IntentFactory.normalRoot(context))
+        if (context is Activity) context.overridePendingTransition(0, 0)
+    }
+}
+```
 
-## Goals
+### 4) Activity hooks
+```kotlin
+class MainActivity : AppCompatActivity() {
+    override fun onStart() {
+        super.onStart()
+        CareModeRouter.routeIfNeeded(this)
+    }
+}
 
-- **One conversation only**: App opens directly into a preselected conversation
-- **Simplified interface**: Large, high-contrast controls; no complex navigation
-- **Essential actions only**: Send/receive text; record/send voice notes
-- **Low cognitive load**: Removes surprises and interaction traps
-- **Maintains Signal security**: No changes to protocol, registration, or cryptography
+class AccessibilityModeActivity : AppCompatActivity() {
+    override fun onStart() {
+        super.onStart()
+        CareModeRouter.routeIfNeeded(this)
+    }
 
-## Non-Goals
+    override fun onBackPressed() {
+        // As root, back exits the app. Optionally make it explicit:
+        finishAndRemoveTask()
+    }
+}
 
-- No changes to the Signal protocol, registration, servers, or cryptography
-- No alternative networks or bridges
-- No theming beyond what's required for clarity and accessibility
+class AppSettingsActivity : AppCompatActivity() {
+    private fun onCareModeToggled(enabled: Boolean, threadId: Long?) {
+        CareModeRouter.store.setEnabled(enabled, threadId)
+        if (enabled) CareModeRouter.rebaseToCare(this, threadId) else CareModeRouter.rebaseToNormal(this)
+        // Optionally finish settings to reveal the new root immediately
+        finish()
+    }
+}
+```
 
-## License
+### 5) Notifications and Deep Links
+Centralise entry-point intents so they honour Care Mode.
+```kotlin
+object EntryIntents {
+    fun messageTap(context: Context, targetThreadId: Long): PendingIntent {
+        val s = CareModeRouter.store.current()
+        val intent = if (s.enabled) IntentFactory.careRoot(context, s.threadId)
+                     else IntentFactory.normalRoot(context).putExtra("open_thread_id", targetThreadId)
+        return PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
 
-This fork remains open-source under the same license as the upstream project. See upstream license files for details.
+    fun handleDeepLink(context: Context, deepLink: Uri): Intent {
+        val s = CareModeRouter.store.current()
+        return if (s.enabled) IntentFactory.careRoot(context, s.threadId)
+               else /* existing deep-link intent builder */ Intent(context, MainActivity::class.java).setData(deepLink)
+    }
+}
+```
 
-## Acknowledgements
 
-Thanks to the Signal team for the upstream codebase and to the maintainers of related forks whose build and packaging practices informed this approach.
+## State Management Strategy
 
----
+- **Single source of truth**: `CareModeStore` (persisted; exposes `Flow` and immediate `current()`).
+- **Immutable hand-off**: Activities read a snapshot via `current()` in `routeIfNeeded` to avoid races.
+- **Settings** applies state and triggers immediate rebase. No reliance on incidental `onResume()` checks.
+- **Thread existence validation**: before rebasing to Care, validate `threadId` exists; otherwise route to a small **Care Onboarding** screen that asks the caregiver to pick a conversation (or fall back to `MainActivity` with a one-shot dialog).
 
-For the upstream documentation and build notes, see **`README-SIGNAL.md`**.
+
+## Testing Strategy
+
+### JVM (Robolectric) — fast logic tests
+- **Router unit tests**: fake `CareModeStore` + verify `routeIfNeeded()` decisions (no actual SQLCipher touch).
+- **ViewModel tests**: use fakes for repositories; no database involvement.
+
+### Instrumented (`androidTest`) — integration/UX correctness
+Use `ActivityScenario` and Espresso to assert stacks and transitions.
+
+- **Scenario 1**: Start `MainActivity` → open `AppSettingsActivity` → toggle ON → assert only `AccessibilityModeActivity` is resumed; back exits.
+- **Scenario 2**: Start `AccessibilityModeActivity` (pre-enable state) → toggle OFF → assert `MainActivity` root.
+- **Scenario 3**: Care → Settings → back (no change) → still in `AccessibilityModeActivity`.
+- **Scenario 5**: Back exits from Care root (`isFinishing` & task empty).
+- **Scenario 7**: With Care enabled, tapping a notification / deep link leads to `AccessibilityModeActivity` regardless of original target.
+
+**CI**: Run instrumented tests on Gradle Managed Devices for determinism.
+
+
+## Edge Case Handling
+
+- **Selected conversation deleted**: On rebase or on `AccessibilityModeActivity.onStart()`, verify thread exists. If missing → route to Care Onboarding or show inline error with button to Settings. Do not fall back to normal mode silently.
+- **Crash/Process death**: On cold start, initial activity calls `routeIfNeeded()` and normalises the task to the correct root.
+- **Multiple rapid toggles**: shield with a simple debounce in Settings UI; the router is idempotent due to `CLEAR_TASK` semantics.
+- **Permission screens / system dialogs**: these remain above the root; once dismissed, `onStart()` re-validates mode.
+
+
+## Performance Considerations
+
+- Use `FLAG_ACTIVITY_NO_ANIMATION` + `overridePendingTransition(0,0)` when rebasing to avoid flashes.
+- Keep the dependency injection for `CareModeRouter.store` lightweight (e.g., an `object` initialised in `Application.onCreate`).
+- Avoid heavy work in `onStart()`; only read the current state and decide. Expensive operations (loading conversation) remain inside the target activity.
+- Memory: task rebasing ensures a single-root stack; no leaks from obsolete activities.
+
+
+## Optional Manifest Tweaks (Not Required, but Safe)
+
+If you see stray re-creations under manufacturer ROMs, consider adding for roots:
+```xml
+<!-- Optional: reduce duplicate creations under some OEMs -->
+<activity android:name=".MainActivity"
+          android:launchMode="singleTop" />
+<activity android:name=".AccessibilityModeActivity"
+          android:launchMode="singleTop" />
+```
+Keep defaults otherwise; the `CLEAR_TASK` rebasing already guarantees correctness.
+
+
+## Success Criteria Mapping
+
+- **Smooth UX**: Rebase with no animations; single-root stacks prevent flicker.
+- **Predictable back**: Care root exits; normal root follows existing behaviour.
+- **Minimal code**: One router, one store, two small hooks.
+- **Robustness**: Centralised decisions; deep links/notifications respect mode.
+- **Performance**: No heavy lifecycle work; single activity in task.

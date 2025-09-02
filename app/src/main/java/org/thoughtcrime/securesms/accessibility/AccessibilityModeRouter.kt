@@ -11,15 +11,15 @@ import org.thoughtcrime.securesms.MainActivity
 import org.signal.core.util.logging.Log
 
 /**
- * Central router for Care Mode transitions.
+ * Central router for Accessibility Mode transitions.
  * Handles all routing decisions and task rebasing.
  */
-object CareModeRouter {
+object AccessibilityModeRouter {
   
-  private val TAG = Log.tag(CareModeRouter::class)
+  private val TAG = Log.tag(AccessibilityModeRouter::class)
   
   // Store instance - will be initialized in Application.onCreate
-  lateinit var store: CareModeStore
+  lateinit var store: AccessibilityModeStore
 
   /**
    * Call from MainActivity.onStart() and AccessibilityModeActivity.onStart().
@@ -27,26 +27,26 @@ object CareModeRouter {
    */
   fun routeIfNeeded(host: Activity) {
     val state = store.current()
-    val isCare = state.enabled
+    val isAccessibility = state.enabled
 
     when (host) {
       is AccessibilityModeActivity -> {
-        // We're in Care Mode - verify we should be here
+        // We're in Accessibility Mode - verify we should be here
         val hostThread = host.intent.getLongExtra("selected_thread_id", -1L).takeIf { it > 0 }
         
-        if (!isCare) {
-          Log.d(TAG, "Care Mode disabled, rebasing to Normal Mode")
+        if (!isAccessibility) {
+          Log.d(TAG, "Accessibility Mode disabled, rebasing to Normal Mode")
           rebaseToNormal(host)
         } else if (state.threadId != hostThread) {
-          Log.d(TAG, "Thread ID mismatch, rebasing to correct Care Mode")
-          rebaseToCare(host, state.threadId)
+          Log.d(TAG, "Thread ID mismatch, rebasing to correct Accessibility Mode")
+          rebaseToAccessibility(host, state.threadId)
         }
       }
       
       is MainActivity -> {
-        if (isCare) {
-          Log.d(TAG, "Care Mode enabled, rebasing to Care Mode")
-          rebaseToCare(host, state.threadId)
+        if (isAccessibility) {
+          Log.d(TAG, "Accessibility Mode enabled, rebasing to Accessibility Mode")
+          rebaseToAccessibility(host, state.threadId)
         }
       }
       
@@ -59,9 +59,9 @@ object CareModeRouter {
   /**
    * Call directly from Settings when user toggles mode for immediate rebase.
    */
-  fun rebaseToCare(context: Context, threadId: Long?) {
-    Log.d(TAG, "Rebasing to Care Mode with threadId: $threadId")
-    context.startActivity(IntentFactory.careRoot(context, threadId))
+  fun rebaseToAccessibility(context: Context, threadId: Long?) {
+    Log.d(TAG, "Rebasing to Accessibility Mode with threadId: $threadId")
+    context.startActivity(IntentFactory.accessibilityRoot(context, threadId))
     if (context is Activity) {
       context.overridePendingTransition(0, 0)
     }

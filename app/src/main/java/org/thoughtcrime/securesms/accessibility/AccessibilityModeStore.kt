@@ -10,19 +10,19 @@ import kotlinx.coroutines.flow.map
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 
 /**
- * Store for Care Mode state management.
- * Provides a clean interface to Care Mode settings.
+ * Store for Accessibility Mode state management.
+ * Provides a clean interface to Accessibility Mode settings.
  */
-interface CareModeStore {
-  fun state(): Flow<CareModeState>
-  fun current(): CareModeState
+interface AccessibilityModeStore {
+  fun state(): Flow<AccessibilityModeState>
+  fun current(): AccessibilityModeState
   fun setEnabled(enabled: Boolean, threadId: Long?)
 }
 
 /**
- * Immutable Care Mode state.
+ * Immutable Accessibility Mode state.
  */
-data class CareModeState(
+data class AccessibilityModeState(
   val enabled: Boolean,
   val threadId: Long?
 )
@@ -30,15 +30,15 @@ data class CareModeState(
 /**
  * Implementation using existing SignalStore.accessibilityMode.
  */
-class SignalCareModeStore : CareModeStore {
-  override fun state(): Flow<CareModeState> {
+class SignalAccessibilityModeStore : AccessibilityModeStore {
+  override fun state(): Flow<AccessibilityModeState> {
     // For now, return a simple flow that reads current state
     // TODO: Implement proper Flow when SignalStore supports it
     return kotlinx.coroutines.flow.flowOf(current())
   }
 
-  override fun current(): CareModeState {
-    return CareModeState(
+  override fun current(): AccessibilityModeState {
+    return AccessibilityModeState(
       enabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
       threadId = SignalStore.accessibilityMode.accessibilityThreadId.takeIf { it > 0 }
     )

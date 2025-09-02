@@ -8,7 +8,7 @@ package org.thoughtcrime.securesms.accessibility
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import org.thoughtcrime.securesms.R
-import org.thoughtcrime.securesms.accessibility.CareModeRouter
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter
 
 /**
  * Main accessibility interface for Signal conversations.
@@ -48,6 +48,6 @@ class AccessibilityModeActivity : AppCompatActivity() {
 
 override fun onStart() {
     super.onStart()
-    CareModeRouter.routeIfNeeded(this)
+    AccessibilityModeRouter.routeIfNeeded(this)
 }
 }

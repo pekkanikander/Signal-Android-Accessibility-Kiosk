@@ -44,8 +44,8 @@ import org.signal.ringrtc.CallManager;
 import org.thoughtcrime.securesms.apkupdate.ApkUpdateRefreshListener;
 import org.thoughtcrime.securesms.avatar.AvatarPickerStorage;
 import org.thoughtcrime.securesms.backup.v2.BackupRepository;
-import org.thoughtcrime.securesms.accessibility.CareModeRouter;
-import org.thoughtcrime.securesms.accessibility.SignalCareModeStore;
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter;
+import org.thoughtcrime.securesms.accessibility.SignalAccessibilityModeStore;
 import org.thoughtcrime.securesms.crypto.AttachmentSecretProvider;
 import org.thoughtcrime.securesms.crypto.DatabaseSecretProvider;
 import org.thoughtcrime.securesms.database.LogDatabase;
@@ -207,7 +207,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
               .addNonBlocking(AppDependencies::getBillingApi)
               .addNonBlocking(this::ensureProfileUploaded)
               .addNonBlocking(() -> AppDependencies.getExpireStoriesManager().scheduleIfNecessary())
-              .addNonBlocking(() -> CareModeRouter.store = new SignalCareModeStore())
+              .addNonBlocking(() -> AccessibilityModeRouter.store = new SignalAccessibilityModeStore())
               .addPostRender(() -> AppDependencies.getDeletedCallEventManager().scheduleIfNecessary())
               .addPostRender(() -> RateLimitUtil.retryAllRateLimitedMessages(this))
               .addPostRender(this::initializeExpiringMessageManager)
