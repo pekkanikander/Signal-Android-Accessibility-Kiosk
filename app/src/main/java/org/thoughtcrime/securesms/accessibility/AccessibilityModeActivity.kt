@@ -70,10 +70,20 @@ class AccessibilityModeActivity : AppCompatActivity() {
     // Attach to the root view
     val rootView = findViewById<View>(android.R.id.content)
     rootView.setOnTouchListener(exitGestureDetector)
+    
+    // Add debug info to logcat
+    Log.d(TAG, "Exit gesture detector initialized and attached to root view")
+    Log.d(TAG, "Root view bounds: ${rootView.width}x${rootView.height}")
   }
 
   override fun onStart() {
     super.onStart()
     AccessibilityModeRouter.routeIfNeeded(this)
+  }
+
+  // Temporary debug method - can be called from adb or removed later
+  fun debugTriggerGesture() {
+    Log.d(TAG, "Debug: Manually triggering gesture")
+    startActivity(IntentFactory.settings(this))
   }
 }

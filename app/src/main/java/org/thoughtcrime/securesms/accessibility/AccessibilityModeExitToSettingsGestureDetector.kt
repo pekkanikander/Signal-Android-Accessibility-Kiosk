@@ -58,36 +58,48 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private val cornerSizeDp: Int get() = SignalStore.accessibilityMode.exitGestureCornerDp
   private val driftToleranceDp: Int get() = SignalStore.accessibilityMode.exitGestureDriftDp
 
-  override fun onTouch(view: View, event: MotionEvent): Boolean {
+    override fun onTouch(view: View, event: MotionEvent): Boolean {
+    Log.d(TAG, "Touch event: action=${event.actionMasked}, pointerCount=${event.pointerCount}, actionIndex=${event.actionIndex}")
+
     when (event.actionMasked) {
       MotionEvent.ACTION_DOWN -> {
+        Log.d(TAG, "ACTION_DOWN: pointerId=${event.getPointerId(0)}, x=${event.getX(0)}, y=${event.getY(0)}")
         handlePointerDown(event, 0)
         return false // Don't consume, let other touch handlers work
       }
 
       MotionEvent.ACTION_POINTER_DOWN -> {
         val pointerIndex = event.actionIndex
+        val pointerId = event.getPointerId(pointerIndex)
+        Log.d(TAG, "ACTION_POINTER_DOWN: pointerId=$pointerId, x=${event.getX(pointerIndex)}, y=${event.getY(pointerIndex)}")
         handlePointerDown(event, pointerIndex)
         return false
       }
 
       MotionEvent.ACTION_MOVE -> {
-        handlePointerMove(event)
+        if (event.pointerCount > 0) {
+          Log.d(TAG, "ACTION_MOVE: pointerCount=${event.pointerCount}, firstPointerId=${event.getPointerId(0)}")
+          handlePointerMove(event)
+        }
         return false
       }
 
       MotionEvent.ACTION_UP -> {
+        Log.d(TAG, "ACTION_UP: pointerId=${event.getPointerId(0)}")
         handlePointerUp(event, 0)
         return false
       }
 
       MotionEvent.ACTION_POINTER_UP -> {
         val pointerIndex = event.actionIndex
+        val pointerId = event.getPointerId(pointerIndex)
+        Log.d(TAG, "ACTION_POINTER_UP: pointerId=$pointerId")
         handlePointerUp(event, pointerIndex)
         return false
       }
 
       MotionEvent.ACTION_CANCEL -> {
+        Log.d(TAG, "ACTION_CANCEL")
         resetGesture()
         return false
       }
@@ -96,11 +108,13 @@ class AccessibilityModeExitToSettingsGestureDetector(
     return false
   }
 
-  private fun handlePointerDown(event: MotionEvent, pointerIndex: Int) {
+    private fun handlePointerDown(event: MotionEvent, pointerIndex: Int) {
     val pointerId = event.getPointerId(pointerIndex)
     val x = event.getX(pointerIndex)
     val y = event.getY(pointerIndex)
     val currentTime = System.currentTimeMillis()
+
+    Log.d(TAG, "handlePointerDown: pointerId=$pointerId, x=$x, y=$y, firstPointerId=$firstPointerId, secondPointerId=$secondPointerId")
 
     when {
       firstPointerId == -1 -> {
@@ -115,6 +129,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
       secondPointerId == -1 -> {
         // Second pointer - check timing
         val timeDiff = currentTime - firstPointerDownTime
+        Log.d(TAG, "Second pointer detected: timeDiff=$timeDiff ms, timeout=$POINTER_TIMEOUT_MS ms")
+
         if (timeDiff <= POINTER_TIMEOUT_MS) {
           secondPointerId = pointerId
           secondPointerDownTime = currentTime
@@ -123,14 +139,17 @@ class AccessibilityModeExitToSettingsGestureDetector(
           Log.d(TAG, "Second pointer down: id=$pointerId, pos=($x, $y), timeDiff=$timeDiff")
 
           // Check if this could be a valid gesture
+          Log.d(TAG, "Checking corner gesture validity...")
           if (isValidCornerGesture(x, y)) {
+            Log.d(TAG, "Corner gesture is valid, starting detection")
             startGestureDetection()
           } else {
+            Log.d(TAG, "Corner gesture is invalid, resetting")
             resetGesture()
           }
         } else {
           // Too much time between pointers, reset
-          Log.d(TAG, "Pointer timeout: $timeDiff ms")
+          Log.d(TAG, "Pointer timeout: $timeDiff ms > $POINTER_TIMEOUT_MS ms")
           resetGesture()
         }
       }
@@ -143,8 +162,9 @@ class AccessibilityModeExitToSettingsGestureDetector(
     }
   }
 
-  private fun handlePointerMove(event: MotionEvent) {
+    private fun handlePointerMove(event: MotionEvent) {
     if (!isGestureActive || firstPointerId == -1 || secondPointerId == -1) {
+      Log.d(TAG, "handlePointerMove: gesture not active or pointers missing - active=$isGestureActive, first=$firstPointerId, second=$secondPointerId")
       return
     }
 
@@ -152,6 +172,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     val secondIndex = event.findPointerIndex(secondPointerId)
 
     if (firstIndex == -1 || secondIndex == -1) {
+      Log.d(TAG, "handlePointerMove: pointer indices not found - firstIndex=$firstIndex, secondIndex=$secondIndex")
       resetGesture()
       return
     }
@@ -161,10 +182,14 @@ class AccessibilityModeExitToSettingsGestureDetector(
     val secondX = event.getX(secondIndex)
     val secondY = event.getY(secondIndex)
 
+    Log.d(TAG, "handlePointerMove: first=($firstX, $firstY), second=($secondX, $secondY)")
+
     // Check drift tolerance
     val firstDrift = sqrt((firstX - firstPointerStartX).pow(2) + (firstY - firstPointerStartY).pow(2))
     val secondDrift = sqrt((secondX - secondPointerStartX).pow(2) + (secondY - secondPointerStartY).pow(2))
     val maxDriftPx = context.resources.displayMetrics.density * driftToleranceDp
+
+    Log.d(TAG, "Drift check: first=$firstDrift, second=$secondDrift, max=$maxDriftPx, driftToleranceDp=$driftToleranceDp")
 
     if (firstDrift > maxDriftPx || secondDrift > maxDriftPx) {
       Log.d(TAG, "Drift exceeded: first=$firstDrift, second=$secondDrift, max=$maxDriftPx")
@@ -176,6 +201,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
     val currentTime = System.currentTimeMillis()
     val holdTime = minOf(currentTime - firstPointerDownTime, currentTime - secondPointerDownTime)
 
+    Log.d(TAG, "Hold check: holdTime=$holdTime ms, required=$holdDurationMs ms")
+
     if (holdTime >= holdDurationMs) {
       Log.d(TAG, "Gesture triggered after ${holdTime}ms")
       triggerGesture()
@@ -186,6 +213,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     if (currentTime - lastHapticTime >= HAPTIC_FEEDBACK_INTERVAL_MS) {
       // TODO: Add haptic feedback
       lastHapticTime = currentTime
+      Log.d(TAG, "Haptic feedback triggered")
     }
   }
 
@@ -209,11 +237,16 @@ class AccessibilityModeExitToSettingsGestureDetector(
     val screenHeight = context.resources.displayMetrics.heightPixels
     val cornerSizePx = context.resources.displayMetrics.density * cornerSizeDp
 
+    Log.d(TAG, "isValidCornerGesture: screen=${screenWidth}x${screenHeight}, cornerSize=${cornerSizePx}px, cornerSizeDp=$cornerSizeDp")
+
     // Check if second pointer is in opposite corner
     val firstInTopLeft = isInTopLeftCorner(firstPointerStartX, firstPointerStartY, cornerSizePx)
     val firstInBottomRight = isInBottomRightCorner(firstPointerStartX, firstPointerStartY, screenWidth, screenHeight, cornerSizePx)
     val secondInTopLeft = isInTopLeftCorner(x, y, cornerSizePx)
     val secondInBottomRight = isInBottomRightCorner(x, y, screenWidth, screenHeight, cornerSizePx)
+
+    Log.d(TAG, "Corner checks: first=(${firstPointerStartX}, ${firstPointerStartY}) - topLeft=$firstInTopLeft, bottomRight=$firstInBottomRight")
+    Log.d(TAG, "Corner checks: second=($x, $y) - topLeft=$secondInTopLeft, bottomRight=$secondInBottomRight")
 
     val isValidCornerPair = (firstInTopLeft && secondInBottomRight) || (firstInBottomRight && secondInTopLeft)
 
@@ -227,6 +260,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
     val screenDiagonal = sqrt((screenWidth * screenWidth + screenHeight * screenHeight).toFloat())
     val minDistance = screenDiagonal * MIN_DISTANCE_RATIO
 
+    Log.d(TAG, "Distance check: distance=$distance, screenDiagonal=$screenDiagonal, minDistance=$minDistance, ratio=$MIN_DISTANCE_RATIO")
+
     if (distance < minDistance) {
       Log.d(TAG, "Distance too small: $distance < $minDistance")
       return false
@@ -237,11 +272,15 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   private fun isInTopLeftCorner(x: Float, y: Float, cornerSizePx: Float): Boolean {
-    return x <= cornerSizePx && y <= cornerSizePx
+    val result = x <= cornerSizePx && y <= cornerSizePx
+    Log.d(TAG, "isInTopLeftCorner: x=$x, y=$y, cornerSize=$cornerSizePx, result=$result")
+    return result
   }
 
   private fun isInBottomRightCorner(x: Float, y: Float, screenWidth: Int, screenHeight: Int, cornerSizePx: Float): Boolean {
-    return x >= (screenWidth - cornerSizePx) && y >= (screenHeight - cornerSizePx)
+    val result = x >= (screenWidth - cornerSizePx) && y >= (screenHeight - cornerSizePx)
+    Log.d(TAG, "isInBottomRightCorner: x=$x, y=$y, screen=${screenWidth}x${screenHeight}, cornerSize=$cornerSizePx, result=$result")
+    return result
   }
 
   private fun startGestureDetection() {
