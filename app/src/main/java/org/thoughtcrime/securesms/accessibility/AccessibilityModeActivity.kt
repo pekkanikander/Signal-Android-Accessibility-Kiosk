@@ -8,6 +8,7 @@ package org.thoughtcrime.securesms.accessibility
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.accessibility.CareModeRouter
 
 /**
  * Main accessibility interface for Signal conversations.
@@ -39,9 +40,14 @@ class AccessibilityModeActivity : AppCompatActivity() {
             args.putLong("selected_thread_id", selectedThreadId)
             fragment.arguments = args
 
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .commit()
-        }
+                    supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .commit()
     }
+}
+
+override fun onStart() {
+    super.onStart()
+    CareModeRouter.routeIfNeeded(this)
+}
 }

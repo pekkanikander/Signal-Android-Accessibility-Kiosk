@@ -98,6 +98,7 @@ import org.thoughtcrime.securesms.devicetransfer.olddevice.OldDeviceExitActivity
 import org.thoughtcrime.securesms.groups.ui.creategroup.CreateGroupActivity
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.lock.v2.CreateSvrPinActivity
+import org.thoughtcrime.securesms.accessibility.CareModeRouter
 import org.thoughtcrime.securesms.main.MainBottomChrome
 import org.thoughtcrime.securesms.main.MainBottomChromeCallback
 import org.thoughtcrime.securesms.main.MainBottomChromeState
@@ -583,6 +584,11 @@ class MainActivity : PassphraseRequiredActivity(), VoiceNoteMediaControllerOwner
   override fun onPreCreate() {
     super.onPreCreate()
     dynamicTheme.onCreate(this)
+  }
+
+  override fun onStart() {
+    super.onStart()
+    CareModeRouter.routeIfNeeded(this)
   }
 
   override fun onResume() {
