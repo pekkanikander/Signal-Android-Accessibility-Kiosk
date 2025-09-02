@@ -17,6 +17,13 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     const val EXIT_GESTURE_REQUIRE_PIN = "accessibility_mode.exit_gesture_require_pin"
     const val EXIT_GESTURE_PIN_HASH = "accessibility_mode.exit_gesture_pin_hash"
     const val EXIT_GESTURE_PIN_SALT = "accessibility_mode.exit_gesture_pin_salt"
+
+    // Advanced configuration keys (Phase 2.5)
+    const val EXIT_GESTURE_HOLD_MS = "accessibility_mode.exit_gesture_hold_ms"
+    const val EXIT_GESTURE_CONFIRM_MS = "accessibility_mode.exit_gesture_confirm_ms"
+    const val EXIT_GESTURE_TIMEOUT_MS = "accessibility_mode.exit_gesture_timeout_ms"
+    const val EXIT_GESTURE_CORNER_DP = "accessibility_mode.exit_gesture_corner_dp"
+    const val EXIT_GESTURE_DRIFT_DP = "accessibility_mode.exit_gesture_drift_dp"
   }
 
   // Boolean values using booleanValue delegate
@@ -31,6 +38,13 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   var exitGesturePinHash: String by stringValue(EXIT_GESTURE_PIN_HASH, "")
   var exitGesturePinSalt: String by stringValue(EXIT_GESTURE_PIN_SALT, "")
 
+  // Advanced configuration (Phase 2.5)
+  var exitGestureHoldMs: Int by integerValue(EXIT_GESTURE_HOLD_MS, 2500) // Default A=2500ms, B=1800ms
+  var exitGestureConfirmMs: Int by integerValue(EXIT_GESTURE_CONFIRM_MS, 1500) // Default 1500ms
+  var exitGestureTimeoutMs: Int by integerValue(EXIT_GESTURE_TIMEOUT_MS, 10000) // Default 10s
+  var exitGestureCornerDp: Int by integerValue(EXIT_GESTURE_CORNER_DP, 72) // Default 72dp
+  var exitGestureDriftDp: Int by integerValue(EXIT_GESTURE_DRIFT_DP, 24) // Default 24dp
+
   public override fun onFirstEverAppLaunch() = Unit
 
   public override fun getKeysToIncludeInBackup(): List<String> {
@@ -40,7 +54,12 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
       EXIT_GESTURE_TYPE,
       EXIT_GESTURE_REQUIRE_PIN,
       EXIT_GESTURE_PIN_HASH,
-      EXIT_GESTURE_PIN_SALT
+      EXIT_GESTURE_PIN_SALT,
+      EXIT_GESTURE_HOLD_MS,
+      EXIT_GESTURE_CONFIRM_MS,
+      EXIT_GESTURE_TIMEOUT_MS,
+      EXIT_GESTURE_CORNER_DP,
+      EXIT_GESTURE_DRIFT_DP
     )
   }
 }
