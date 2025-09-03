@@ -27,17 +27,33 @@ class AccessibilityTalkBackUiTest {
 
     @Test
     fun mainScreen_hasAccessibleConversationList() {
-        // Launch Signal RoutingActivity
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val intent = context.packageManager.getLaunchIntentForPackage("org.thoughtcrime.securesms")
-        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        context.startActivity(intent)
+        // Launch Signal RoutingActivity. getLaunchIntentForPackage may return null
+        // if the package isn't found for the instrumentation context, so fall
+        // back to using a shell am start via UiDevice.
+        val packageName = "org.thoughtcrime.securesms"
+        val instr = InstrumentationRegistry.getInstrumentation()
+        val context = instr.targetContext
+        val pm = context.packageManager
+        val intent = pm.getLaunchIntentForPackage(packageName)
+        if (intent != null) {
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            context.startActivity(intent)
+        } else {
+            // Best-effort fallback: start via shell command (RoutingActivity assumed)
+            val activityName = "$packageName/.RoutingActivity"
+            device.executeShellCommand("am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $activityName")
+        }
+        // Give the app a moment to start
+        Thread.sleep(1500)
 
         // Wait for app to appear
         device.wait(Until.hasObject(By.pkg("org.thoughtcrime.securesms")), 5000)
 
         // Look for an element that is likely to exist and should have a content-desc or text
-        val node = device.wait(Until.findObject(By.descContains("Conversation").or(By.textContains("Conversation"))), 5000)
+        var node = device.wait(Until.findObject(By.descContains("Conversation")), 5000)
+        if (node == null) {
+            node = device.wait(Until.findObject(By.textContains("Conversation")), 5000)
+        }
 
         assertTrue("Conversation list or label should be present", node != null)
     }
