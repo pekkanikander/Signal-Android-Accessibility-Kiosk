@@ -8,6 +8,9 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import io.mockk.mockk
 import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import android.view.accessibility.AccessibilityManager
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.MatcherAssert.assertThat
@@ -26,6 +29,32 @@ class AccessibilityGestureDetectionTest {
 
     private var gestureTriggered = false
     private val gestureCallback = { gestureTriggered = true }
+
+    @org.junit.Before
+    fun setUp() {
+        // Ensure SignalStore is mocked to avoid NPEs in unit tests where SignalStore.instance isn't initialized
+        mockkObject(SignalStore)
+        val mockAccessibilityValues = mockk<org.thoughtcrime.securesms.keyvalue.AccessibilityModeValues>(relaxed = true)
+        // Provide a mutable backing for mocked properties so tests can set/get values normally
+        var currentExitGesture = org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD.value
+        every { mockAccessibilityValues.exitGestureType } answers { currentExitGesture }
+        every { mockAccessibilityValues.exitGestureType = any() } answers { currentExitGesture = it.invocation.args[0] as Int }
+        every { mockAccessibilityValues.exitGestureHoldMs } returns 2500
+        every { mockAccessibilityValues.exitGestureCornerDp } returns 72
+        every { mockAccessibilityValues.exitGestureDriftDp } returns 24
+        every { mockAccessibilityValues.exitGesturePointerTimeoutMs } returns 5000
+        every { SignalStore.accessibilityMode } returns mockAccessibilityValues
+        // Provide a default AccessibilityManager for the mocked Context so lazy access doesn't throw
+        val defaultAccessibilityManager = mockk<AccessibilityManager>(relaxed = true)
+        every { defaultAccessibilityManager.isEnabled } returns false
+        every { defaultAccessibilityManager.isTouchExplorationEnabled } returns false
+        every { mockContext.getSystemService(Context.ACCESSIBILITY_SERVICE) } returns defaultAccessibilityManager
+    }
+
+    @org.junit.After
+    fun tearDown() {
+        unmockkObject(SignalStore)
+    }
 
     @Test
     fun triple_tap_debug_gesture_is_detected() {
@@ -157,20 +186,15 @@ class AccessibilityGestureDetectionTest {
         y: Float,
         downTime: Long = 0
     ): MotionEvent {
-        val eventTime = System.currentTimeMillis() + downTime
-        return MotionEvent.obtain(
-            if (downTime == 0L) eventTime else eventTime - downTime, // downTime
-            eventTime, // eventTime
-            action, // action
-            x, // x
-            y, // y
-            0f, // pressure
-            1f, // size
-            0, // metaState
-            1f, // xPrecision
-            1f, // yPrecision
-            0, // deviceId
-            0 // edgeFlags
-        )
+        // Use a mocked MotionEvent for JVM unit tests (MotionEvent.obtain isn't available)
+        val event = mockk<MotionEvent>(relaxed = true)
+        every { event.actionMasked } returns action
+        every { event.pointerCount } returns 1
+        every { event.actionIndex } returns 0
+        every { event.getPointerId(0) } returns 0
+        every { event.getX(0) } returns x
+        every { event.getY(0) } returns y
+        every { event.findPointerIndex(0) } returns 0
+        return event
     }
 }

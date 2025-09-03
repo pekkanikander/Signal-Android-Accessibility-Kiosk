@@ -109,7 +109,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
       MotionEvent.ACTION_POINTER_DOWN -> handlePointerDown(event, event.actionIndex)
       MotionEvent.ACTION_MOVE -> handlePointerMove(event)
       MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> handlePointerUp(event, event.actionIndex)
-      MotionEvent.ACTION_CANCEL -> { resetState(); false }
+      MotionEvent.ACTION_CANCEL -> { resetState(); true }
       else -> false
     }
   }
@@ -148,6 +148,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
               tapCount = 0
               return true
             }
+            // Consume the ACTION_DOWN as part of the triple-tap sequence so subsequent taps are registered
+            return true
           }
 
           GestureType.SINGLE_FINGER_EDGE_DRAG -> {
@@ -340,8 +342,12 @@ class AccessibilityModeExitToSettingsGestureDetector(
     val pointerId = event.getPointerId(pointerIndex)
 
     // If either tracked pointer goes up, cancel gesture
-    if (pointerId == firstPointerId || pointerId == secondPointerId) {
-      resetState()
+    // For the triple-tap debug gesture we intentionally do NOT reset on pointer up
+    // since the gesture is based on consecutive ACTION_DOWN events within a timeout.
+    if (gestureType != GestureType.TRIPLE_TAP_DEBUG) {
+      if (pointerId == firstPointerId || pointerId == secondPointerId) {
+        resetState()
+      }
     }
 
     return false
