@@ -5,6 +5,7 @@
 
 package org.thoughtcrime.securesms.accessibility
 
+import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -70,12 +71,16 @@ class AccessibilityModeActivity : AppCompatActivity() {
   }
 
     private fun setupExitGestureDetector() {
-    exitGestureDetector = AccessibilityModeExitToSettingsGestureDetector(this) {
-      Log.d(TAG, "Exit gesture triggered, launching confirmation")
-      // TODO: Launch confirmation overlay instead of directly going to settings
-      // For now, go directly to settings for testing
-      startActivity(IntentFactory.settings(this))
-    }
+    exitGestureDetector = AccessibilityModeExitToSettingsGestureDetector(
+      context = this,
+      headerBoundsProvider = { android.graphics.Rect() }, // Empty rect - can be updated when toolbar bounds are available
+      onTriggered = {
+        Log.d(TAG, "Exit gesture triggered, launching confirmation")
+        // TODO: Launch confirmation overlay instead of directly going to settings
+        // For now, go directly to settings for testing
+        startActivity(IntentFactory.settings(this))
+      }
+    )
 
     // Create a transparent overlay view that sits on top of everything
     val overlayView = View(this).apply {

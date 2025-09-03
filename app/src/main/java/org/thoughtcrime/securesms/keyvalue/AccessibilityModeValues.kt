@@ -24,6 +24,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     const val EXIT_GESTURE_TIMEOUT_MS = "accessibility_mode.exit_gesture_timeout_ms"
     const val EXIT_GESTURE_CORNER_DP = "accessibility_mode.exit_gesture_corner_dp"
     const val EXIT_GESTURE_DRIFT_DP = "accessibility_mode.exit_gesture_drift_dp"
+    const val EXIT_GESTURE_POINTER_TIMEOUT_MS = "accessibility_mode.exit_gesture_pointer_timeout_ms"
   }
 
   // Boolean values using booleanValue delegate
@@ -44,6 +45,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   var exitGestureTimeoutMs: Int by integerValue(EXIT_GESTURE_TIMEOUT_MS, 10000) // Default 10s
   var exitGestureCornerDp: Int by integerValue(EXIT_GESTURE_CORNER_DP, 72) // Default 72dp
   var exitGestureDriftDp: Int by integerValue(EXIT_GESTURE_DRIFT_DP, 24) // Default 24dp
+  var exitGesturePointerTimeoutMs: Int by integerValue(EXIT_GESTURE_POINTER_TIMEOUT_MS, 5000) // Default 5000ms for emulator testing
 
   public override fun onFirstEverAppLaunch() = Unit
 
@@ -59,7 +61,8 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
       EXIT_GESTURE_CONFIRM_MS,
       EXIT_GESTURE_TIMEOUT_MS,
       EXIT_GESTURE_CORNER_DP,
-      EXIT_GESTURE_DRIFT_DP
+      EXIT_GESTURE_DRIFT_DP,
+      EXIT_GESTURE_POINTER_TIMEOUT_MS
     )
   }
 }
