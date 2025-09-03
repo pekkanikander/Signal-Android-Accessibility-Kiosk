@@ -39,11 +39,13 @@
 - [x] Preserve upstream Signal tests untouched (182 files remain)
 - [x] Verified build still works after removal
 
-### **Step 1.2: Design New Test Strategy**
-- [ ] **Unit Tests**: Core accessibility logic only
-- [ ] **Integration Tests**: Signal component compatibility
-- [ ] **E2E Tests**: Critical user flows with Espresso
-- [ ] **Accessibility Tests**: TalkBack/screen reader compatibility
+### **✅ Step 1.2: Design New Test Strategy** ✓
+- [x] **Unit Tests**: Core accessibility logic only
+- [x] **Integration Tests**: Signal component compatibility
+- [x] **E2E Tests**: Critical user flows with Espresso
+- [x] **Accessibility Tests**: TalkBack/screen reader compatibility
+- [x] **Semantic Test Cases**: User-focused test scenarios
+- [x] **Minimal Coverage**: Essential workflows only
 
 ### **Step 1.3: Implement Minimal Test Coverage**
 - [ ] **Semantic Test Cases**:
