@@ -46,7 +46,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private enum class GestureType {
     OPPOSITE_CORNERS,
     HEADER_HOLD,
-    SINGLE_FINGER_EDGE_DRAG
+    SINGLE_FINGER_EDGE_DRAG,
+    TRIPLE_TAP_DEBUG
   }
 
   // Configuration - lazy loaded for performance
@@ -55,7 +56,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
       0 -> GestureType.OPPOSITE_CORNERS
       1 -> GestureType.HEADER_HOLD
       2 -> GestureType.SINGLE_FINGER_EDGE_DRAG
-      else -> GestureType.SINGLE_FINGER_EDGE_DRAG // Default to easier option for testing
+      3 -> GestureType.TRIPLE_TAP_DEBUG
+      else -> GestureType.TRIPLE_TAP_DEBUG // Default to debug gesture for testing
     }
   }
 
@@ -89,11 +91,18 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private var singleFingerStartY = 0f
   private var isAtEdge = false
 
+  // Triple tap debug state
+  private var tapCount = 0
+  private var lastTapTime = 0L
+  private val TRIPLE_TAP_TIMEOUT = 2000L // 2 seconds to complete triple tap
+
   override fun onTouch(view: View, event: MotionEvent): Boolean {
     // Skip if accessibility services are active (let them handle gestures)
     if (accessibilityManager.isEnabled && accessibilityManager.isTouchExplorationEnabled) {
       return false
     }
+
+    Log.d(TAG, "onTouch: action=${event.actionMasked}, pointers=${event.pointerCount}, state=$state")
 
     return when (event.actionMasked) {
       MotionEvent.ACTION_DOWN -> handlePointerDown(event, 0)
@@ -113,23 +122,48 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
     when (state) {
       GestureState.IDLE -> {
-        // First pointer down - handle both single and multi-finger gestures
+        // First pointer down - handle different gesture types
         firstPointerId = pointerId
         firstPointerDownTime = currentTime
         firstPointerStartX = x
         firstPointerStartY = y
 
-        if (gestureType == GestureType.SINGLE_FINGER_EDGE_DRAG) {
-          // For single-finger gesture, just record start position and wait for long press
-          singleFingerStartX = x
-          singleFingerStartY = y
-          singleFingerLongPressStartTime = currentTime
-          state = GestureState.FIRST_POINTER_DOWN
-          Log.d(TAG, "Single-finger gesture tracking started: id=$pointerId at ($x, $y)")
-        } else {
-          // For multi-finger gestures, wait for second pointer
-          state = GestureState.FIRST_POINTER_DOWN
-          Log.d(TAG, "First pointer down: id=$pointerId at ($x, $y)")
+        when (gestureType) {
+          GestureType.TRIPLE_TAP_DEBUG -> {
+            // Handle triple tap: check timing and count taps
+            if (currentTime - lastTapTime > TRIPLE_TAP_TIMEOUT) {
+              // Reset if too much time has passed
+              tapCount = 1
+            } else {
+              tapCount++
+            }
+            lastTapTime = currentTime
+
+            Log.d(TAG, "Triple tap: count=$tapCount, timeDiff=${currentTime - lastTapTime}")
+
+            if (tapCount >= 3) {
+              // Triple tap completed!
+              Log.d(TAG, "Triple tap gesture completed!")
+              triggerGesture()
+              tapCount = 0
+              return true
+            }
+          }
+
+          GestureType.SINGLE_FINGER_EDGE_DRAG -> {
+            // For single-finger gesture, just record start position and wait for long press
+            singleFingerStartX = x
+            singleFingerStartY = y
+            singleFingerLongPressStartTime = currentTime
+            state = GestureState.FIRST_POINTER_DOWN
+            Log.d(TAG, "Single-finger gesture tracking started: id=$pointerId at ($x, $y)")
+          }
+
+          else -> {
+            // For multi-finger gestures, wait for second pointer
+            state = GestureState.FIRST_POINTER_DOWN
+            Log.d(TAG, "First pointer down: id=$pointerId at ($x, $y)")
+          }
         }
       }
 
@@ -155,6 +189,11 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
       GestureState.SECOND_POINTER_DOWN -> {
         // Third pointer - cancel gesture
+        resetState()
+      }
+
+      GestureState.SINGLE_FINGER_LONG_PRESS -> {
+        // Additional pointer during long press - cancel gesture
         resetState()
       }
 
@@ -185,8 +224,9 @@ class AccessibilityModeExitToSettingsGestureDetector(
         Log.d(TAG, "Single-finger long press detected, now waiting for edge drag")
         // Continue to edge detection below
       } else {
-        // Still waiting for long press, don't consume event yet
-        return false
+        // Still waiting for long press, but consume events to prevent interference
+        Log.d(TAG, "Waiting for long press: ${pressDuration}ms / 500ms")
+        return true // Consume the event
       }
     }
 
@@ -205,6 +245,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
       // Check if finger is at screen edge
       val isAtEdgeNow = isAtScreenEdge(currentX, currentY)
+      Log.d(TAG, "Edge detection: pos=($currentX, $currentY), atEdge=$isAtEdgeNow, state=$state")
 
       if (state == GestureState.SINGLE_FINGER_LONG_PRESS && isAtEdgeNow) {
         // Just arrived at edge during long press - start the gesture
@@ -311,6 +352,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
       GestureType.OPPOSITE_CORNERS -> isValidCornerGesture(secondX, secondY)
       GestureType.HEADER_HOLD -> isValidHeaderGesture(secondX, secondY)
       GestureType.SINGLE_FINGER_EDGE_DRAG -> false // Single-finger gestures don't use this method
+      GestureType.TRIPLE_TAP_DEBUG -> false // Triple tap doesn't use this method
     }
   }
 
@@ -390,11 +432,26 @@ class AccessibilityModeExitToSettingsGestureDetector(
     singleFingerStartY = 0f
     isAtEdge = false
 
+    // Reset triple tap state
+    tapCount = 0
+    lastTapTime = 0L
+
     Log.d(TAG, "Gesture state reset")
   }
 
   private fun provideHapticFeedback() {
     // TODO: Implement haptic feedback
     // view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+  }
+
+  // Debug method to get current gesture state
+  fun getCurrentState(): String {
+    return when (state) {
+      GestureState.IDLE -> "IDLE"
+      GestureState.FIRST_POINTER_DOWN -> "FIRST_POINTER_DOWN"
+      GestureState.SECOND_POINTER_DOWN -> "SECOND_POINTER_DOWN"
+      GestureState.SINGLE_FINGER_LONG_PRESS -> "SINGLE_FINGER_LONG_PRESS"
+      GestureState.GESTURE_ACTIVE -> "GESTURE_ACTIVE"
+    }
   }
 }

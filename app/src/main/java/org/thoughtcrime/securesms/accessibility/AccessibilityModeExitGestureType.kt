@@ -16,7 +16,8 @@ package org.thoughtcrime.securesms.accessibility
 enum class AccessibilityModeExitGestureType(val value: Int, val displayName: String) {
   OPPOSITE_CORNERS_HOLD(0, "Opposite corners hold (strict)"),
   TWO_FINGER_HEADER_HOLD(1, "Two-finger header hold"),
-  SINGLE_FINGER_EDGE_DRAG_HOLD(2, "Single-finger edge drag hold (easier)");
+  SINGLE_FINGER_EDGE_DRAG_HOLD(2, "Single-finger edge drag hold (easier)"),
+  TRIPLE_TAP_DEBUG(3, "Triple tap (debug - emulator reliable)");
 
   companion object {
     fun fromValue(value: Int): AccessibilityModeExitGestureType {

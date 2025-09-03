@@ -94,7 +94,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
     // Add the overlay to the root view
     val rootView = findViewById<View>(android.R.id.content) as ViewGroup
     rootView.addView(overlayView)
-    
+
     // Add debug info to logcat
     Log.d(TAG, "Exit gesture detector initialized and attached to overlay view")
     Log.d(TAG, "Root view bounds: ${rootView.width}x${rootView.height}")
@@ -110,6 +110,18 @@ class AccessibilityModeActivity : AppCompatActivity() {
   // Temporary debug method - can be called from adb or removed later
   fun debugTriggerGesture() {
     Log.d(TAG, "Debug: Manually triggering gesture")
+    startActivity(IntentFactory.settings(this))
+  }
+
+  // Debug method to test gesture states
+  fun debugGestureState() {
+    Log.d(TAG, "Debug gesture state: current_state=${exitGestureDetector.getCurrentState()}")
+  }
+
+  // Debug method to simulate edge touch
+  fun debugSimulateEdgeTouch() {
+    Log.d(TAG, "Debug: Simulating edge touch at (50, 500)")
+    // This would require modifying the gesture detector to accept simulated events
     startActivity(IntentFactory.settings(this))
   }
 }

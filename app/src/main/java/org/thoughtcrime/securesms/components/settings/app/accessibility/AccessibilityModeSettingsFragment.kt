@@ -93,6 +93,8 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
           org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD
         org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD ->
           org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD
+        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD ->
+          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG
         else ->
           org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD
       }
