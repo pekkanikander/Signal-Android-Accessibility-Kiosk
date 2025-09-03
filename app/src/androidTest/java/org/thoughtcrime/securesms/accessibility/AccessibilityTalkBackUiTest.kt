@@ -36,15 +36,19 @@ class AccessibilityTalkBackUiTest {
 
         // Quick sanity: ensure the package is installed before trying to launch.
         val pm = context.packageManager
+        var installCheckException: Exception? = null
         val installed = try {
             pm.getPackageInfo(packageName, 0)
             true
         } catch (e: Exception) {
+            // Record and log the exception so it appears in instrumentation output
+            installCheckException = e
+            android.util.Log.w("AccessibilityTalkBackUiTest", "packageManager.getPackageInfo failed", e)
             false
         }
 
         if (!installed) {
-            throw AssertionError("Required package not installed on device: $packageName")
+            throw AssertionError("Required package not installed on device: $packageName; check error: ${installCheckException?.message}", installCheckException)
         }
 
         val intent = pm.getLaunchIntentForPackage(packageName)
