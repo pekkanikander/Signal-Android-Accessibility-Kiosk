@@ -34,7 +34,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   var accessibilityThreadId: Long by longValue(ACCESSIBILITY_THREAD_ID, -1L)
 
   // Exit gesture configuration
-  var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD.value)
+  var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD.value)
   var exitGestureRequirePin: Boolean by booleanValue(EXIT_GESTURE_REQUIRE_PIN, false)
   var exitGesturePinHash: String by stringValue(EXIT_GESTURE_PIN_HASH, "")
   var exitGesturePinSalt: String by stringValue(EXIT_GESTURE_PIN_SALT, "")

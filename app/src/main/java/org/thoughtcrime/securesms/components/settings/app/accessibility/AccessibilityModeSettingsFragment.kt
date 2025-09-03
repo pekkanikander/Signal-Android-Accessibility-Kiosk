@@ -86,13 +86,15 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     }
 
     override fun onExitGestureTypeClick() {
-      // TODO: Show gesture type selection dialog
-      // For now, just toggle between the two options
+      // Cycle through all available gesture types
       val currentType = viewModel.state.value.exitGestureType
-      val newType = if (currentType == org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD) {
-        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD
-      } else {
-        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD
+      val newType = when (currentType) {
+        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD ->
+          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD
+        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD ->
+          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD
+        else ->
+          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD
       }
       viewModel.setExitGestureType(newType)
     }
