@@ -649,6 +649,8 @@ dependencies {
   androidTestImplementation(testLibs.androidx.test.ext.junit)
   androidTestImplementation(testLibs.espresso.core)
   androidTestImplementation(testLibs.androidx.test.core)
+  // UIAutomator required for accessibility UI tests (use 2.2.0 to match dependency verification)
+  androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
   androidTestImplementation(testLibs.androidx.test.core.ktx)
   androidTestImplementation(testLibs.androidx.test.ext.junit.ktx)
   androidTestImplementation(testLibs.assertk)
