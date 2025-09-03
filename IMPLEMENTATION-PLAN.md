@@ -32,41 +32,19 @@
 
 ---
 
-## 🚀 **PHASE 1: CORE ARCHITECTURE (2-3 Weeks)**
+## 🧪 **PHASE 1: TESTING FOUNDATION (1-2 Weeks)**
 
-### **Step 1.1: Simplified Gesture System**
-- [ ] **Production Gesture**: One reliable gesture for real device use
-- [ ] **Debug Gesture**: One simple gesture for emulator testing
-- [ ] **Implementation**: Clean 150-line gesture detector (vs current 457 lines)
-
-### **Step 1.2: Clean Settings UI**
-- [ ] **Replace 10 current files** with 2-3 focused files
-- [ ] **Essential Settings Only**:
-  - Enable/Disable toggle
-  - Gesture type selection (2 options)
-  - Conversation selection (reuse Signal's picker)
-- [ ] **Data Model**: Simplify `AccessibilityModeValues.kt`
-
-### **Step 1.3: Preserve Working Core**
-- [ ] **Keep**: `AccessibilityModeActivity.kt`, `AccessibilityModeFragment.kt`
-- [ ] **Keep**: `AccessibilityModeRouter.kt`, `IntentFactory.kt`
-- [ ] **Keep**: Core conversation integration with Signal components
-
----
-
-## 🧪 **PHASE 2: TESTING FOUNDATION (1-2 Weeks)**
-
-### **Step 2.1: Scrap Current Tests**
+### **Step 1.1: Scrap Current Tests**
 - [ ] Remove all 246 current test files
 - [ ] Preserve upstream Signal tests untouched
 
-### **Step 2.2: Design New Test Strategy**
+### **Step 1.2: Design New Test Strategy**
 - [ ] **Unit Tests**: Core accessibility logic only
 - [ ] **Integration Tests**: Signal component compatibility
 - [ ] **E2E Tests**: Critical user flows with Espresso
 - [ ] **Accessibility Tests**: TalkBack/screen reader compatibility
 
-### **Step 2.3: Implement Minimal Test Coverage**
+### **Step 1.3: Implement Minimal Test Coverage**
 - [ ] **Semantic Test Cases**:
   - "User can enter accessibility mode"
   - "User can exit with production gesture"
@@ -74,10 +52,32 @@
   - "Messages display and send correctly"
   - "TalkBack announces accessibility elements"
 
-### **Step 2.4: Verify Test Quality**
+### **Step 1.4: Verify Test Quality**
 - [ ] All tests pass reliably
 - [ ] Tests provide meaningful feedback
 - [ ] Test coverage focuses on user value
+
+---
+
+## 🚀 **PHASE 2: CORE ARCHITECTURE (2-3 Weeks)**
+
+### **Step 2.1: Simplified Gesture System**
+- [ ] **Production Gesture**: One reliable gesture for real device use
+- [ ] **Debug Gesture**: One simple gesture for emulator testing
+- [ ] **Implementation**: Clean 150-line gesture detector (vs current 457 lines)
+
+### **Step 2.2: Clean Settings UI**
+- [ ] **Replace 10 current files** with 2-3 focused files
+- [ ] **Essential Settings Only**:
+  - Enable/Disable toggle
+  - Gesture type selection (2 options)
+  - Conversation selection (reuse Signal's picker)
+- [ ] **Data Model**: Simplify `AccessibilityModeValues.kt`
+
+### **Step 2.3: Preserve Working Core**
+- [ ] **Keep**: `AccessibilityModeActivity.kt`, `AccessibilityModeFragment.kt`
+- [ ] **Keep**: `AccessibilityModeRouter.kt`, `IntentFactory.kt`
+- [ ] **Keep**: Core conversation integration with Signal components
 
 ---
 
@@ -169,8 +169,8 @@
 ## 📅 **TIMELINE**
 
 - **Phase 0 (Foundation)**: This week
-- **Phase 1 (Architecture)**: Weeks 2-4
-- **Phase 2 (Testing)**: Weeks 5-6
+- **Phase 1 (Testing)**: Weeks 2-3
+- **Phase 2 (Architecture)**: Weeks 4-6
 - **Phase 3 (Implementation)**: Weeks 7-10
 - **Phase 4 (Validation)**: Weeks 11-12
 
