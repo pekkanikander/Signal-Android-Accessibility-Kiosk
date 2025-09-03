@@ -165,8 +165,14 @@ benchmark_startup_time() {
         # Kill app if running
         adb -s "$DEVICE_SERIAL" shell am force-stop "$PACKAGE_NAME"
 
-        # Clear app data for clean start
-        adb -s "$DEVICE_SERIAL" shell pm clear "$PACKAGE_NAME"
+        # Clear app data for clean start (destructive)
+        # This is disabled by default. To allow clearing app data set ALLOW_DATA_CLEAR=true
+        if [ "${ALLOW_DATA_CLEAR:-false}" = "true" ]; then
+            warning "ALLOW_DATA_CLEAR=true — clearing app data for clean start (destructive action)"
+            adb -s "$DEVICE_SERIAL" shell pm clear "$PACKAGE_NAME"
+        else
+            info "Skipping pm clear for $PACKAGE_NAME (set ALLOW_DATA_CLEAR=true to enable)"
+        fi
 
         # Start timing
         local start_time
