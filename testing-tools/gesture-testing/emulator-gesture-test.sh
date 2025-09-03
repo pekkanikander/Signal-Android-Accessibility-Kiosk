@@ -136,17 +136,36 @@ check_adb_setup() {
 # Get screen dimensions and calculate gesture coordinates
 get_screen_info() {
     local screen_size
-    screen_size=$(adb_exec shell wm size | grep -o '[0-9]*x[0-9]*')
+    # Use adb_exec so DRY_RUN works
+    screen_size=$(adb_exec shell wm size | grep -o '[0-9]*x[0-9]*' || true)
+    screen_size=$(echo "$screen_size" | tr -d '\r')
     readonly SCREEN_WIDTH=$(echo "$screen_size" | cut -dx -f1)
     readonly SCREEN_HEIGHT=$(echo "$screen_size" | cut -dx -f2)
 
+    # Get display density (dpi) and compute scale factor for DP->PX conversions
+    local density
+    density=$(adb_exec shell wm density 2>/dev/null | grep -o '[0-9]*' | head -1 || true)
+    if [ -z "$density" ]; then
+        density=$(adb_exec shell getprop ro.sf.lcd_density 2>/dev/null | tr -d '\r' || echo "160")
+    fi
+    density=$(echo "$density" | tr -d '\r')
+    if [ -z "$density" ]; then
+        density=160
+    fi
+    readonly DENSITY_DPI=$density
+    readonly DENSITY_SCALE=$(awk "BEGIN {printf \"%f\", $DENSITY_DPI/160}")
+
     info "Screen size: ${SCREEN_WIDTH}x${SCREEN_HEIGHT}"
 
-    # Calculate gesture coordinates based on screen size
+    # Calculate gesture coordinates based on screen size (use DP offsets converted to PX)
     readonly CENTER_X=$((SCREEN_WIDTH / 2))
     readonly CENTER_Y=$((SCREEN_HEIGHT / 2))
-    readonly CORNER_OFFSET=100
-    readonly EDGE_OFFSET=50
+    # Offsets defined in dp to be stable across densities
+    local CORNER_OFFSET_DP=100
+    local EDGE_OFFSET_DP=50
+    # Convert dp to px: px = dp * density/160
+    readonly CORNER_OFFSET=$(printf "%.0f" $(awk "BEGIN{printf %f, $CORNER_OFFSET_DP * $DENSITY_DPI/160}"))
+    readonly EDGE_OFFSET=$(printf "%.0f" $(awk "BEGIN{printf %f, $EDGE_OFFSET_DP * $DENSITY_DPI/160}"))
 
     # Corner positions for opposite corners gesture
     readonly TOP_LEFT_X=$CORNER_OFFSET
