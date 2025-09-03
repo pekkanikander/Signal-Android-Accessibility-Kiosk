@@ -134,6 +134,27 @@ ALLOW_DATA_CLEAR=true ./testing-tools/performance-testing/performance-benchmark.
 2. Execute performance benchmarks
 3. Validate basic functionality
 
+## CI Smoke Job (recommended)
+
+Add a CI job that runs lightweight, non-destructive checks to catch regressions early. Example steps for the CI job:
+
+- Checkout repo and install adb/android SDK (CI runner must have emulator support)
+- Start a dedicated emulator image (headless) and wait for boot
+- Install the app under test (production build recommended)
+- Run gesture script in dry-run mode to ensure adb commands are valid:
+  ```bash
+  DRY_RUN=true ./testing-tools/gesture-testing/emulator-gesture-test.sh triple-tap-debug emulator-5554
+  ```
+- Run accessibility check that only verifies TalkBack presence (non-destructive):
+  ```bash
+  ./testing-tools/accessibility-testing/talkback-control.sh check-talkback emulator-5554
+  ```
+- Collect and upload logs/artifacts if checks fail
+
+Notes:
+- CI smoke job must **not** enable destructive operations (no ALLOW_DATA_CLEAR=true).
+- Prefer an emulator snapshot to reset state between runs.
+
 ### Phase 3: Manual Testing
 1. Follow TalkBack testing procedures
 2. Test accessibility features manually
