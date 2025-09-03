@@ -53,11 +53,19 @@ mkdir -p testing-tools/cross-device-testing/device-test-results
 
 ### 3. Performance Benchmarking
 ```bash
-# Run full performance benchmark suite (includes environment verification)
-./testing-tools/performance-testing/performance-benchmark.sh full-suite emulator-5554
+**WARNING — destructive actions:** By default these scripts will NOT clear app data or uninstall apps. Always run in dry-run first.
 
-# Test just startup time
-./testing-tools/performance-testing/performance-benchmark.sh startup-time emulator-5554
+To run benchmark (safe dry-run):
+```bash
+# Dry-run (no destructive actions)
+DRY_RUN=true ./testing-tools/performance-testing/performance-benchmark.sh full-suite emulator-5554
+```
+
+To allow destructive actions (explicit opt-in):
+```bash
+# This will clear app data between iterations and may remove registration
+ALLOW_DATA_CLEAR=true ./testing-tools/performance-testing/performance-benchmark.sh startup-time emulator-5554
+```
 ```
 
 ### 4. Accessibility Testing
