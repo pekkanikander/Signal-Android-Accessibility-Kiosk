@@ -25,10 +25,10 @@
   - `ARCHITECTURE-DECISIONS.md` - Why we simplified each component
   - Analysis docs for internal reference
 
-### **✅ Step 0.3: Current State Analysis**
-- [ ] Document specific issues with current settings UI
-- [ ] Identify working core components to preserve
-- [ ] Map Signal component dependencies
+### **✅ Step 0.3: Current State Analysis** ✓
+- [x] Document specific issues with current settings UI
+- [x] Identify working core components to preserve
+- [x] Map Signal component dependencies
 
 ---
 
