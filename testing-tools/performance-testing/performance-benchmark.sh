@@ -163,23 +163,23 @@ benchmark_startup_time() {
         info "Iteration $i of $ITERATIONS"
 
         # Kill app if running
-        adb -s "$DEVICE_SERIAL" shell am force-stop "$PACKAGE_NAME"
+        adb_exec shell am force-stop "$PACKAGE_NAME"
 
         # Clear app data for clean start (destructive)
         # This is disabled by default. To allow clearing app data set ALLOW_DATA_CLEAR=true
         if [ "${ALLOW_DATA_CLEAR:-false}" = "true" ]; then
             warning "ALLOW_DATA_CLEAR=true — clearing app data for clean start (destructive action)"
-            adb -s "$DEVICE_SERIAL" shell pm clear "$PACKAGE_NAME"
+            adb_exec shell pm clear "$PACKAGE_NAME"
         else
             info "Skipping pm clear for $PACKAGE_NAME (set ALLOW_DATA_CLEAR=true to enable)"
         fi
 
-        # Start timing
+        # Start timing (milliseconds since epoch)
         local start_time
-        start_time=$(date +%s%3N)  # milliseconds
+        start_time=$(($(date +%s%N)/1000000))
 
         # Launch app
-        adb -s "$DEVICE_SERIAL" shell am start -n "$PACKAGE_NAME/org.thoughtcrime.securesms.RoutingActivity"
+        adb_exec shell am start -n "$PACKAGE_NAME/org.thoughtcrime.securesms.RoutingActivity"
 
         # Wait for app to be fully loaded (adjust timing as needed)
         sleep 3
@@ -198,7 +198,7 @@ benchmark_startup_time() {
         done
 
         local end_time
-        end_time=$(date +%s%3N)
+        end_time=$(($(date +%s%N)/1000000))
         local duration=$((end_time - start_time))
 
         results+=("$duration")
