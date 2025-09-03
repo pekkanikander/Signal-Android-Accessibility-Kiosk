@@ -181,6 +181,29 @@ No additional build dependencies required. All functionality uses existing Signa
 - Regular review against WCAG guidelines
 - User feedback integration into updates
 
+## Troubleshooting
+
+### Common Integration Issues
+- **Router not initializing**: Check `ApplicationContext.java` registration
+- **Settings not appearing**: Verify navigation XML configuration
+- **Gestures not working**: Check gesture detector attachment in activity
+- **Conversation not loading**: Verify `ConversationViewModel` integration
+
+### Debug Tools
+- Gesture detection logging available in debug builds
+- Accessibility mode state visible in developer options
+- Test gestures available through debug menu
+
+---
+
+## Support
+
+For integration questions or issues:
+1. Review this implementation guide
+2. Check existing test coverage
+3. Consult Signal's development documentation
+4. File issues through standard Signal contribution process
+
 ---
 
 *This integration maintains Signal's architectural patterns while providing essential accessibility functionality for users who need simplified interfaces.*
