@@ -44,7 +44,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
   private enum class GestureType {
     OPPOSITE_CORNERS,
-    HEADER_HOLD
+    HEADER_HOLD,
+    SINGLE_FINGER_EDGE_DRAG
   }
 
   // Configuration - lazy loaded for performance
@@ -52,7 +53,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
     when (SignalStore.accessibilityMode.exitGestureType) {
       0 -> GestureType.OPPOSITE_CORNERS
       1 -> GestureType.HEADER_HOLD
-      else -> GestureType.HEADER_HOLD // Default to more accessible option
+      2 -> GestureType.SINGLE_FINGER_EDGE_DRAG
+      else -> GestureType.SINGLE_FINGER_EDGE_DRAG // Default to easier option for testing
     }
   }
 
@@ -80,6 +82,12 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private var secondPointerStartY = 0f
   private var lastHapticTime = 0L
 
+  // Single-finger edge drag state
+  private var singleFingerLongPressStartTime = 0L
+  private var singleFingerStartX = 0f
+  private var singleFingerStartY = 0f
+  private var isAtEdge = false
+
   override fun onTouch(view: View, event: MotionEvent): Boolean {
     // Skip if accessibility services are active (let them handle gestures)
     if (accessibilityManager.isEnabled && accessibilityManager.isTouchExplorationEnabled) {
@@ -104,13 +112,23 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
     when (state) {
       GestureState.IDLE -> {
-        // First pointer down
+        // First pointer down - handle both single and multi-finger gestures
         firstPointerId = pointerId
         firstPointerDownTime = currentTime
         firstPointerStartX = x
         firstPointerStartY = y
-        state = GestureState.FIRST_POINTER_DOWN
-        Log.d(TAG, "First pointer down: id=$pointerId at ($x, $y)")
+
+        if (gestureType == GestureType.SINGLE_FINGER_EDGE_DRAG) {
+          // For single-finger gesture, start immediately
+          if (isValidGestureStart(x, y)) {
+            state = GestureState.GESTURE_ACTIVE
+            Log.d(TAG, "Single-finger gesture started: id=$pointerId at ($x, $y)")
+          }
+        } else {
+          // For multi-finger gestures, wait for second pointer
+          state = GestureState.FIRST_POINTER_DOWN
+          Log.d(TAG, "First pointer down: id=$pointerId at ($x, $y)")
+        }
       }
 
       GestureState.FIRST_POINTER_DOWN -> {
@@ -150,47 +168,100 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private fun handlePointerMove(event: MotionEvent): Boolean {
     if (state != GestureState.GESTURE_ACTIVE) return false
 
-    // Find our tracked pointers
-    val firstIndex = event.findPointerIndex(firstPointerId)
-    val secondIndex = event.findPointerIndex(secondPointerId)
-    if (firstIndex == -1 || secondIndex == -1) {
-      resetState()
-      return false
-    }
-
-    // Check drift tolerance
-    val firstX = event.getX(firstIndex)
-    val firstY = event.getY(firstIndex)
-    val secondX = event.getX(secondIndex)
-    val secondY = event.getY(secondIndex)
-
-    val firstDrift = calculateDistance(firstX, firstY, firstPointerStartX, firstPointerStartY)
-    val secondDrift = calculateDistance(secondX, secondY, secondPointerStartX, secondPointerStartY)
-
-    if (firstDrift > driftTolerancePx || secondDrift > driftTolerancePx) {
-      resetState()
-      return false
-    }
-
-    // Check hold duration
     val currentTime = System.currentTimeMillis()
-    val holdTime = minOf(
-      currentTime - firstPointerDownTime,
-      currentTime - secondPointerDownTime
-    )
 
-    if (holdTime >= holdDurationMs) {
-      triggerGesture()
-      return true // Consume the event
+    if (gestureType == GestureType.SINGLE_FINGER_EDGE_DRAG) {
+      // Handle single-finger edge drag gesture
+      val firstIndex = event.findPointerIndex(firstPointerId)
+      if (firstIndex == -1) {
+        resetState()
+        return false
+      }
+
+      val currentX = event.getX(firstIndex)
+      val currentY = event.getY(firstIndex)
+
+      // Check if finger is at screen edge
+      val isAtEdgeNow = isAtScreenEdge(currentX, currentY)
+
+      if (!isAtEdge && isAtEdgeNow) {
+        // Just arrived at edge - start edge hold timer
+        isAtEdge = true
+        lastHapticTime = currentTime
+        Log.d(TAG, "Finger reached edge at ($currentX, $currentY)")
+      } else if (isAtEdge && !isAtEdgeNow) {
+        // Moved away from edge - cancel gesture
+        Log.d(TAG, "Finger moved away from edge")
+        resetState()
+        return false
+      }
+
+      // Check drift tolerance from edge position
+      if (isAtEdge) {
+        val driftFromEdge = calculateDistance(currentX, currentY, singleFingerStartX, singleFingerStartY)
+        if (driftFromEdge > driftTolerancePx) {
+          Log.d(TAG, "Drift from edge exceeded: $driftFromEdge > $driftTolerancePx")
+          resetState()
+          return false
+        }
+
+        // Check hold duration at edge
+        val holdTime = currentTime - singleFingerLongPressStartTime
+        if (holdTime >= holdDurationMs) {
+          triggerGesture()
+          return true
+        }
+
+        // Provide haptic feedback during hold
+        if (currentTime - lastHapticTime >= HAPTIC_FEEDBACK_INTERVAL_MS) {
+          provideHapticFeedback()
+          lastHapticTime = currentTime
+        }
+      }
+
+      return true // Consume the event during active gesture
+    } else {
+      // Handle multi-finger gestures (original logic)
+      val firstIndex = event.findPointerIndex(firstPointerId)
+      val secondIndex = event.findPointerIndex(secondPointerId)
+      if (firstIndex == -1 || secondIndex == -1) {
+        resetState()
+        return false
+      }
+
+      // Check drift tolerance
+      val firstX = event.getX(firstIndex)
+      val firstY = event.getY(firstIndex)
+      val secondX = event.getX(secondIndex)
+      val secondY = event.getY(secondIndex)
+
+      val firstDrift = calculateDistance(firstX, firstY, firstPointerStartX, firstPointerStartY)
+      val secondDrift = calculateDistance(secondX, secondY, secondPointerStartX, secondPointerStartY)
+
+      if (firstDrift > driftTolerancePx || secondDrift > driftTolerancePx) {
+        resetState()
+        return false
+      }
+
+      // Check hold duration
+      val holdTime = minOf(
+        currentTime - firstPointerDownTime,
+        currentTime - secondPointerDownTime
+      )
+
+      if (holdTime >= holdDurationMs) {
+        triggerGesture()
+        return true
+      }
+
+      // Provide haptic feedback during hold
+      if (currentTime - lastHapticTime >= HAPTIC_FEEDBACK_INTERVAL_MS) {
+        provideHapticFeedback()
+        lastHapticTime = currentTime
+      }
+
+      return true // Consume the event during active gesture
     }
-
-    // Provide haptic feedback during hold
-    if (currentTime - lastHapticTime >= HAPTIC_FEEDBACK_INTERVAL_MS) {
-      provideHapticFeedback()
-      lastHapticTime = currentTime
-    }
-
-    return true // Consume the event during active gesture
   }
 
   private fun handlePointerUp(event: MotionEvent, pointerIndex: Int): Boolean {
@@ -208,6 +279,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     return when (gestureType) {
       GestureType.OPPOSITE_CORNERS -> isValidCornerGesture(secondX, secondY)
       GestureType.HEADER_HOLD -> isValidHeaderGesture(secondX, secondY)
+      GestureType.SINGLE_FINGER_EDGE_DRAG -> isValidSingleFingerEdgeGesture(secondX, secondY)
     }
   }
 
@@ -232,6 +304,15 @@ class AccessibilityModeExitToSettingsGestureDetector(
            headerBounds.contains(secondX.toInt(), secondY.toInt())
   }
 
+  private fun isValidSingleFingerEdgeGesture(x: Float, y: Float): Boolean {
+    // For single-finger edge drag, we just need to record the start position
+    // The actual edge detection happens during the move phase
+    singleFingerStartX = x
+    singleFingerStartY = y
+    singleFingerLongPressStartTime = System.currentTimeMillis()
+    return true
+  }
+
   private fun isInCorner(x: Float, y: Float, isTopLeft: Boolean): Boolean {
     return if (isTopLeft) {
       x <= cornerSizePx && y <= cornerSizePx
@@ -244,6 +325,14 @@ class AccessibilityModeExitToSettingsGestureDetector(
     val dx = x1 - x2
     val dy = y1 - y2
     return sqrt(dx * dx + dy * dy)
+  }
+
+  private fun isAtScreenEdge(x: Float, y: Float): Boolean {
+    val edgeTolerancePx = context.resources.displayMetrics.density * 24f // 24dp tolerance
+    return x <= edgeTolerancePx || // Left edge
+           x >= (screenWidth - edgeTolerancePx) || // Right edge
+           y <= edgeTolerancePx || // Top edge
+           y >= (screenHeight - edgeTolerancePx) // Bottom edge
   }
 
   private fun triggerGesture() {
@@ -263,6 +352,13 @@ class AccessibilityModeExitToSettingsGestureDetector(
     secondPointerStartX = 0f
     secondPointerStartY = 0f
     lastHapticTime = 0L
+
+    // Reset single-finger edge drag state
+    singleFingerLongPressStartTime = 0L
+    singleFingerStartX = 0f
+    singleFingerStartY = 0f
+    isAtEdge = false
+
     Log.d(TAG, "Gesture state reset")
   }
 

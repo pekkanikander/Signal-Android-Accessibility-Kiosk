@@ -17,6 +17,7 @@ We support two trigger variants and an optional PIN gate:
 1. **Exit gesture** (single‑choice)
    - *Opposite corners hold (recommended for strict)*
    - *Two‑finger header hold*
+   - *Single‑finger edge drag hold (easier for testing)*
 2. **Require PIN** (toggle)
    - Off (default for Gesture B profile)
    - On (recommended for Gesture A profile)
@@ -89,6 +90,12 @@ OPEN_SETTINGS
 ### B) Two‑finger header hold
 - Two pointers down within 150 ms inside the **top app bar/header** bounds.
 - Maintain hold for **hold_ms**; allow drift ≤ **drift_dp**.
+
+### C) Single‑finger edge drag hold
+- Single finger long press (500ms) anywhere on screen.
+- Drag finger to screen edge (within 24dp of edge).
+- Maintain hold at edge for **hold_ms**; allow drift ≤ **drift_dp**.
+- Cancel if finger moves away from edge before hold completes.
 
 ### Feedback (both)
 - On trigger success: short haptic tick + brief toast/announcement: "Release. Confirm slider visible." (We immediately open the overlay; releasing fingers is fine.)
