@@ -12,12 +12,14 @@ testing-tools/
 │   ├── emulator-gesture-test.sh     # Automated gesture testing script
 │   └── gesture-test-results/        # Test result logs
 ├── accessibility-testing/     # TalkBack and accessibility testing
+│   ├── talkback-control.sh           # Automated TalkBack control & testing
 │   ├── talkback-testing-procedures.md  # Comprehensive TalkBack test procedures
-│   └── accessibility-test-results/    # Accessibility test results
+│   └── accessibility-test-results/   # Accessibility test results
 ├── performance-testing/       # Performance benchmarking tools
 │   ├── performance-benchmark.sh      # Automated performance benchmarks
 │   └── benchmark-results/            # Performance test results
 ├── cross-device-testing/      # Cross-device compatibility testing
+│   ├── run-device-tests.sh           # Automated cross-device testing
 │   ├── cross-device-test-matrix.md   # Device and version compatibility matrix
 │   └── device-test-results/          # Cross-device test results
 └── README.md                  # This file
@@ -51,7 +53,7 @@ mkdir -p testing-tools/cross-device-testing/device-test-results
 
 ### 3. Performance Benchmarking
 ```bash
-# Run full performance benchmark suite
+# Run full performance benchmark suite (includes environment verification)
 ./testing-tools/performance-testing/performance-benchmark.sh full-suite emulator-5554
 
 # Test just startup time
@@ -59,10 +61,25 @@ mkdir -p testing-tools/cross-device-testing/device-test-results
 ```
 
 ### 4. Accessibility Testing
-Follow the procedures in `testing-tools/accessibility-testing/talkback-testing-procedures.md`
+```bash
+# Enable TalkBack automatically
+./testing-tools/accessibility-testing/talkback-control.sh enable-talkback emulator-5554
+
+# Run automated accessibility tests
+./testing-tools/accessibility-testing/talkback-control.sh run-accessibility-tests emulator-5554
+
+# Disable TalkBack when done
+./testing-tools/accessibility-testing/talkback-control.sh disable-talkback emulator-5554
+```
 
 ### 5. Cross-Device Testing
-Follow the matrix in `testing-tools/cross-device-testing/cross-device-test-matrix.md`
+```bash
+# Run compatibility tests on all connected devices
+./testing-tools/cross-device-testing/run-device-tests.sh compatibility all
+
+# Run full test suite on specific devices
+./testing-tools/cross-device-testing/run-device-tests.sh full-suite emulator-5554,pixel-device
+```
 
 ## Test Categories
 
@@ -70,25 +87,31 @@ Follow the matrix in `testing-tools/cross-device-testing/cross-device-test-matri
 **Purpose**: Validate gesture detection works reliably
 - **Tools**: `emulator-gesture-test.sh`
 - **Coverage**: All 4 gesture types (triple tap, opposite corners, two-finger header, single-finger edge)
+- **Automation**: ✅ **Fully automated** with environment verification
 - **Results**: Logged to `gesture-test-results/`
 
 ### 2. Accessibility Testing
 **Purpose**: Ensure TalkBack and screen reader compatibility
-- **Procedures**: `talkback-testing-procedures.md`
+- **Automated Tools**: `talkback-control.sh` for TalkBack control and testing
+- **Manual Procedures**: `talkback-testing-procedures.md`
 - **Coverage**: Navigation, announcements, touch targets, gesture conflicts
-- **Results**: Documented in `accessibility-test-results/`
+- **Automation**: ✅ **Semi-automated** with TalkBack enable/disable and test execution
+- **Results**: Logged to `accessibility-test-results/`
 
 ### 3. Performance Testing
 **Purpose**: Validate performance meets requirements
 - **Tools**: `performance-benchmark.sh`
 - **Metrics**: Startup time, memory usage, CPU usage, gesture latency
+- **Automation**: ✅ **Fully automated** with environment verification
 - **Results**: JSON format in `benchmark-results/`
 
 ### 4. Cross-Device Testing
 **Purpose**: Ensure compatibility across Android ecosystem
-- **Matrix**: `cross-device-test-matrix.md`
+- **Automated Tools**: `run-device-tests.sh` for multi-device testing
+- **Compatibility Matrix**: `cross-device-test-matrix.md`
 - **Coverage**: Android 8.0-14, various device types, OEM skins
-- **Results**: Documented in `device-test-results/`
+- **Automation**: ✅ **Fully automated** device discovery and test orchestration
+- **Results**: JSON summaries in `device-test-results/`
 
 ## Test Execution Workflow
 
