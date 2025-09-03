@@ -33,7 +33,20 @@ class AccessibilityTalkBackUiTest {
         val packageName = "org.thoughtcrime.securesms"
         val instr = InstrumentationRegistry.getInstrumentation()
         val context = instr.targetContext
+
+        // Quick sanity: ensure the package is installed before trying to launch.
         val pm = context.packageManager
+        val installed = try {
+            pm.getPackageInfo(packageName, 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
+
+        if (!installed) {
+            throw AssertionError("Required package not installed on device: $packageName")
+        }
+
         val intent = pm.getLaunchIntentForPackage(packageName)
         if (intent != null) {
             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -43,8 +56,9 @@ class AccessibilityTalkBackUiTest {
             val activityName = "$packageName/.RoutingActivity"
             device.executeShellCommand("am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $activityName")
         }
-        // Give the app a moment to start
-        Thread.sleep(1500)
+
+        // Give the app additional time to cold-start and settle
+        Thread.sleep(5000)
 
         // Wait for app to appear
         device.wait(Until.hasObject(By.pkg("org.thoughtcrime.securesms")), 5000)
