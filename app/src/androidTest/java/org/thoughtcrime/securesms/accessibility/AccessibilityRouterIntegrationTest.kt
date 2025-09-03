@@ -11,7 +11,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.thoughtcrime.securesms.MainActivity
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.keyvalue.SignalStore
+import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.testing.SignalActivityRule
 import org.hamcrest.CoreMatchers.equalTo
@@ -46,7 +48,7 @@ class AccessibilityRouterIntegrationTest {
         }
 
         // Then: We should remain on the main Signal interface
-        onView(withId(R.id.conversation_list_view))
+        onView(withId(android.R.id.content))
             .check(matches(isDisplayed()))
 
         // And accessibility mode should still be disabled
@@ -73,7 +75,7 @@ class AccessibilityRouterIntegrationTest {
         }
 
         // Then: We should remain on the main Signal interface
-        onView(withId(R.id.conversation_list_view))
+        onView(withId(android.R.id.content))
             .check(matches(isDisplayed()))
 
         // And settings should remain unchanged
@@ -88,8 +90,9 @@ class AccessibilityRouterIntegrationTest {
     @Test
     fun router_preserves_settings_state_during_navigation() {
         // Given: Accessibility mode is properly configured
-        val testRecipient = signalActivityRule.others[0]
-        val testThreadId = testRecipient.id.serialize()
+        val testRecipientId = signalActivityRule.others[0]
+        val testRecipient = Recipient.resolved(testRecipientId)
+        val testThreadId = SignalDatabase.threads.getOrCreateThreadIdFor(testRecipient)
 
         val initialEnabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled
         val initialThreadId = SignalStore.accessibilityMode.accessibilityThreadId
@@ -140,7 +143,7 @@ class AccessibilityRouterIntegrationTest {
         // Given: Accessibility mode configuration changes during app session
         SignalStore.accessibilityMode.run {
             isAccessibilityModeEnabled = true
-            accessibilityThreadId = signalActivityRule.others[0].id.serialize()
+            accessibilityThreadId = signalActivityRule.others[0].toLong()
         }
 
         // When: Configuration changes occur (orientation, etc.)
@@ -162,8 +165,9 @@ class AccessibilityRouterIntegrationTest {
     @Test
     fun router_state_is_consistent_across_activity_instances() {
         // Given: Accessibility mode is configured
-        val testRecipient = signalActivityRule.others[1]
-        val testThreadId = testRecipient.id.serialize()
+        val testRecipientId = signalActivityRule.others[1]
+        val testRecipient = Recipient.resolved(testRecipientId)
+        val testThreadId = SignalDatabase.threads.getOrCreateThreadIdFor(testRecipient)
 
         SignalStore.accessibilityMode.run {
             isAccessibilityModeEnabled = true

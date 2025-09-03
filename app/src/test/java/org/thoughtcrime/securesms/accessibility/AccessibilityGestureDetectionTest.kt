@@ -6,12 +6,11 @@ import android.view.MotionEvent
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
+import io.mockk.mockk
+import io.mockk.every
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.MatcherAssert.assertThat
-import org.mockito.kotlin.any
 
 /**
  * Test case: Gesture Detection Tests
@@ -22,7 +21,7 @@ import org.mockito.kotlin.any
 @RunWith(JUnit4::class)
 class AccessibilityGestureDetectionTest {
 
-    private val mockContext = mock(Context::class.java)
+    private val mockContext = mockk<Context>()
     private val mockRect = Rect(0, 0, 1080, 100) // Header bounds
 
     private var gestureTriggered = false
@@ -40,7 +39,7 @@ class AccessibilityGestureDetectionTest {
         )
 
         // When: We simulate three rapid taps
-        val mockView = mock(android.view.View::class.java)
+        val mockView = mockk<android.view.View>()
 
         // First tap
         val tap1Down = createMotionEvent(MotionEvent.ACTION_DOWN, 500f, 500f)
@@ -96,10 +95,10 @@ class AccessibilityGestureDetectionTest {
     @Test
     fun accessibility_services_are_respected() {
         // Given: Accessibility services are enabled
-        val mockAccessibilityManager = mock(android.view.accessibility.AccessibilityManager::class.java)
-        `when`(mockAccessibilityManager.isEnabled).thenReturn(true)
-        `when`(mockAccessibilityManager.isTouchExplorationEnabled).thenReturn(true)
-        `when`(mockContext.getSystemService(Context.ACCESSIBILITY_SERVICE)).thenReturn(mockAccessibilityManager)
+        val mockAccessibilityManager = mockk<android.view.accessibility.AccessibilityManager>()
+        every { mockAccessibilityManager.isEnabled } returns true
+        every { mockAccessibilityManager.isTouchExplorationEnabled } returns true
+        every { mockContext.getSystemService(Context.ACCESSIBILITY_SERVICE) } returns mockAccessibilityManager
 
         SignalStore.accessibilityMode.exitGestureType = AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG.value
 
@@ -110,7 +109,7 @@ class AccessibilityGestureDetectionTest {
         )
 
         // When: Touch event occurs while accessibility services are active
-        val mockView = mock(android.view.View::class.java)
+        val mockView = mockk<android.view.View>()
         val tapDown = createMotionEvent(MotionEvent.ACTION_DOWN, 500f, 500f)
 
         val result = detector.onTouch(mockView, tapDown)
@@ -132,7 +131,7 @@ class AccessibilityGestureDetectionTest {
         )
 
         // When: We start a gesture but then cancel it
-        val mockView = mock(android.view.View::class.java)
+        val mockView = mockk<android.view.View>()
 
         // Start with one tap
         val tap1Down = createMotionEvent(MotionEvent.ACTION_DOWN, 500f, 500f)

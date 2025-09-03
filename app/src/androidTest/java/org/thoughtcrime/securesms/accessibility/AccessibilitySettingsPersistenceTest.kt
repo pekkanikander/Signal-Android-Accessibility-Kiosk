@@ -31,7 +31,7 @@ class AccessibilitySettingsPersistenceTest {
         val initialGestureType = SignalStore.accessibilityMode.exitGestureType
 
         // When: We modify accessibility settings
-        val testRecipientId = signalActivityRule.others[0].id.serialize()
+        val testRecipientId = signalActivityRule.others[0].toLong()
         val newGestureType = AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG.value
 
         SignalStore.accessibilityMode.run {
