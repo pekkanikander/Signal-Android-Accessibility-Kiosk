@@ -196,19 +196,20 @@ verify_gesture_detection() {
     local logcat_pid=""
     local temp_log="${SCRIPT_DIR}/temp_logcat_$$.log"
     if [ "$DRY_RUN" = "true" ]; then
-        echo "[DRY_RUN] start logcat to $temp_log"
+        echo "[DRY_RUN] start logcat to $temp_log" | tee -a "$LOG_FILE"
     else
+        # Use -c to clear buffer first, then start streaming recent logs
+        adb -s "$DEVICE_SERIAL" logcat -b all -c 2>/dev/null || true
         adb -s "$DEVICE_SERIAL" logcat -v time -T "$(date '+%m-%d %H:%M:%S.000')" > "$temp_log" 2>/dev/null &
         logcat_pid=$!
     fi
-    logcat_pid=$!
 
     # Wait for gesture detection or timeout
     local count=0
     local detected=false
 
     while [ $count -lt $timeout ]; do
-        if grep -q "$log_pattern" "$temp_log" 2>/dev/null; then
+        if [ -f "$temp_log" ] && grep -E -q "$log_pattern" "$temp_log" 2>/dev/null; then
             detected=true
             break
         fi
@@ -222,10 +223,14 @@ verify_gesture_detection() {
         wait "$logcat_pid" 2>/dev/null || true
     fi
 
-    # Extract relevant log lines
+    # Extract relevant log lines and save raw snippet
     local gesture_logs=""
     if [ -f "$temp_log" ]; then
         gesture_logs=$(grep -E "$log_pattern" "$temp_log" 2>/dev/null || echo "")
+        # Save a raw snippet for debugging
+        local snippet_file="${SCRIPT_DIR}/gesture-log-snippet-$(date +%s)-$$.log"
+        tail -n 200 "$temp_log" > "$snippet_file" 2>/dev/null || true
+        log "Raw log snippet saved to: $snippet_file"
         rm -f "$temp_log"
     fi
 
