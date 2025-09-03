@@ -279,17 +279,25 @@ app/src/androidTest/            # Instrumented tests (real database)
 - [x] Test infrastructure set up (Signal test framework integrated)
 - [x] Basic androidTest framework implemented (specification tests created)
 
-### **Phase 2: Core Tests**
-- [ ] Unit tests for pure logic (gesture detection, router logic)
-- [ ] androidTest integration for Signal components (database + UI)
-- [ ] E2E tests for user workflows (Espresso on emulator)
+### **Phase 2: Testing Foundation Completion**
+- [ ] SignalStore integration tests (settings persistence)
+- [ ] Database integration tests (conversation data access)
+- [ ] Gesture detection tests (real MotionEvent validation)
+- [ ] Router integration tests (Activity lifecycle testing)
 
-### **Phase 3: Validation**
+### **Phase 3: Implementation Validation**
+- [ ] Tests validate actual implementation (not just specifications)
+- [ ] Integration tests with real Signal components
+- [ ] End-to-end user workflow validation
+- [ ] Performance and accessibility compliance
+
+### **Phase 4: Production Readiness**
 - [ ] Accessibility compliance tests (TalkBack)
 - [ ] Cross-device compatibility tests
 - [ ] Settings persistence validation
+- [ ] Performance benchmarks
 
-### **Phase 4: Maintenance**
+### **Phase 5: Maintenance & Documentation**
 - [ ] Test documentation updated
 - [ ] CI/CD pipeline configured (emulator-based)
 - [ ] Test maintenance procedures established

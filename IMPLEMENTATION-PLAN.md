@@ -62,14 +62,36 @@
 
 ---
 
-## 🚀 **PHASE 2: CORE ARCHITECTURE (2-3 Weeks)**
+## 🧪 **PHASE 2: TESTING FOUNDATION COMPLETION (1-2 Weeks)**
 
-### **Step 2.1: Simplified Gesture System**
+### **Step 2.1: Complete Test Infrastructure**
+- [ ] **SignalStore Integration Tests**: Verify accessibility settings persistence works
+- [ ] **Database Integration Tests**: Test conversation data access patterns
+- [ ] **Gesture Detection Tests**: Validate gesture detection logic with real MotionEvents
+- [ ] **Router Integration Tests**: Test mode switching with actual Activity lifecycle
+
+### **Step 2.2: Manual Testing Framework**
+- [ ] **Emulator Test Gestures**: Set up reliable gesture testing in emulator
+- [ ] **Accessibility Testing Tools**: Configure TalkBack testing procedures
+- [ ] **Performance Benchmarks**: Establish baseline performance metrics
+- [ ] **Cross-Device Testing**: Verify behavior across different Android versions
+
+### **Step 2.3: Test Validation & Readiness**
+- [ ] **All Tests Pass**: Specification tests converted to real validation tests
+- [ ] **Test Coverage**: 90%+ coverage for new accessibility code
+- [ ] **Test Documentation**: Complete testing procedures and troubleshooting
+- [ ] **CI/CD Ready**: Tests runnable in automated environment
+
+---
+
+## 🚀 **PHASE 3: CORE ARCHITECTURE (2-3 Weeks)**
+
+### **Step 3.1: Simplified Gesture System**
 - [ ] **Production Gesture**: One reliable gesture for real device use
 - [ ] **Debug Gesture**: One simple gesture for emulator testing
 - [ ] **Implementation**: Clean 150-line gesture detector (vs current 457 lines)
 
-### **Step 2.2: Clean Settings UI**
+### **Step 3.2: Clean Settings UI**
 - [ ] **Replace 10 current files** with 2-3 focused files
 - [ ] **Essential Settings Only**:
   - Enable/Disable toggle
@@ -77,45 +99,48 @@
   - Conversation selection (reuse Signal's picker)
 - [ ] **Data Model**: Simplify `AccessibilityModeValues.kt`
 
-### **Step 2.3: Preserve Working Core**
+### **Step 3.3: Preserve Working Core**
 - [ ] **Keep**: `AccessibilityModeActivity.kt`, `AccessibilityModeFragment.kt`
 - [ ] **Keep**: `AccessibilityModeRouter.kt`, `IntentFactory.kt`
 - [ ] **Keep**: Core conversation integration with Signal components
-
----
-
-## 🏗️ **PHASE 3: CLEAN IMPLEMENTATION (3-4 Weeks)**
-
-### **Step 3.1: New Gesture Implementation**
-- [ ] Production gesture: Corner-based, reliable on real devices
-- [ ] Debug gesture: Triple-tap, reliable in emulator
-- [ ] Clean state machine, no unnecessary complexity
-
-### **Step 3.2: New Settings Implementation**
-- [ ] Single settings screen with essential options
-- [ ] Clean data flow: UI → ViewModel → Storage
-- [ ] Proper error handling and user feedback
-
-### **Step 3.3: Integration Verification**
 - [ ] Test with multiple Android versions
 - [ ] Verify Signal component compatibility
 - [ ] Accessibility audit with TalkBack
 
 ---
 
-## 🎯 **PHASE 4: VALIDATION & POLISH (1-2 Weeks)**
+## 🏗️ **PHASE 4: CLEAN IMPLEMENTATION (3-4 Weeks)**
 
-### **Step 4.1: Quality Assurance**
+### **Step 4.1: New Gesture Implementation**
+- [ ] Production gesture: Corner-based, reliable on real devices
+- [ ] Debug gesture: Triple-tap, reliable in emulator
+- [ ] Clean state machine, no unnecessary complexity
+
+### **Step 4.2: New Settings Implementation**
+- [ ] Single settings screen with essential options
+- [ ] Clean data flow: UI → ViewModel → Storage
+- [ ] Proper error handling and user feedback
+
+### **Step 4.3: Integration Verification**
+- [ ] Test with multiple Android versions
+- [ ] Verify Signal component compatibility
+- [ ] Accessibility audit with TalkBack
+
+---
+
+## 🎯 **PHASE 5: VALIDATION & POLISH (1-2 Weeks)**
+
+### **Step 5.1: Quality Assurance**
 - [ ] All tests pass consistently
 - [ ] Manual testing on real devices
 - [ ] Accessibility compliance verification
 
-### **Step 4.2: Documentation Finalization**
+### **Step 5.2: Documentation Finalization**
 - [ ] Update PR-ready documentation
 - [ ] Create integration guide for Signal engineers
 - [ ] Document maintenance procedures
 
-### **Step 4.3: Final Review**
+### **Step 5.3: Final Review**
 - [ ] Code review against Signal standards
 - [ ] Performance impact assessment
 - [ ] Security review for accessibility features
