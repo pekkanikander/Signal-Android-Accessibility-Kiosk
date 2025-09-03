@@ -28,6 +28,10 @@
 
 set -euo pipefail
 
+# Script directory and logs (define early so DRY_RUN and result paths work)
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly LOG_FILE="${SCRIPT_DIR}/gesture-test-$(date +%Y%m%d-%H%M%S).log"
+
 # ----- Safety / run flags -----
 # If DRY_RUN is set to "true" the script will only print intended adb commands
 DRY_RUN="${DRY_RUN:-false}"
@@ -60,16 +64,15 @@ JSON
     log "Result JSON written to: $RESULT_JSON"
 }
 
-# Configuration
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly LOG_FILE="${SCRIPT_DIR}/gesture-test-$(date +%Y%m%d-%H%M%S).log"
-
 # Default values
+# GESTURE_TYPE, DEVICE_SERIAL, PACKAGE_NAME, optional SET_GESTURE
 GESTURE_TYPE="${1:-triple-tap-debug}"
 DEVICE_SERIAL="${2:-}"
 EMULATOR_WAIT_TIME=2
 # Default to Production package unless overridden
 PACKAGE_NAME="${3:-org.thoughtcrime.securesms}"
+# Optional: set accessibility exit gesture (best-effort; may fail on prod builds)
+SET_GESTURE="${4:-}"
 # Ensure-only mode: prod or staging (defaults to prod)
 ENSURE_ONLY="${ENSURE_ONLY:-prod}"
 # If true, uninstall other Signal variants (use with care)
@@ -290,8 +293,8 @@ verify_app_state_change() {
 gesture_triple_tap_debug() {
     log "Testing TRIPLE TAP DEBUG gesture"
 
-    # Start logcat monitoring before gesture
-    verify_gesture_detection "Triple Tap Debug" 5 "Triple.*tap.*completed\|Gesture.*detected" &
+    # Start logcat monitoring before gesture (longer timeout to handle slow systems)
+    verify_gesture_detection "Triple Tap Debug" 20 "Triple.*tap.*completed\|Gesture.*detected" &
     local verify_pid=$!
 
     # Three quick taps in center of screen
@@ -299,6 +302,9 @@ gesture_triple_tap_debug() {
         execute_tap "$CENTER_X" "$CENTER_Y"
         sleep 0.1
     done
+
+    # Give system a short moment to process taps
+    sleep 1
 
     # Wait for verification to complete
     wait "$verify_pid"
@@ -587,6 +593,32 @@ preflight_package_check() {
     else
         log "No conflicting Signal variants detected"
     fi
+}
+
+# Best-effort: set Accessibility Mode exit gesture via broadcast or run-as
+# Note: This will only work if the app honors the debug broadcast or the build is debuggable
+set_accessibility_exit_gesture() {
+    local gesture_value="$1"
+    log "Attempting to set Accessibility Mode exit gesture to: $gesture_value"
+
+    # 1) Try a debug broadcast the app may listen for
+    local bc_cmd="am broadcast -a org.thoughtcrime.securesms.DEBUG_SET_EXIT_GESTURE --es gesture '$gesture_value'"
+    if [ "$DRY_RUN" = "true" ]; then
+        echo "[DRY_RUN] adb -s $DEVICE_SERIAL shell $bc_cmd" | tee -a "$LOG_FILE"
+    else
+        log "Sending debug broadcast to app (best-effort)"
+        adb -s "$DEVICE_SERIAL" shell $bc_cmd 2>&1 | tee -a "$LOG_FILE" || true
+    fi
+
+    # 2) If build is debuggable, try run-as to write to shared_prefs (best-effort placeholder)
+    if [ "$DRY_RUN" = "true" ]; then
+        echo "[DRY_RUN] run-as $PACKAGE_NAME echo 'gesture=$gesture_value' > /data/data/$PACKAGE_NAME/files/accessibility_gesture_debug" | tee -a "$LOG_FILE"
+    else
+        log "Attempting run-as fallback (only works on debuggable builds)"
+        adb -s "$DEVICE_SERIAL" shell run-as "$PACKAGE_NAME" sh -c "echo 'gesture=$gesture_value' > /data/data/$PACKAGE_NAME/files/accessibility_gesture_debug" 2>/dev/null && log "run-as write succeeded" || warning "run-as write failed (non-debug build or permission denied)"
+    fi
+
+    log "Set gesture attempt finished (may require app restart to take effect)"
 }
 
 # Show setup instructions for enabling Accessibility Mode
