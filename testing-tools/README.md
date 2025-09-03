@@ -42,6 +42,25 @@ mkdir -p testing-tools/performance-testing/benchmark-results
 mkdir -p testing-tools/cross-device-testing/device-test-results
 ```
 
+### 1.a Emulator snapshot helper
+
+If you rely on a preconfigured emulator state (installed & registered Signal), use the snapshot helper to save and restore that state.
+
+Save current running emulator state to a named snapshot:
+```bash
+# Save snapshot on first connected device (named "signal_preconfigured")
+./testing-tools/emulator-snapshot-tool.sh save signal_preconfigured
+```
+
+Load (restore) a previously saved snapshot on the running emulator:
+```bash
+./testing-tools/emulator-snapshot-tool.sh load signal_preconfigured
+```
+
+Notes:
+- The emulator must be running and support snapshots. If you have multiple devices, pass the device serial as the first argument.
+- You can list snapshots with `adb -s <device> emu avd snapshot list` or `emulator -list-avds` for AVDs.
+
 ### 2. Basic Gesture Testing
 ```bash
 # Test triple tap gesture on default emulator

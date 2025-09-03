@@ -90,7 +90,7 @@
 - [ ] **Production Gesture**: One reliable gesture for real device use
 - [ ] **Debug Gesture**: One simple gesture for emulator testing
 - [ ] **Implementation**: Clean 150-line gesture detector (vs current 457 lines)
-  
+
   - **Tooling note (automation)**: Add a short-term debug hook allowing tests to set the selected exit gesture via an internal debug broadcast or a debug-only shared preference. The gesture test script will attempt a best-effort `am broadcast` and `run-as` write to set this value; app-side support (broadcast handler or debug hook) should be implemented as part of Step 3.1 so automation can fully control the selected gesture.
 
 ### **Step 3.2: Clean Settings UI**
