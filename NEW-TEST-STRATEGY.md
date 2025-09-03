@@ -280,10 +280,10 @@ app/src/androidTest/            # Instrumented tests (real database)
 - [x] Basic androidTest framework implemented (specification tests created)
 
 ### **Phase 2: Testing Foundation Completion**
-- [ ] SignalStore integration tests (settings persistence)
-- [ ] Database integration tests (conversation data access)
-- [ ] Gesture detection tests (real MotionEvent validation)
-- [ ] Router integration tests (Activity lifecycle testing)
+- [x] SignalStore integration tests (AccessibilitySettingsPersistenceTest created)
+- [x] Database integration tests (AccessibilityDatabaseIntegrationTest created)
+- [x] Gesture detection tests (AccessibilityGestureDetectionTest created)
+- [x] Router integration tests (AccessibilityRouterIntegrationTest created)
 
 ### **Phase 3: Implementation Validation**
 - [ ] Tests validate actual implementation (not just specifications)
