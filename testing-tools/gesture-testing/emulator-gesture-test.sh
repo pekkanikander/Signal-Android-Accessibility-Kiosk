@@ -68,6 +68,12 @@ readonly LOG_FILE="${SCRIPT_DIR}/gesture-test-$(date +%Y%m%d-%H%M%S).log"
 GESTURE_TYPE="${1:-triple-tap-debug}"
 DEVICE_SERIAL="${2:-}"
 EMULATOR_WAIT_TIME=2
+# Default to Production package unless overridden
+PACKAGE_NAME="${3:-org.thoughtcrime.securesms}"
+# Ensure-only mode: prod or staging (defaults to prod)
+ENSURE_ONLY="${ENSURE_ONLY:-prod}"
+# If true, uninstall other Signal variants (use with care)
+UNINSTALL_OTHER="${UNINSTALL_OTHER:-false}"
 
 # Colors for output
 readonly RED='\033[0;31m'
@@ -500,8 +506,11 @@ verify_test_environment() {
     fi
     log "✅ Device $DEVICE_SERIAL is accessible"
 
+    # Preflight: ensure only the selected package is installed if requested
+    preflight_package_check
+
     # Check if Signal app is installed
-    if ! adb -s "$DEVICE_SERIAL" shell pm list packages | grep -q "org.thoughtcrime.securesms"; then
+    if ! adb_exec shell pm list packages | grep -q "$PACKAGE_NAME"; then
         error "Signal app is not installed on device"
         echo ""
         echo "📦 INSTALLATION REQUIRED:"
@@ -548,6 +557,36 @@ verify_test_environment() {
     log "✅ Currently in Accessibility Mode Activity"
 
     log "=== Test Environment Ready ==="
+}
+
+# Look for multiple Signal variants and optionally uninstall others
+preflight_package_check() {
+    log "Checking for multiple Signal variants on device..."
+    local pkgs
+    pkgs=$(adb_exec shell pm list packages | grep "org.thoughtcrime.securesms" || true)
+    local count
+    count=$(echo "$pkgs" | wc -l | tr -d ' ')
+
+    if [ "$count" -gt 1 ]; then
+        warning "Multiple Signal packages detected:\n$pkgs"
+        if [ "$UNINSTALL_OTHER" = "true" ]; then
+            log "Uninstalling other variants except $PACKAGE_NAME"
+            while read -r line; do
+                pkg=$(echo "$line" | cut -d: -f2)
+                if [ "$pkg" != "$PACKAGE_NAME" ]; then
+                    if [ "$DRY_RUN" = "true" ]; then
+                        echo "[DRY_RUN] adb -s $DEVICE_SERIAL uninstall $pkg" | tee -a "$LOG_FILE"
+                    else
+                        adb -s "$DEVICE_SERIAL" uninstall "$pkg" || warning "Failed to uninstall $pkg"
+                    fi
+                fi
+            done <<< "$pkgs"
+        else
+            warning "Set UNINSTALL_OTHER=true to remove non-selected variants automatically (use with care)."
+        fi
+    else
+        log "No conflicting Signal variants detected"
+    fi
 }
 
 # Show setup instructions for enabling Accessibility Mode

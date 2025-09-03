@@ -78,6 +78,10 @@ check_adb_setup() {
         DEVICE_SERIAL=$(adb devices | grep -v "List of devices" | grep -v "^$" | awk 'NR==1{print $1}')
     fi
 
+    # Enforce production by default
+    PACKAGE_NAME="${PACKAGE_NAME:-org.thoughtcrime.securesms}"
+    ENSURE_ONLY="${ENSURE_ONLY:-prod}"
+
     if [ "$DRY_RUN" = "true" ]; then
         info "DRY_RUN enabled; skipping actual device connection checks"
     else

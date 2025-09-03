@@ -39,6 +39,27 @@ BENCHMARK_TYPE="${1:-startup-time}"
 DEVICE_SERIAL="${2:-${DEVICE_SERIAL:-}}"
 PACKAGE_NAME="${3:-org.thoughtcrime.securesms}"
 ITERATIONS="${4:-5}"
+# Ensure-only mode: prefer prod by default
+ENSURE_ONLY="${ENSURE_ONLY:-prod}"
+UNINSTALL_OTHER="${UNINSTALL_OTHER:-false}"
+
+preflight_uninstall_other() {
+    if [ "$UNINSTALL_OTHER" = "true" ]; then
+        log "Uninstalling non-selected Signal variants (except $PACKAGE_NAME)"
+        local pkgs
+        pkgs=$(adb devices | awk 'NR>1 && $2=="device"{print $1}' | while read -r d; do adb -s "$d" shell pm list packages | grep "org.thoughtcrime.securesms"; done || true)
+        while read -r line; do
+            pkg=$(echo "$line" | cut -d: -f2)
+            if [ "$pkg" != "$PACKAGE_NAME" ]; then
+                if [ "$DRY_RUN" = "true" ]; then
+                    echo "[DRY_RUN] adb -s $DEVICE_SERIAL uninstall $pkg" | tee -a "${LOG_DIR}/benchmark-${TIMESTAMP}.log"
+                else
+                    adb -s "$DEVICE_SERIAL" uninstall "$pkg" || warning "Failed to uninstall $pkg"
+                fi
+            fi
+        done <<< "$pkgs"
+    fi
+}
 
 # Simple adb wrapper respecting DRY_RUN
 adb_exec() {
