@@ -39,6 +39,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     IDLE,
     FIRST_POINTER_DOWN,
     SECOND_POINTER_DOWN,
+    SINGLE_FINGER_LONG_PRESS,
     GESTURE_ACTIVE
   }
 
@@ -119,11 +120,12 @@ class AccessibilityModeExitToSettingsGestureDetector(
         firstPointerStartY = y
 
         if (gestureType == GestureType.SINGLE_FINGER_EDGE_DRAG) {
-          // For single-finger gesture, start immediately
-          if (isValidGestureStart(x, y)) {
-            state = GestureState.GESTURE_ACTIVE
-            Log.d(TAG, "Single-finger gesture started: id=$pointerId at ($x, $y)")
-          }
+          // For single-finger gesture, just record start position and wait for long press
+          singleFingerStartX = x
+          singleFingerStartY = y
+          singleFingerLongPressStartTime = currentTime
+          state = GestureState.FIRST_POINTER_DOWN
+          Log.d(TAG, "Single-finger gesture tracking started: id=$pointerId at ($x, $y)")
         } else {
           // For multi-finger gestures, wait for second pointer
           state = GestureState.FIRST_POINTER_DOWN
@@ -166,9 +168,29 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   private fun handlePointerMove(event: MotionEvent): Boolean {
-    if (state != GestureState.GESTURE_ACTIVE) return false
-
     val currentTime = System.currentTimeMillis()
+
+    // Handle single-finger long press detection
+    if (gestureType == GestureType.SINGLE_FINGER_EDGE_DRAG && state == GestureState.FIRST_POINTER_DOWN) {
+      val firstIndex = event.findPointerIndex(firstPointerId)
+      if (firstIndex == -1) {
+        resetState()
+        return false
+      }
+
+      // Check if long press duration has been reached
+      val pressDuration = currentTime - firstPointerDownTime
+      if (pressDuration >= 500L) { // 500ms long press
+        state = GestureState.SINGLE_FINGER_LONG_PRESS
+        Log.d(TAG, "Single-finger long press detected, now waiting for edge drag")
+        // Continue to edge detection below
+      } else {
+        // Still waiting for long press, don't consume event yet
+        return false
+      }
+    }
+
+    if (state != GestureState.GESTURE_ACTIVE && state != GestureState.SINGLE_FINGER_LONG_PRESS) return false
 
     if (gestureType == GestureType.SINGLE_FINGER_EDGE_DRAG) {
       // Handle single-finger edge drag gesture
@@ -184,16 +206,25 @@ class AccessibilityModeExitToSettingsGestureDetector(
       // Check if finger is at screen edge
       val isAtEdgeNow = isAtScreenEdge(currentX, currentY)
 
-      if (!isAtEdge && isAtEdgeNow) {
-        // Just arrived at edge - start edge hold timer
+      if (state == GestureState.SINGLE_FINGER_LONG_PRESS && isAtEdgeNow) {
+        // Just arrived at edge during long press - start the gesture
+        state = GestureState.GESTURE_ACTIVE
         isAtEdge = true
         lastHapticTime = currentTime
-        Log.d(TAG, "Finger reached edge at ($currentX, $currentY)")
-      } else if (isAtEdge && !isAtEdgeNow) {
-        // Moved away from edge - cancel gesture
-        Log.d(TAG, "Finger moved away from edge")
-        resetState()
-        return false
+        singleFingerLongPressStartTime = currentTime // Reset timer for hold duration
+        Log.d(TAG, "Single-finger gesture started at edge ($currentX, $currentY)")
+      } else if (state == GestureState.GESTURE_ACTIVE) {
+        if (!isAtEdge && isAtEdgeNow) {
+          // Just arrived at edge - start edge hold timer
+          isAtEdge = true
+          lastHapticTime = currentTime
+          Log.d(TAG, "Finger reached edge at ($currentX, $currentY)")
+        } else if (isAtEdge && !isAtEdgeNow) {
+          // Moved away from edge - cancel gesture
+          Log.d(TAG, "Finger moved away from edge")
+          resetState()
+          return false
+        }
       }
 
       // Check drift tolerance from edge position
@@ -279,7 +310,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     return when (gestureType) {
       GestureType.OPPOSITE_CORNERS -> isValidCornerGesture(secondX, secondY)
       GestureType.HEADER_HOLD -> isValidHeaderGesture(secondX, secondY)
-      GestureType.SINGLE_FINGER_EDGE_DRAG -> isValidSingleFingerEdgeGesture(secondX, secondY)
+      GestureType.SINGLE_FINGER_EDGE_DRAG -> false // Single-finger gestures don't use this method
     }
   }
 
