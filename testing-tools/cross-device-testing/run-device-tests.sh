@@ -38,6 +38,15 @@ readonly SUMMARY_FILE="${RESULTS_DIR}/cross-device-summary-${TIMESTAMP}.json"
 # Default values
 TEST_TYPE="${1:-compatibility}"
 DEVICE_LIST="${2:-all}"
+DRY_RUN="${DRY_RUN:-false}"
+
+adb_exec() {
+    if [ "$DRY_RUN" = "true" ]; then
+        echo "[DRY_RUN] adb -s $1 ${@:2}"
+    else
+        adb -s "$1" ${@:2}
+    fi
+}
 
 # Colors for output
 readonly RED='\033[0;31m'

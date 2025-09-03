@@ -28,6 +28,38 @@
 
 set -euo pipefail
 
+# ----- Safety / run flags -----
+# If DRY_RUN is set to "true" the script will only print intended adb commands
+DRY_RUN="${DRY_RUN:-false}"
+# Optional package override (3rd CLI arg or env var)
+PACKAGE_NAME="${3:-${PACKAGE_NAME:-}}"
+# JSON results output
+RESULT_JSON="${SCRIPT_DIR}/gesture-test-result-$(date +%Y%m%d-%H%M%S).json"
+
+# Small wrapper for adb that respects DRY_RUN and device selection
+adb_exec() {
+    if [ "$DRY_RUN" = "true" ]; then
+        echo "[DRY_RUN] adb -s $DEVICE_SERIAL $*" | tee -a "$LOG_FILE"
+    else
+        adb -s "$DEVICE_SERIAL" $*
+    fi
+}
+
+# Helper to write a minimal JSON result
+write_result_json() {
+    local overall="$1"
+    cat > "$RESULT_JSON" <<-JSON
+{
+  "timestamp": "$(date --iso-8601=seconds 2>/dev/null || date)",
+  "device": "$DEVICE_SERIAL",
+  "gesture": "$GESTURE_TYPE",
+  "result": "$overall",
+  "log": "${LOG_FILE}"
+}
+JSON
+    log "Result JSON written to: $RESULT_JSON"
+}
+
 # Configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="${SCRIPT_DIR}/gesture-test-$(date +%Y%m%d-%H%M%S).log"
@@ -70,7 +102,7 @@ check_adb_setup() {
 
     # Find connected devices
     local devices
-    devices=$(adb devices | grep -v "List of devices" | grep -v "^$" | wc -l)
+    devices=$(adb devices | grep -v "List of devices" | grep -v "^$" | awk '{print $1" "$2}' | grep -v "^$" | wc -l)
 
     if [ "$devices" -eq 0 ]; then
         error "No Android devices/emulators found. Please start an emulator or connect a device."
@@ -79,12 +111,12 @@ check_adb_setup() {
 
     # If no specific device requested, use the first available
     if [ -z "$DEVICE_SERIAL" ]; then
-        DEVICE_SERIAL=$(adb devices | grep -v "List of devices" | grep -v "^$" | head -1 | cut -f1)
+        DEVICE_SERIAL=$(adb devices | grep -v "List of devices" | grep -v "^$" | awk 'NR==1{print $1}')
         info "Using device: $DEVICE_SERIAL"
     fi
 
     # Verify device is accessible
-    if ! adb -s "$DEVICE_SERIAL" shell echo "test" &> /dev/null; then
+    if ! adb_exec shell echo "test" &> /dev/null; then
         error "Cannot connect to device $DEVICE_SERIAL"
         exit 1
     fi
@@ -95,7 +127,7 @@ check_adb_setup() {
 # Get screen dimensions and calculate gesture coordinates
 get_screen_info() {
     local screen_size
-    screen_size=$(adb -s "$DEVICE_SERIAL" shell wm size | grep -o '[0-9]*x[0-9]*')
+    screen_size=$(adb_exec shell wm size | grep -o '[0-9]*x[0-9]*')
     readonly SCREEN_WIDTH=$(echo "$screen_size" | cut -dx -f1)
     readonly SCREEN_HEIGHT=$(echo "$screen_size" | cut -dx -f2)
 
@@ -130,7 +162,7 @@ execute_swipe() {
     local start_x="$1" start_y="$2" end_x="$3" end_y="$4" duration="${5:-300}"
     log "Executing swipe: ($start_x,$start_y) -> ($end_x,$end_y) [${duration}ms]"
 
-    adb -s "$DEVICE_SERIAL" shell input touchscreen swipe "$start_x" "$start_y" "$end_x" "$end_y" "$duration"
+    adb_exec shell input touchscreen swipe "$start_x" "$start_y" "$end_x" "$end_y" "$duration"
     sleep 0.5
 }
 
@@ -139,7 +171,7 @@ execute_tap() {
     local x="$1" y="$2"
     log "Executing tap: ($x,$y)"
 
-    adb -s "$DEVICE_SERIAL" shell input touchscreen tap "$x" "$y"
+    adb_exec shell input touchscreen tap "$x" "$y"
     sleep 0.2
 }
 
@@ -154,7 +186,12 @@ verify_gesture_detection() {
     # Start logcat monitoring in background
     local logcat_pid=""
     local temp_log="${SCRIPT_DIR}/temp_logcat_$$.log"
-    adb -s "$DEVICE_SERIAL" logcat -v time -T "$(date '+%m-%d %H:%M:%S.000')" > "$temp_log" 2>/dev/null &
+    if [ "$DRY_RUN" = "true" ]; then
+        echo "[DRY_RUN] start logcat to $temp_log"
+    else
+        adb -s "$DEVICE_SERIAL" logcat -v time -T "$(date '+%m-%d %H:%M:%S.000')" > "$temp_log" 2>/dev/null &
+        logcat_pid=$!
+    fi
     logcat_pid=$!
 
     # Wait for gesture detection or timeout
@@ -171,13 +208,15 @@ verify_gesture_detection() {
     done
 
     # Clean up logcat process
-    kill "$logcat_pid" 2>/dev/null || true
-    wait "$logcat_pid" 2>/dev/null || true
+    if [ -n "$logcat_pid" ]; then
+        kill "$logcat_pid" 2>/dev/null || true
+        wait "$logcat_pid" 2>/dev/null || true
+    fi
 
     # Extract relevant log lines
     local gesture_logs=""
     if [ -f "$temp_log" ]; then
-        gesture_logs=$(grep "$log_pattern" "$temp_log" 2>/dev/null || echo "")
+        gesture_logs=$(grep -E "$log_pattern" "$temp_log" 2>/dev/null || echo "")
         rm -f "$temp_log"
     fi
 

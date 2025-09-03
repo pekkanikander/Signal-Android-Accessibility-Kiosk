@@ -34,10 +34,20 @@ readonly TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 readonly RESULT_FILE="${LOG_DIR}/benchmark-${TIMESTAMP}.json"
 
 # Default values
+DRY_RUN="${DRY_RUN:-false}"
 BENCHMARK_TYPE="${1:-startup-time}"
-DEVICE_SERIAL="${2:-}"
-PACKAGE_NAME="org.thoughtcrime.securesms"
-ITERATIONS=5
+DEVICE_SERIAL="${2:-${DEVICE_SERIAL:-}}"
+PACKAGE_NAME="${3:-org.thoughtcrime.securesms}"
+ITERATIONS="${4:-5}"
+
+# Simple adb wrapper respecting DRY_RUN
+adb_exec() {
+    if [ "$DRY_RUN" = "true" ]; then
+        echo "[DRY_RUN] adb -s $DEVICE_SERIAL $*" | tee -a "${LOG_DIR}/benchmark-${TIMESTAMP}.log"
+    else
+        adb -s "$DEVICE_SERIAL" $*
+    fi
+}
 
 # Colors for output
 readonly RED='\033[0;31m'
@@ -97,10 +107,10 @@ check_adb_setup() {
     fi
 
     if [ -z "$DEVICE_SERIAL" ]; then
-        DEVICE_SERIAL=$(adb devices | grep -v "List of devices" | grep -v "^$" | head -1 | cut -f1)
+        DEVICE_SERIAL=$(adb devices | grep -v "List of devices" | grep -v "^$" | awk 'NR==1{print $1}')
     fi
 
-    if ! adb -s "$DEVICE_SERIAL" shell echo "test" &> /dev/null; then
+    if ! adb_exec shell echo "test" &> /dev/null; then
         error "Cannot connect to device $DEVICE_SERIAL"
         exit 1
     fi

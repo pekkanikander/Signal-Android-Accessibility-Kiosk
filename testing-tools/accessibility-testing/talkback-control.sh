@@ -72,13 +72,19 @@ check_adb_setup() {
         exit 1
     fi
 
+    DRY_RUN="${DRY_RUN:-false}"
+
     if [ -z "$DEVICE_SERIAL" ]; then
-        DEVICE_SERIAL=$(adb devices | grep -v "List of devices" | grep -v "^$" | head -1 | cut -f1)
+        DEVICE_SERIAL=$(adb devices | grep -v "List of devices" | grep -v "^$" | awk 'NR==1{print $1}')
     fi
 
-    if ! adb -s "$DEVICE_SERIAL" shell echo "test" > /dev/null 2>&1; then
-        error "Cannot connect to device $DEVICE_SERIAL"
-        exit 1
+    if [ "$DRY_RUN" = "true" ]; then
+        info "DRY_RUN enabled; skipping actual device connection checks"
+    else
+        if ! adb -s "$DEVICE_SERIAL" shell echo "test" > /dev/null 2>&1; then
+            error "Cannot connect to device $DEVICE_SERIAL"
+            exit 1
+        fi
     fi
 
     info "ADB setup verified for device: $DEVICE_SERIAL"

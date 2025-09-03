@@ -1,0 +1,17 @@
+-e [0;32m[14:30:57][0m === Accessibility Mode Performance Benchmark Started ===
+-e [0;32m[14:30:57][0m Benchmark Type: startup-time
+-e [0;32m[14:30:57][0m Device: 
+-e [0;32m[14:30:57][0m Iterations: 5
+-e [0;34m[INFO][0m ADB setup verified for device: emulator-5554
+-e [0;34m[INFO][0m Device: sdk_gphone64_arm64
+-e [0;34m[INFO][0m Android Version: 12 (API 31)
+-e [0;32m[14:30:57][0m === Verifying Benchmark Environment ===
+-e [0;32m[14:30:57][0m ✅ Device emulator-5554 is accessible
+-e [0;32m[14:30:57][0m ✅ Signal app is installed
+-e [0;32m[14:30:57][0m Checking if Accessibility Mode is enabled...
+-e [0;32m[14:30:57][0m Found AccessibilityModeActivity in recent tasks - likely enabled
+-e [0;32m[14:30:57][0m ✅ Accessibility Mode is enabled
+-e [0;32m[14:30:57][0m ✅ Currently in Accessibility Mode Activity
+-e [0;32m[14:30:57][0m === Benchmark Environment Ready ===
+-e [0;32m[14:30:57][0m === Benchmarking Startup Time ===
+-e [0;34m[INFO][0m Iteration 1 of 5
