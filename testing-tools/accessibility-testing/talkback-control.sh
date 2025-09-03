@@ -102,6 +102,41 @@ check_adb_setup() {
     info "ADB setup verified for device: $DEVICE_SERIAL"
 }
 
+# Temporarily elevate adb to root on emulator if possible
+adb_ensure_root() {
+    if [ "${DRY_RUN:-false}" = "true" ]; then
+        echo "[DRY_RUN] adb -s $DEVICE_SERIAL root" | tee -a "$RESULT_FILE"
+        return 0
+    fi
+
+    info "Attempting to run adbd as root on device: $DEVICE_SERIAL"
+    adb -s "$DEVICE_SERIAL" root >/dev/null 2>&1 || true
+    # Wait a moment for adbd to restart as root
+    sleep 1
+    # Verify root by checking whoami or id
+    local who
+    who=$(adb -s "$DEVICE_SERIAL" shell id 2>/dev/null || echo "")
+    if echo "$who" | grep -q "uid=0"; then
+        info "adbd running as root"
+        return 0
+    else
+        warning "Could not obtain root adbd; continuing without root (some operations may fail)"
+        return 1
+    fi
+}
+
+# Return adbd to unrooted mode (best-effort)
+adb_restore_unroot() {
+    if [ "${DRY_RUN:-false}" = "true" ]; then
+        echo "[DRY_RUN] adb -s $DEVICE_SERIAL unroot" | tee -a "$RESULT_FILE"
+        return 0
+    fi
+
+    info "Attempting to restore adbd unroot on device: $DEVICE_SERIAL"
+    adb -s "$DEVICE_SERIAL" unroot >/dev/null 2>&1 || true
+    sleep 1
+}
+
 # Enable TalkBack screen reader
 enable_talkback() {
     log "=== Enabling TalkBack Screen Reader ==="
@@ -132,13 +167,19 @@ disable_talkback() {
     log "=== Disabling TalkBack Screen Reader ==="
 
     # Disable accessibility
-    adb -s "$DEVICE_SERIAL" shell settings put secure accessibility_enabled 0
+    # Try to temporarily elevate to root so we can delete secure settings reliably on emulator
+    adb_ensure_root || true
 
-    # Clear accessibility services
-    adb -s "$DEVICE_SERIAL" shell settings put secure enabled_accessibility_services ""
+    adb -s "$DEVICE_SERIAL" shell settings put secure accessibility_enabled 0 || true
+
+    # Clear enabled services safely using delete
+    adb -s "$DEVICE_SERIAL" shell settings delete secure enabled_accessibility_services || true
 
     # Disable touch exploration
-    adb -s "$DEVICE_SERIAL" shell settings put secure touch_exploration_enabled 0
+    adb -s "$DEVICE_SERIAL" shell settings put secure touch_exploration_enabled 0 || true
+
+    # Restore adbd to unrooted mode (best-effort)
+    adb_restore_unroot || true
 
     sleep 2
 
