@@ -276,8 +276,8 @@ app/src/androidTest/            # Instrumented tests (real database)
 
 ### **Phase 1: Foundation (Current)**
 - [x] Test strategy designed (SQLCipher-aware)
-- [ ] Test infrastructure set up
-- [ ] Basic androidTest framework implemented
+- [x] Test infrastructure set up (Signal test framework integrated)
+- [x] Basic androidTest framework implemented (specification tests created)
 
 ### **Phase 2: Core Tests**
 - [ ] Unit tests for pure logic (gesture detection, router logic)
