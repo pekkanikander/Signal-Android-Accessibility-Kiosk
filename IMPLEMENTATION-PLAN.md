@@ -34,9 +34,10 @@
 
 ## 🧪 **PHASE 1: TESTING FOUNDATION (1-2 Weeks)**
 
-### **Step 1.1: Scrap Current Tests**
-- [ ] Remove all 246 current test files
-- [ ] Preserve upstream Signal tests untouched
+### **✅ Step 1.1: Scrap Current Tests** ✓
+- [x] Remove all 8 accessibility test files we created
+- [x] Preserve upstream Signal tests untouched (182 files remain)
+- [x] Verified build still works after removal
 
 ### **Step 1.2: Design New Test Strategy**
 - [ ] **Unit Tests**: Core accessibility logic only
