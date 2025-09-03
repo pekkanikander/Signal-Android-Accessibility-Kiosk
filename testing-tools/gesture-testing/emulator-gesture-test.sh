@@ -806,6 +806,13 @@ main() {
     # Verify test environment and guide user if needed
     verify_test_environment
 
+    # If requested, attempt to set the accessibility exit gesture (best-effort)
+    if [ -n "$SET_GESTURE" ]; then
+        set_accessibility_exit_gesture "$SET_GESTURE"
+        # Small pause to let app process change
+        sleep 1
+    fi
+
     # Wait for app to be fully ready after environment setup
     wait_for_app
 
