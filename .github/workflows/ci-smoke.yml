@@ -46,6 +46,8 @@ jobs:
           api-level: 31
           target: google_apis
           arch: arm64-v8a
+          # run a debug dump first to inspect environment
+          pre-emulator-launch-script: ./testing-tools/ci-debug-env.sh
           script: ./testing-tools/ci-smoke.sh emulator-5554
           # request explicit arm64 system image where supported
           system-image: 'system-images;android-31;google_apis;arm64-v8a'
