@@ -33,11 +33,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Build APKs (release aab not needed here)
-        run: |
-          # Build the Signal app project (project path is ':Signal-Android' in this repo)
-          ./gradlew :Signal-Android:assembleDebug :Signal-Android:assembleAndroidTest --stacktrace --no-daemon
-
       - name: Ensure adb and platform-tools available (for act/local)
         if: runner.os == 'Linux'
         run: |
@@ -52,6 +47,11 @@ jobs:
           arch: x86_64
           force-avd-creation: true
           emulator-options: -no-window -no-audio
+
+      - name: Build APKs (release aab not needed here)
+        run: |
+          # Build after the emulator/SDK is available in the runner
+          ./gradlew :Signal-Android:assembleDebug :Signal-Android:assembleAndroidTest --stacktrace --no-daemon
 
       - name: Run CI smoke script
         run: |
