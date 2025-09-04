@@ -19,7 +19,8 @@ class AccessibilityEspressoE2E {
     fun enableAccessibilityMode_showsConversationList() {
         // Create or get a thread for one of the pre-created recipients from the harness
         val recipientId = harness.others.first()
-        val threadId = SignalDatabase.threads.getOrCreateThreadIdFor(recipientId)
+        val recipient = org.thoughtcrime.securesms.recipients.Recipient.resolved(recipientId)
+        val threadId = SignalDatabase.threads.getOrCreateThreadIdFor(recipient)
 
         // Enable accessibility mode pointing to that thread before launching UI
         AccessibilityTestHelpers.enableAccessibilityModeForThread(threadId)
