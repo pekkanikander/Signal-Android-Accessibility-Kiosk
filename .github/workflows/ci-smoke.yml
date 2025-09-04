@@ -55,6 +55,19 @@ jobs:
           chmod +x testing-tools/ci-debug-env.sh || true
           ./testing-tools/ci-debug-env.sh
 
+      - name: Debug system Java (container)
+        run: |
+          echo '--- which java ---'
+          which java || true
+          echo '--- java -version ---'
+          java -version || true
+          echo '--- ls /usr/lib/jvm ---'
+          ls -la /usr/lib/jvm || true
+          echo '--- env JAVA_HOME ANDROID_HOME PATH ---'
+          echo "JAVA_HOME=${JAVA_HOME:-}" || true
+          echo "ANDROID_HOME=${ANDROID_HOME:-}" || true
+          echo "PATH=${PATH:-}" || true
+
       - name: Prepare local android-emulator-runner (install deps)
         run: |
           if [ -d "tmp/android-emulator-runner" ]; then
