@@ -27,11 +27,12 @@ class AccessibilityGestureDetectorInstrTest {
     val y = 100f
     val now = System.currentTimeMillis()
 
+    val view = android.view.View(context)
     for (i in 0 until 3) {
       val down = MotionEvent.obtain(now + i*100L, now + i*100L, MotionEvent.ACTION_DOWN, x, y, 0)
-      detector.onTouch(null, down)
+      detector.onTouch(view, down)
       val up = MotionEvent.obtain(now + i*100L + 20, now + i*100L + 20, MotionEvent.ACTION_UP, x, y, 0)
-      detector.onTouch(null, up)
+      detector.onTouch(view, up)
       down.recycle()
       up.recycle()
     }
