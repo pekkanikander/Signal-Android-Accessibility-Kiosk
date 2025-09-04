@@ -12,6 +12,9 @@ jobs:
   smoke:
     name: smoke
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /opt/android-sdk
+      PATH: /opt/acttoolcache/node/18.20.8/x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator:${{ env.PATH }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,7 +52,8 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           ANDROID_HOME: /opt/android-sdk
-          PATH: /opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator:${{ env.PATH }}
+          # PATH: /opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator:${{ env.PATH }}
+          PATH: /opt/acttoolcache/node/18.20.8/x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator
         with:
           api-level: 31
           target: google_apis
