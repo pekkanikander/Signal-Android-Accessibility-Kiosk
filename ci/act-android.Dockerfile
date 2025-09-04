@@ -31,3 +31,12 @@ RUN set -euo pipefail && \
       unzip -q /tmp/$DIST_FILE -d "$DIST_DIR" || true && \
       rm -f /tmp/$DIST_FILE; \
     fi
+
+# Install Android commandline tools so sdkmanager/avdmanager are available
+RUN set -eux; \
+  SDK_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip"; \
+  wget -q -O /tmp/cmdline-tools.zip "$SDK_TOOLS_URL"; \
+  unzip -q /tmp/cmdline-tools.zip -d ${ANDROID_HOME}/cmdline-tools; \
+  mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest || true; \
+  rm -f /tmp/cmdline-tools.zip; \
+  chmod -R a+rX ${ANDROID_HOME};
