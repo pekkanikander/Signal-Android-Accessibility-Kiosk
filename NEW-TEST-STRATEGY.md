@@ -282,7 +282,7 @@ app/src/androidTest/            # Instrumented tests (real database)
 ### **Phase 2: Testing Foundation Completion**
 - [x] SignalStore integration tests (AccessibilitySettingsPersistenceTest created)
 - [x] Database integration tests (AccessibilityDatabaseIntegrationTest created)
-- [x] Gesture detection tests (AccessibilityGestureDetectionTest created)
+- [x] Gesture detection tests (AccessibilityGestureDetectPrionTest created)
 - [x] Router integration tests (AccessibilityRouterIntegrationTest created)
 
 ### **Phase 3: Implementation Validation**

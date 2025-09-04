@@ -80,9 +80,40 @@ class AccessibilityDatabaseIntegrationTest {
             accessibilityThreadId = testThreadId
         }
 
+        // Ensure the thread is marked active early (some devices may lazily mark newly-created threads inactive)
+        try {
+            SignalDatabase.threads.markAsActiveEarly(testThreadId)
+        } catch (e: Exception) {
+            android.util.Log.w("AccessibilityDatabaseIntegrationTest", "markAsActiveEarly failed: ${e.message}")
+        }
+
         // When: We perform database operations that accessibility mode would use
-        val threadRecord = SignalDatabase.threads.getThreadRecord(testThreadId)
+        // Retry briefly in case of transient visibility/race issues on test devices
+        var threadRecord = SignalDatabase.threads.getThreadRecord(testThreadId)
+        val maxAttempts = 3
+        var attempt = 1
+        while (threadRecord == null && attempt <= maxAttempts) {
+            try {
+                Thread.sleep(200)
+            } catch (ie: InterruptedException) {
+                // ignore
+            }
+            threadRecord = SignalDatabase.threads.getThreadRecord(testThreadId)
+            attempt++
+        }
         val recipient = threadRecord?.recipient
+
+        if (threadRecord == null) {
+            // Log useful diagnostic info for triage
+            android.util.Log.e("AccessibilityDatabaseIntegrationTest", "ThreadRecord null for testThreadId=$testThreadId after $maxAttempts attempts")
+            // Try to log recipient/listing info
+            try {
+                val convoList = SignalDatabase.threads.getUnarchivedConversationList(ConversationFilter.OFF, false, 0, 50, ChatFolderRecord())
+                android.util.Log.e("AccessibilityDatabaseIntegrationTest", "ConversationList=${convoList?.toString()}")
+            } catch (e: Exception) {
+                android.util.Log.e("AccessibilityDatabaseIntegrationTest", "Failed to fetch conversation list: ${e.message}")
+            }
+        }
 
         // Then: All data should be accessible and consistent
         assertThat("Thread should exist", threadRecord, not(nullValue()))

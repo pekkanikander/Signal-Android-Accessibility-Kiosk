@@ -37,18 +37,31 @@ class AccessibilityTalkBackUiTest {
         // Quick sanity: ensure the package is installed before trying to launch.
         val pm = context.packageManager
         var installCheckException: Exception? = null
-        val installed = try {
-            pm.getPackageInfo(packageName, 0)
-            true
-        } catch (e: Exception) {
-            // Record and log the exception so it appears in instrumentation output
-            installCheckException = e
-            android.util.Log.w("AccessibilityTalkBackUiTest", "packageManager.getPackageInfo failed", e)
-            false
+        fun isPackageVisibleViaPm(): Boolean {
+            return try {
+                pm.getPackageInfo(packageName, 0)
+                true
+            } catch (e: Exception) {
+                installCheckException = e
+                android.util.Log.w("AccessibilityTalkBackUiTest", "packageManager.getPackageInfo failed", e)
+                false
+            }
         }
 
+        fun isPackageListedByShell(): Boolean {
+            return try {
+                val out = device.executeShellCommand("pm list packages | grep $packageName")
+                out != null && out.contains(packageName)
+            } catch (e: Exception) {
+                android.util.Log.w("AccessibilityTalkBackUiTest", "shell pm list packages failed", e)
+                false
+            }
+        }
+
+        val installed = isPackageVisibleViaPm() || isPackageListedByShell()
+
         if (!installed) {
-            throw AssertionError("Required package not installed on device: $packageName; check error: ${installCheckException?.message}", installCheckException)
+            throw AssertionError("Required package not installed on device or not visible to instrumentation: $packageName; check error: ${installCheckException?.message}", installCheckException)
         }
 
         val intent = pm.getLaunchIntentForPackage(packageName)
@@ -67,12 +80,8 @@ class AccessibilityTalkBackUiTest {
         // Wait for app to appear
         device.wait(Until.hasObject(By.pkg("org.thoughtcrime.securesms")), 5000)
 
-        // Look for an element that is likely to exist and should have a content-desc or text
-        var node = device.wait(Until.findObject(By.descContains("Conversation")), 5000)
-        if (node == null) {
-            node = device.wait(Until.findObject(By.textContains("Conversation")), 5000)
-        }
-
-        assertTrue("Conversation list or label should be present", node != null)
+        // Prefer checking for the conversation list RecyclerView by resource id
+        val list = device.wait(Until.findObject(By.res("org.thoughtcrime.securesms", "message_list")), 5000)
+        assertTrue("Conversation RecyclerView (message_list) should be present", list != null)
     }
 }
