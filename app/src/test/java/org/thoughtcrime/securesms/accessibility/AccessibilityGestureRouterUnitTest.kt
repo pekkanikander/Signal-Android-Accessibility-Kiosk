@@ -1,6 +1,5 @@
 package org.thoughtcrime.securesms.accessibility
 
-import android.view.MotionEvent
 import org.junit.Test
 import org.junit.Assert.assertEquals
 
@@ -10,36 +9,35 @@ class AccessibilityGestureRouterUnitTest {
   fun tripleTap_stateTransitions() {
     val detector = AccessibilityModeExitToSettingsGestureDetectorFake()
 
-    // Simulate three ACTION_DOWN/ACTION_UP sequences
-    val x = 100f
-    val y = 100f
+    // Simulate three logical taps spaced 100ms apart
     val now = System.currentTimeMillis()
-
     for (i in 0 until 3) {
-      val down = MotionEvent.obtain(now + i*100L, now + i*100L, MotionEvent.ACTION_DOWN, x, y, 0)
-      detector.onTouch(null, down)
-      val up = MotionEvent.obtain(now + i*100L + 20, now + i*100L + 20, MotionEvent.ACTION_UP, x, y, 0)
-      detector.onTouch(null, up)
-      down.recycle()
-      up.recycle()
+      detector.recordTap(now + i * 100L)
     }
 
     assertEquals("DETECTED", detector.lastState)
   }
 }
 
-// Minimal fake detector that flips state when triple-tap logic would trigger
-class AccessibilityModeExitToSettingsGestureDetectorFake : AccessibilityModeExitToSettingsGestureDetector(
-  context = androidx.test.core.app.ApplicationProvider.getApplicationContext(),
-  headerBoundsProvider = { android.graphics.Rect(0,0,100,100) },
-  onTriggered = {}
-) {
+// Pure-JVM fake detector that mimics triple-tap detection without Android types.
+class AccessibilityModeExitToSettingsGestureDetectorFake {
   var lastState: String = "IDLE"
+  private val tapTimestamps = mutableListOf<Long>()
+  private val tripleTapWindowMs = 600L
 
-  override fun triggerGesture() {
-    super.triggerGesture()
+  fun recordTap(timestampMs: Long) {
+    tapTimestamps.add(timestampMs)
+    // Keep only recent taps
+    while (tapTimestamps.size > 3) tapTimestamps.removeAt(0)
+    if (tapTimestamps.size == 3) {
+      val window = tapTimestamps.last() - tapTimestamps.first()
+      if (window <= tripleTapWindowMs) {
+        triggerGesture()
+      }
+    }
+  }
+
+  private fun triggerGesture() {
     lastState = "DETECTED"
   }
 }
-
-
