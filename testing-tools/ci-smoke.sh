@@ -30,6 +30,20 @@ fi
 adb -s "$DEVICE" shell settings put secure enabled_accessibility_services ""
 adb -s "$DEVICE" shell settings put secure accessibility_enabled 1 || true
 
+# If adb is not available in the container, try to install a lightweight adb package (for act local runs)
+if ! command -v adb >/dev/null 2>&1; then
+  echo "adb not found in PATH; attempting to install android-tools-adb (requires apt)"
+  if command -v apt-get >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y && apt-get install -y android-tools-adb || true
+  else
+    echo "apt-get not available; cannot install adb. Local act runs may fail." >&2
+  fi
+fi
+
+# Re-check device connectivity after ensuring adb
+adb -s "$DEVICE" wait-for-device 2>/dev/null || true
+
 # Run the Espresso E2E via instrumentation
 echo "Running AccessibilityEspressoE2E"
 adb -s "$DEVICE" shell am instrument -w -r -e class org.thoughtcrime.securesms.accessibility.AccessibilityEspressoE2E org.thoughtcrime.securesms.instrumentation.test/org.thoughtcrime.securesms.testing.SignalTestRunner > "$OUT_DIR/espresso_e2e.txt" 2>&1 || true
