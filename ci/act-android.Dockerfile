@@ -40,3 +40,8 @@ RUN set -eux; \
   mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest || true; \
   rm -f /tmp/cmdline-tools.zip; \
   chmod -R a+rX ${ANDROID_HOME};
+
+# Ensure environment is available to non-login shells inside container
+RUN echo "export ANDROID_HOME=/opt/android-sdk" > /etc/profile.d/android.sh && \
+    echo "export PATH=/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator:\$PATH" >> /etc/profile.d/android.sh && \
+    chmod +x /etc/profile.d/android.sh
