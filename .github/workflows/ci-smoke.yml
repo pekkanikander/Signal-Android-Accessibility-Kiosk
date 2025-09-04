@@ -28,47 +28,34 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
 
       - name: Set up JDK 17
+        if: env.SKIP_SETUP_JAVA != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Ensure adb and platform-tools available (for act/local)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && env.SKIP_ADB_INSTALL != 'true'
         run: |
           sudo apt-get update -y || true
           sudo apt-get install -y android-sdk-platform-tools android-tools-adb || true
-
-      - name: Start Android emulator (ARM64 image)
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 31
-          target: google_apis
-          arch: arm64-v8a
-          # request explicit arm64 system image where supported
-          system-image: 'system-images;android-31;google_apis;arm64-v8a'
-          force-avd-creation: true
-          emulator-options: -no-window -no-audio
 
       - name: Build APKs (release aab not needed here)
         run: |
           # Build after the emulator/SDK is available in the runner
           ./gradlew :Signal-Android:assembleDebug :Signal-Android:assembleAndroidTest --stacktrace --no-daemon
 
-      - name: Run CI smoke script
-        run: |
-          chmod +x testing-tools/ci-smoke.sh || true
-          ./testing-tools/ci-smoke.sh emulator-5554
-
-      - name: Terminate emulator (with timeout)
-        if: runner.os == 'Linux'
-        run: |
-          # Ensure emulator termination cannot hang the job indefinitely
-          if command -v timeout >/dev/null 2>&1; then
-            timeout 60s adb -s emulator-5554 emu kill || true
-          else
-            adb -s emulator-5554 emu kill || true
-          fi
+      - name: Start Android emulator (ARM64 image) and run CI smoke script
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: google_apis
+          arch: arm64-v8a
+          script: ./testing-tools/ci-smoke.sh emulator-5554
+          # request explicit arm64 system image where supported
+          system-image: 'system-images;android-31;google_apis;arm64-v8a'
+          force-avd-creation: true
+          emulator-options: -no-window -no-audio -verbose
 
       - name: Upload test artifacts
         if: always()
