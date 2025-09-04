@@ -10,7 +10,12 @@ RUN apt-get update && \
       openjdk-17-jdk \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PATH="/usr/bin:${PATH}"
+ENV ANDROID_HOME=/opt/android-sdk
+ENV PATH="/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator:/usr/bin:${PATH}"
+
+# Ensure Android SDK layout exists and is writable
+RUN mkdir -p ${ANDROID_HOME} ${ANDROID_HOME}/cmdline-tools ${ANDROID_HOME}/platform-tools ${ANDROID_HOME}/emulator /root/.android/avd \
+    && chown -R root:root ${ANDROID_HOME} /root/.android
 
 # Pre-cache Gradle wrapper distribution to speed up ./gradlew on first run
 COPY gradle/wrapper/gradle-wrapper.properties /tmp/gradle-wrapper.properties
