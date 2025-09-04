@@ -18,6 +18,9 @@ class AccessibilityGestureDetectorInstrTest {
     val context = InstrumentationRegistry.getInstrumentation().targetContext
     val latch = CountDownLatch(1)
 
+    // Ensure detector is configured to use the triple-tap debug gesture for the test
+    org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitGestureType = 3
+
     val detector = AccessibilityModeExitToSettingsGestureDetector(context, { Rect(0,0,100,100) }) {
       latch.countDown()
     }
