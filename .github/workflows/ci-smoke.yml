@@ -12,10 +12,15 @@ jobs:
   smoke:
     name: smoke
     runs-on: ubuntu-latest
-    env:
-      ANDROID_HOME: /opt/android-sdk
-      PATH: /opt/acttoolcache/node/18.20.8/x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator:${{ env.PATH }}
+    defaults:
+      run:
+        shell: bash
     steps:
+    - name: Set job-level env
+      run: |
+        echo "ANDROID_HOME=/opt/android-sdk" >> $GITHUB_ENV || true
+        echo "PATH=/opt/acttoolcache/node/18.20.8/x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator:${PATH}" >> $GITHUB_ENV || true
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
