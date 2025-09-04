@@ -92,23 +92,10 @@ jobs:
             npm run build --silent || true
           fi
 
-      - name: Start Android emulator (ARM64 image) and run CI smoke script
-        uses: ./tmp/android-emulator-runner
-        # env:
-          # ANDROID_HOME: /opt/android-sdk
-          # PATH: /opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator:${{ env.PATH }}
-          # PATH: /opt/acttoolcache/node/18.20.8/x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/emulator
-        with:
-          api-level: 31
-          target: google_apis
-          arch: arm64-v8a
-          # run a debug dump first to inspect environment
-          pre-emulator-launch-script: ./testing-tools/ci-debug-env.sh
-          script: ./testing-tools/ci-smoke.sh emulator-5554
-          # request explicit arm64 system image where supported
-          system-image: 'system-images;android-31;google_apis;arm64-v8a'
-          force-avd-creation: true
-          emulator-options: -no-window -no-audio -verbose
+      - name: Start Android emulator (ARM64 image) and run CI smoke script (shell runner)
+        run: |
+          chmod +x testing-tools/ci-emulator-shell.sh || true
+          ANDROID_HOME=/opt/android-sdk API_LEVEL=31 ARCH=arm64-v8a TARGET=google_apis ./testing-tools/ci-emulator-shell.sh
 
       - name: Upload test artifacts
         if: always()
