@@ -58,6 +58,16 @@ jobs:
           chmod +x testing-tools/ci-smoke.sh || true
           ./testing-tools/ci-smoke.sh emulator-5554
 
+      - name: Terminate emulator (with timeout)
+        if: runner.os == 'Linux'
+        run: |
+          # Ensure emulator termination cannot hang the job indefinitely
+          if command -v timeout >/dev/null 2>&1; then
+            timeout 60s adb -s emulator-5554 emu kill || true
+          else
+            adb -s emulator-5554 emu kill || true
+          fi
+
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
