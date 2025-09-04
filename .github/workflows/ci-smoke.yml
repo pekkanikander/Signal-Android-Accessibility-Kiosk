@@ -30,6 +30,16 @@ jobs:
           distribution: temurin
           java-version: '11'
 
+      - name: Build APKs (release aab not needed here)
+        run: |
+          ./gradlew :app:assembleDebug :app:assembleAndroidTest --stacktrace --no-daemon
+
+      - name: Ensure adb and platform-tools available (for act/local)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y || true
+          sudo apt-get install -y android-sdk-platform-tools android-tools-adb || true
+
       - name: Start Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
