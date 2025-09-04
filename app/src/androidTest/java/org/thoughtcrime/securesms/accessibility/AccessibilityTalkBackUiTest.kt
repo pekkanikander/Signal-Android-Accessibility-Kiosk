@@ -81,6 +81,9 @@ class AccessibilityTalkBackUiTest {
         device.wait(Until.hasObject(By.pkg("org.thoughtcrime.securesms")), 5000)
 
         // Prefer checking for the conversation list RecyclerView by resource id
+        // Ensure global accessibility enabled so TalkBack will announce
+        org.thoughtcrime.securesms.testing.AccessibilitySystemHelpers.enableGlobalAccessibility()
+
         val list = device.wait(Until.findObject(By.res("org.thoughtcrime.securesms", "message_list")), 5000)
         assertTrue("Conversation RecyclerView (message_list) should be present", list != null)
     }
