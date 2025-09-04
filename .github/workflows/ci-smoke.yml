@@ -53,6 +53,14 @@ jobs:
           chmod +x testing-tools/ci-debug-env.sh || true
           ./testing-tools/ci-debug-env.sh
 
+      - name: Prepare local android-emulator-runner (install deps)
+        run: |
+          if [ -d "tmp/android-emulator-runner" ]; then
+            cd tmp/android-emulator-runner
+            npm ci --silent || true
+            npm run build --silent || true
+          fi
+
       - name: Start Android emulator (ARM64 image) and run CI smoke script
         uses: ./tmp/android-emulator-runner
         # env:
