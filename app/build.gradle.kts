@@ -21,8 +21,8 @@ plugins {
 
 apply(from = "static-ips.gradle.kts")
 
-val canonicalVersionCode = 1583
-val canonicalVersionName = "7.56.4"
+val canonicalVersionCode = 1579
+val canonicalVersionName = "7.55.0"
 val currentHotfixVersion = 0
 val maxHotfixVersions = 100
 
@@ -237,8 +237,8 @@ android {
     buildConfigField("String", "STRIPE_BASE_URL", "\"https://api.stripe.com/v1\"")
     buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_live_6cmGZopuTsV8novGgJJW9JpC00vLIgtQ1D\"")
     buildConfigField("boolean", "TRACING_ENABLED", "false")
-    buildConfigField("boolean", "MESSAGE_BACKUP_RESTORE_ENABLED", "true")
-    buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "true")
+    buildConfigField("boolean", "MESSAGE_BACKUP_RESTORE_ENABLED", "false")
+    buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "false")
 
     ndk {
       abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
@@ -608,7 +608,8 @@ dependencies {
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.compat)
 
-  implementation(project(":billing"))
+  "playImplementation"(project(":billing"))
+  "nightlyImplementation"(project(":billing"))
 
   "spinnerImplementation"(project(":spinner"))
 
@@ -648,6 +649,8 @@ dependencies {
   androidTestImplementation(testLibs.androidx.test.ext.junit)
   androidTestImplementation(testLibs.espresso.core)
   androidTestImplementation(testLibs.androidx.test.core)
+  // UIAutomator required for accessibility UI tests (use 2.2.0 to match dependency verification)
+  androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
   androidTestImplementation(testLibs.androidx.test.core.ktx)
   androidTestImplementation(testLibs.androidx.test.ext.junit.ktx)
   androidTestImplementation(testLibs.assertk)
