@@ -32,3 +32,8 @@ maps.key
 /local/
 kls_database.db
 .kotlin
+
+# Local environment variables (contains secrets for local testing)
+.env
+.env.local
+quick-smoke-host
