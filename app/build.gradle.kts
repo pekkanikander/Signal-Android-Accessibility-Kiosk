@@ -21,8 +21,8 @@ plugins {
 
 apply(from = "static-ips.gradle.kts")
 
-val canonicalVersionCode = 1579
-val canonicalVersionName = "7.55.0"
+val canonicalVersionCode = 1583
+val canonicalVersionName = "7.56.4"
 val currentHotfixVersion = 0
 val maxHotfixVersions = 100
 
@@ -190,6 +190,7 @@ android {
 
     buildConfigField("long", "BUILD_TIMESTAMP", getLastCommitTimestamp() + "L")
     buildConfigField("String", "GIT_HASH", "\"${getGitHash()}\"")
+    buildConfigField("boolean", "GIT_DIRTY", "${isGitDirty()}")
     buildConfigField("String", "SIGNAL_URL", "\"https://chat.signal.org\"")
     buildConfigField("String", "STORAGE_URL", "\"https://storage.signal.org\"")
     buildConfigField("String", "SIGNAL_CDN_URL", "\"https://cdn.signal.org\"")
@@ -237,8 +238,8 @@ android {
     buildConfigField("String", "STRIPE_BASE_URL", "\"https://api.stripe.com/v1\"")
     buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_live_6cmGZopuTsV8novGgJJW9JpC00vLIgtQ1D\"")
     buildConfigField("boolean", "TRACING_ENABLED", "false")
-    buildConfigField("boolean", "MESSAGE_BACKUP_RESTORE_ENABLED", "false")
-    buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "false")
+    buildConfigField("boolean", "MESSAGE_BACKUP_RESTORE_ENABLED", "true")
+    buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "true")
 
     ndk {
       abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
@@ -681,6 +682,16 @@ fun getGitHash(): String {
   return providers.exec {
     commandLine("git", "rev-parse", "HEAD")
   }.standardOutput.asText.get().trim().substring(0, 12)
+}
+
+fun isGitDirty(): Boolean {
+  assertIsGitRepo()
+
+  val status = providers.exec {
+    commandLine("git", "status", "--porcelain")
+  }.standardOutput.asText.get().trim()
+
+  return status.isNotEmpty()
 }
 
 fun getCurrentGitTag(): String? {
