@@ -23,6 +23,8 @@ act --container-architecture linux/arm64 \
    --container-options "--privileged --add-host=host.docker.internal:host-gateway" \
    -P ubuntu-latest=signal-act-android:ci-arm64 \
    -j "${JOB}" -W "${WORKFLOW}" \
+   --env DEBUG_KEYSTORE_B64="$(base64 -i ~/.android/debug.keystore | tr -d '\n')" \
+   --env GITHUB_TOKEN="$(grep GITHUB_TOKEN .env | cut -d '=' -f 2)" \
    --env CI=true --env ADB_SERVER_SOCKET=tcp:host.docker.internal:5037 \
    --pull=false --reuse 2>&1 | tee "${ACT_LOG}"
 
