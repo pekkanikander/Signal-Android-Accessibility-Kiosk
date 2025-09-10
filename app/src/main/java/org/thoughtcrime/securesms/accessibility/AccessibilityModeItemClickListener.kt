@@ -27,11 +27,11 @@ import org.thoughtcrime.securesms.stickers.StickerLocator
 
 /**
  * Minimal ItemClickListener implementation for accessibility mode.
- * 
+ *
  * This implementation disables most complex features and provides only
  * basic message interaction for accessibility users.
  */
-class AccessibilityItemClickListener : ConversationAdapter.ItemClickListener {
+class AccessibilityModeItemClickListener : ConversationAdapter.ItemClickListener {
 
     // Basic click handling - only essential for accessibility
     override fun onItemClick(item: MultiselectPart) {

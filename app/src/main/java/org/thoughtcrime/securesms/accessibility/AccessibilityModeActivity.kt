@@ -73,12 +73,10 @@ class AccessibilityModeActivity : AppCompatActivity() {
     private fun setupExitGestureDetector() {
     exitGestureDetector = AccessibilityModeExitToSettingsGestureDetector(
       context = this,
-      headerBoundsProvider = { android.graphics.Rect() }, // Empty rect - can be updated when toolbar bounds are available
+      headerBoundsProvider = { computeHeaderBounds() },
       onTriggered = {
         Log.d(TAG, "Exit gesture triggered, launching confirmation")
-        // TODO: Launch confirmation overlay instead of directly going to settings
-        // For now, go directly to settings for testing
-        startActivity(IntentFactory.settings(this))
+        showExitConfirmationOverlay()
       }
     )
 
@@ -100,28 +98,27 @@ class AccessibilityModeActivity : AppCompatActivity() {
     Log.d(TAG, "Root view bounds: ${rootView.width}x${rootView.height}")
   }
 
+  private fun computeHeaderBounds(): android.graphics.Rect {
+    val heightDp = org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitHeaderHeightDp
+    val heightPx = (resources.displayMetrics.density * heightDp).toInt()
+    val width = resources.displayMetrics.widthPixels
+    return android.graphics.Rect(0, 0, width, heightPx)
+  }
+
+  private fun showExitConfirmationOverlay() {
+    val timeoutMs = org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitConfirmTimeoutMs.toLong()
+    val dialog = AccessibilityModeExitConfirmationDialog.newInstance(timeoutMs)
+    dialog.show(supportFragmentManager, AccessibilityModeExitConfirmationDialog.TAG)
+  }
+
+  fun navigateToSettings() {
+    startActivity(IntentFactory.settings(this))
+  }
+
   override fun onStart() {
     super.onStart()
     Log.d(TAG, "AccessibilityModeActivity.onStart() called")
     AccessibilityModeRouter.routeIfNeeded(this)
     Log.d(TAG, "AccessibilityModeActivity.onStart() completed")
-  }
-
-  // Temporary debug method - can be called from adb or removed later
-  fun debugTriggerGesture() {
-    Log.d(TAG, "Debug: Manually triggering gesture")
-    startActivity(IntentFactory.settings(this))
-  }
-
-  // Debug method to test gesture states
-  fun debugGestureState() {
-    Log.d(TAG, "Debug gesture state: current_state=${exitGestureDetector.getCurrentState()}")
-  }
-
-  // Debug method to simulate edge touch
-  fun debugSimulateEdgeTouch() {
-    Log.d(TAG, "Debug: Simulating edge touch at (50, 500)")
-    // This would require modifying the gesture detector to accept simulated events
-    startActivity(IntentFactory.settings(this))
   }
 }

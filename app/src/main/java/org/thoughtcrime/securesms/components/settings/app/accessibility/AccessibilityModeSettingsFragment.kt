@@ -86,17 +86,13 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     }
 
     override fun onExitGestureTypeClick() {
-      // Cycle through all available gesture types
       val currentType = viewModel.state.value.exitGestureType
       val newType = when (currentType) {
-        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD ->
-          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD
         org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD ->
-          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD
-        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD ->
           org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG
-        else ->
-          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD
+        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG ->
+          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD
+        else -> org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD // to be removed
       }
       viewModel.setExitGestureType(newType)
     }

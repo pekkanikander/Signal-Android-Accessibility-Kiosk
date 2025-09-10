@@ -160,8 +160,8 @@ private fun AccessibilityModeSettingsScreenPreview() {
     AccessibilityModeSettingsScreen(
       state = AccessibilityModeSettingsState(
         isAccessibilityModeEnabled = true,
-        threadId = 123L,
-        exitGestureType = AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD,
+        threadId = 2L, // XXX: TBD
+        exitGestureType = AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD,
         exitGestureRequirePin = false
       ),
       callbacks = AccessibilityModeSettingsCallbacks.Empty

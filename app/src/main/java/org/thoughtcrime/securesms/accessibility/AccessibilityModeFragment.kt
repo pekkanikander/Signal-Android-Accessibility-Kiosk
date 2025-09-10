@@ -110,7 +110,7 @@ class AccessibilityModeFragment : Fragment() {
         adapter = ConversationAdapterV2(
             lifecycleOwner = viewLifecycleOwner,
             requestManager = Glide.with(this),
-            clickListener = AccessibilityItemClickListener(),
+            clickListener = AccessibilityModeItemClickListener(),
             hasWallpaper = false, // No wallpaper for accessibility
             colorizer = org.thoughtcrime.securesms.conversation.colors.Colorizer(),
             startExpirationTimeout = viewModel::startExpirationTimeout,

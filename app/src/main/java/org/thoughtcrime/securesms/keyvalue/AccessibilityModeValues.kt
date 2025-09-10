@@ -25,6 +25,12 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     const val EXIT_GESTURE_CORNER_DP = "accessibility_mode.exit_gesture_corner_dp"
     const val EXIT_GESTURE_DRIFT_DP = "accessibility_mode.exit_gesture_drift_dp"
     const val EXIT_GESTURE_POINTER_TIMEOUT_MS = "accessibility_mode.exit_gesture_pointer_timeout_ms"
+    const val EXIT_HEADER_DEADZONE_DP = "accessibility_mode.exit_header_deadzone_dp"
+    const val EXIT_TRIPLE_TAP_INTERVAL_MS = "accessibility_mode.exit_triple_tap_interval_ms"
+    const val EXIT_TRIPLE_TAP_WINDOW_MS = "accessibility_mode.exit_triple_tap_window_ms"
+    const val EXIT_HEADER_EXTRA_BOTTOM_DP = "accessibility_mode.exit_header_extra_bottom_dp"
+    const val EXIT_CONFIRM_TIMEOUT_MS = "accessibility_mode.exit_confirm_timeout_ms"
+    const val EXIT_HEADER_HEIGHT_DP = "accessibility_mode.exit_header_height_dp"
   }
 
   // Boolean values using booleanValue delegate
@@ -34,18 +40,29 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   var accessibilityThreadId: Long by longValue(ACCESSIBILITY_THREAD_ID, -1L)
 
   // Exit gesture configuration
-  var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD.value)
+  var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD.value)
   var exitGestureRequirePin: Boolean by booleanValue(EXIT_GESTURE_REQUIRE_PIN, false)
   var exitGesturePinHash: String by stringValue(EXIT_GESTURE_PIN_HASH, "")
   var exitGesturePinSalt: String by stringValue(EXIT_GESTURE_PIN_SALT, "")
 
   // Advanced configuration (Phase 2.5)
-  var exitGestureHoldMs: Int by integerValue(EXIT_GESTURE_HOLD_MS, 2500) // Default A=2500ms, B=1800ms
-  var exitGestureConfirmMs: Int by integerValue(EXIT_GESTURE_CONFIRM_MS, 1500) // Default 1500ms
-  var exitGestureTimeoutMs: Int by integerValue(EXIT_GESTURE_TIMEOUT_MS, 10000) // Default 10s
-  var exitGestureCornerDp: Int by integerValue(EXIT_GESTURE_CORNER_DP, 72) // Default 72dp
-  var exitGestureDriftDp: Int by integerValue(EXIT_GESTURE_DRIFT_DP, 24) // Default 24dp
-  var exitGesturePointerTimeoutMs: Int by integerValue(EXIT_GESTURE_POINTER_TIMEOUT_MS, 5000) // Default 5000ms for emulator testing
+  var exitGestureHoldMs: Int by integerValue(EXIT_GESTURE_HOLD_MS, 1800)
+  var exitGestureConfirmMs: Int by integerValue(EXIT_GESTURE_CONFIRM_MS, 1000)
+  var exitGestureTimeoutMs: Int by integerValue(EXIT_GESTURE_TIMEOUT_MS, 8000)
+  var exitGestureCornerDp: Int by integerValue(EXIT_GESTURE_CORNER_DP, 72)
+  var exitGestureDriftDp: Int by integerValue(EXIT_GESTURE_DRIFT_DP, 24)
+  // Allow slightly more time for the second finger on real devices
+  var exitGesturePointerTimeoutMs: Int by integerValue(EXIT_GESTURE_POINTER_TIMEOUT_MS, 700)
+  // Reduce the aggressive deadzone so header remains easily tappable
+  var exitHeaderDeadzoneDp: Int by integerValue(EXIT_HEADER_DEADZONE_DP, 24)
+  // Make the tappable area noticeably larger beneath the header
+  var exitHeaderExtraBottomDp: Int by integerValue(EXIT_HEADER_EXTRA_BOTTOM_DP, 40)
+  var exitTripleTapIntervalMs: Int by integerValue(EXIT_TRIPLE_TAP_INTERVAL_MS, 350)
+  var exitTripleTapWindowMs: Int by integerValue(EXIT_TRIPLE_TAP_WINDOW_MS, 1000)
+  var exitConfirmTimeoutMs: Int by integerValue(EXIT_CONFIRM_TIMEOUT_MS, 5000)
+  var exitHeaderHeightDp: Int by integerValue(EXIT_HEADER_HEIGHT_DP, 120)
+  // Haptic feedback interval (ms) used during hold gestures
+  var exitHapticFeedbackIntervalMs: Int by integerValue("accessibility_mode.exit_haptic_feedback_interval_ms", 500)
 
   public override fun onFirstEverAppLaunch() = Unit
 
@@ -62,7 +79,12 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
       EXIT_GESTURE_TIMEOUT_MS,
       EXIT_GESTURE_CORNER_DP,
       EXIT_GESTURE_DRIFT_DP,
-      EXIT_GESTURE_POINTER_TIMEOUT_MS
+      EXIT_GESTURE_POINTER_TIMEOUT_MS,
+      EXIT_HEADER_DEADZONE_DP,
+      EXIT_TRIPLE_TAP_INTERVAL_MS,
+      EXIT_TRIPLE_TAP_WINDOW_MS,
+      EXIT_CONFIRM_TIMEOUT_MS,
+      EXIT_HEADER_HEIGHT_DP
     )
   }
 }

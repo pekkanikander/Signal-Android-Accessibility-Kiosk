@@ -12,14 +12,11 @@ import android.view.View
 import android.view.accessibility.AccessibilityManager
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.keyvalue.SignalStore
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
- * Clean, state-machine based detector for Accessibility Mode exit gestures.
- *
- * Supports both Gesture A (opposite corners) and Gesture B (header hold)
- * with proper accessibility support and configurable parameters.
+ * Detector for Accessibility Mode exit gestures.
+ * Production: two-finger header hold. Debug: triple-tap header.
  */
 class AccessibilityModeExitToSettingsGestureDetector(
   private val context: Context,
@@ -29,51 +26,47 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
   companion object {
     private val TAG = "ExitGesture"
-
-    private const val POINTER_TIMEOUT_MS = 150L
-    private const val HAPTIC_FEEDBACK_INTERVAL_MS = 500L
-    private const val MIN_DISTANCE_RATIO = 0.85f
+    // Default value, real value is read from SignalStore at runtime
+    private const val DEFAULT_HAPTIC_FEEDBACK_INTERVAL_MS = 500L
   }
 
   private enum class GestureState {
     IDLE,
     FIRST_POINTER_DOWN,
     SECOND_POINTER_DOWN,
-    SINGLE_FINGER_LONG_PRESS,
     GESTURE_ACTIVE
   }
-
-  private enum class GestureType {
-    OPPOSITE_CORNERS,
-    HEADER_HOLD,
-    SINGLE_FINGER_EDGE_DRAG,
-    TRIPLE_TAP_DEBUG
-  }
-
-  // Configuration - lazy loaded for performance
-  private val gestureType: GestureType by lazy {
-    when (SignalStore.accessibilityMode.exitGestureType) {
-      0 -> GestureType.OPPOSITE_CORNERS
-      1 -> GestureType.HEADER_HOLD
-      2 -> GestureType.SINGLE_FINGER_EDGE_DRAG
-      3 -> GestureType.TRIPLE_TAP_DEBUG
-      else -> GestureType.TRIPLE_TAP_DEBUG // Default to debug gesture for testing
-    }
-  }
-
-  private val holdDurationMs: Int by lazy { SignalStore.accessibilityMode.exitGestureHoldMs }
-  private val cornerSizePx: Float by lazy { context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitGestureCornerDp }
-  private val driftTolerancePx: Float by lazy { context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitGestureDriftDp }
-  private val screenWidth: Int by lazy { context.resources.displayMetrics.widthPixels }
-  private val screenHeight: Int by lazy { context.resources.displayMetrics.heightPixels }
-  private val screenDiagonal: Float by lazy { sqrt((screenWidth * screenWidth + screenHeight * screenHeight).toFloat()) }
-  private val minDistancePx: Float by lazy { screenDiagonal * MIN_DISTANCE_RATIO }
 
   private val accessibilityManager: AccessibilityManager by lazy {
     context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
   }
 
-  // State machine variables
+  // Config
+  private val holdDurationMs: Int by lazy { SignalStore.accessibilityMode.exitGestureHoldMs }
+  private val driftTolerancePx: Float by lazy { context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitGestureDriftDp }
+  private val headerDeadzonePx: Int by lazy { (context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitHeaderDeadzoneDp).toInt() }
+  // Additional configurable downward inset to widen the active header tap area
+  private val headerExtraBottomPx: Int by lazy { (context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitHeaderExtraBottomDp).toInt() }
+  private val pointerTimeoutMs: Int by lazy { SignalStore.accessibilityMode.exitGesturePointerTimeoutMs }
+  private val tripleTapIntervalMs: Int by lazy { SignalStore.accessibilityMode.exitTripleTapIntervalMs }
+  private val tripleTapWindowMs: Int by lazy { SignalStore.accessibilityMode.exitTripleTapWindowMs }
+  private fun currentGestureType(): AccessibilityModeExitGestureType {
+    val debugPrefs = context.getSharedPreferences("accessibility_mode_debug", Context.MODE_PRIVATE)
+    val override = debugPrefs.getInt("exit_gesture_type_override", -1)
+    val overrideEnabled = debugPrefs.getBoolean("exit_gesture_type_override_enabled", false)
+
+    // Prefer the persisted user setting in SignalStore. Only apply the debug override
+    // if an explicit debug-enable flag has been set to avoid silent mismatches.
+    val value = if (overrideEnabled && (override == 0 || override == 1)) {
+      Log.d(TAG, "Using debug override for exit gesture: $override")
+      override
+    } else {
+      SignalStore.accessibilityMode.exitGestureType
+    }
+    return AccessibilityModeExitGestureType.fromValue(value)
+  }
+
+  // State
   private var state = GestureState.IDLE
   private var firstPointerId = -1
   private var secondPointerId = -1
@@ -85,337 +78,175 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private var secondPointerStartY = 0f
   private var lastHapticTime = 0L
 
-  // Single-finger edge drag state
-  private var singleFingerLongPressStartTime = 0L
-  private var singleFingerStartX = 0f
-  private var singleFingerStartY = 0f
-  private var isAtEdge = false
-
-  // Triple tap debug state
+  // Triple tap state
   private var tapCount = 0
+  private var firstTapTime = 0L
   private var lastTapTime = 0L
-  private val TRIPLE_TAP_TIMEOUT = 2000L // 2 seconds to complete triple tap
 
   override fun onTouch(view: View, event: MotionEvent): Boolean {
-    // Skip if accessibility services are active (let them handle gestures)
-    if (accessibilityManager.isEnabled && accessibilityManager.isTouchExplorationEnabled) {
-      return false
-    }
-
-    Log.d(TAG, "onTouch: action=${event.actionMasked}, pointers=${event.pointerCount}, state=$state")
+    // If TalkBack touch exploration is on, don't intercept
+    if (accessibilityManager.isEnabled && accessibilityManager.isTouchExplorationEnabled) return false
 
     return when (event.actionMasked) {
-      MotionEvent.ACTION_DOWN -> handlePointerDown(event, 0)
-      MotionEvent.ACTION_POINTER_DOWN -> handlePointerDown(event, event.actionIndex)
-      MotionEvent.ACTION_MOVE -> handlePointerMove(event)
-      MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> handlePointerUp(event, event.actionIndex)
+      MotionEvent.ACTION_DOWN -> handleActionDown(event)
+      MotionEvent.ACTION_POINTER_DOWN -> handlePointerDown(event)
+      MotionEvent.ACTION_MOVE -> handleMove(event)
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> handlePointerUp(event)
       MotionEvent.ACTION_CANCEL -> { resetState(); true }
       else -> false
     }
   }
 
-  private fun handlePointerDown(event: MotionEvent, pointerIndex: Int): Boolean {
-    val pointerId = event.getPointerId(pointerIndex)
-    val x = event.getX(pointerIndex)
-    val y = event.getY(pointerIndex)
-    val currentTime = System.currentTimeMillis()
+  private fun headerBoundsInset(): Rect {
+    val b = Rect(headerBoundsProvider())
+    b.inset(headerDeadzonePx, 0)
+    // Keep top edge strict; reduce bottom slightly to avoid content touches counted as header
+    b.bottom = maxOf(b.top, b.bottom - headerDeadzonePx)
+    // Expand bottom downward slightly to make hitting the header easier on real devices
+    b.bottom = minOf(b.bottom + headerExtraBottomPx, Int.MAX_VALUE)
+    return b
+  }
 
-    when (state) {
-      GestureState.IDLE -> {
-        // First pointer down - handle different gesture types
-        firstPointerId = pointerId
-        firstPointerDownTime = currentTime
-        firstPointerStartX = x
-        firstPointerStartY = y
+  private fun handleActionDown(event: MotionEvent): Boolean {
+    val x = event.getX(0)
+    val y = event.getY(0)
+    val now = System.currentTimeMillis()
+    val headerRect = headerBoundsInset()
+    val inHeader = headerRect.contains(x.toInt(), y.toInt())
 
-        when (gestureType) {
-          GestureType.TRIPLE_TAP_DEBUG -> {
-            // Handle triple tap: check timing and count taps
-            if (currentTime - lastTapTime > TRIPLE_TAP_TIMEOUT) {
-              // Reset if too much time has passed
-              tapCount = 1
-            } else {
-              tapCount++
-            }
-            lastTapTime = currentTime
+    // Debug logging for header hit detection and tap state
+    Log.d(TAG, "ACTION_DOWN at=(${x.toInt()},${y.toInt()}) inHeader=${inHeader} headerRect=${headerRect} tapCount=${tapCount} firstTapTime=${firstTapTime} lastTapTime=${lastTapTime}")
 
-            Log.d(TAG, "Triple tap: count=$tapCount, timeDiff=${currentTime - lastTapTime}")
-
-            if (tapCount >= 3) {
-              // Triple tap completed!
-              Log.d(TAG, "Triple tap gesture completed!")
-              triggerGesture()
-              tapCount = 0
-              return true
-            }
-            // Consume the ACTION_DOWN as part of the triple-tap sequence so subsequent taps are registered
-            return true
-          }
-
-          GestureType.SINGLE_FINGER_EDGE_DRAG -> {
-            // For single-finger gesture, just record start position and wait for long press
-            singleFingerStartX = x
-            singleFingerStartY = y
-            singleFingerLongPressStartTime = currentTime
-            state = GestureState.FIRST_POINTER_DOWN
-            Log.d(TAG, "Single-finger gesture tracking started: id=$pointerId at ($x, $y)")
-          }
-
-          else -> {
-            // For multi-finger gestures, wait for second pointer
-            state = GestureState.FIRST_POINTER_DOWN
-            Log.d(TAG, "First pointer down: id=$pointerId at ($x, $y)")
-          }
-        }
+    val gestureType = currentGestureType()
+    if (gestureType == AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG) {
+      if (!inHeader) {
+        Log.d(TAG, "TRIPLE_TAP: ACTION_DOWN outside header -> ignored")
+        return false
       }
-
-      GestureState.FIRST_POINTER_DOWN -> {
-        // Second pointer down - check if valid gesture start
-        val timeDiff = currentTime - firstPointerDownTime
-        if (timeDiff <= POINTER_TIMEOUT_MS) {
-          secondPointerId = pointerId
-          secondPointerDownTime = currentTime
-          secondPointerStartX = x
-          secondPointerStartY = y
-
-          if (isValidGestureStart(x, y)) {
-            state = GestureState.SECOND_POINTER_DOWN
-            Log.d(TAG, "Second pointer down: valid gesture start")
-          } else {
-            resetState()
+      if (tapCount == 0 || now - firstTapTime > tripleTapWindowMs) {
+        tapCount = 1
+        firstTapTime = now
+        lastTapTime = now
+      } else {
+        if (now - lastTapTime <= tripleTapIntervalMs) {
+          tapCount += 1
+          lastTapTime = now
+          if (tapCount >= 3) {
+            triggerGesture()
+            tapCount = 0
           }
         } else {
-          resetState()
+          tapCount = 1
+          firstTapTime = now
+          lastTapTime = now
         }
       }
-
-      GestureState.SECOND_POINTER_DOWN -> {
-        // Third pointer - cancel gesture
-        resetState()
-      }
-
-      GestureState.SINGLE_FINGER_LONG_PRESS -> {
-        // Additional pointer during long press - cancel gesture
-        resetState()
-      }
-
-      GestureState.GESTURE_ACTIVE -> {
-        // Additional pointer during active gesture - cancel
-        resetState()
-      }
+      Log.d(TAG, "TRIPLE_TAP: tapCount=${tapCount}")
+      return true
     }
 
-    return false // Don't consume, let normal touch handling continue
-  }
-
-  private fun handlePointerMove(event: MotionEvent): Boolean {
-    val currentTime = System.currentTimeMillis()
-
-    // Handle single-finger long press detection
-    if (gestureType == GestureType.SINGLE_FINGER_EDGE_DRAG && state == GestureState.FIRST_POINTER_DOWN) {
-      val firstIndex = event.findPointerIndex(firstPointerId)
-      if (firstIndex == -1) {
-        resetState()
-        return false
-      }
-
-      // Check if long press duration has been reached
-      val pressDuration = currentTime - firstPointerDownTime
-      if (pressDuration >= 500L) { // 500ms long press
-        state = GestureState.SINGLE_FINGER_LONG_PRESS
-        Log.d(TAG, "Single-finger long press detected, now waiting for edge drag")
-        // Continue to edge detection below
-      } else {
-        // Still waiting for long press, but consume events to prevent interference
-        Log.d(TAG, "Waiting for long press: ${pressDuration}ms / 500ms")
-        return true // Consume the event
-      }
+    // Production: two-finger header hold
+    if (!inHeader) {
+      Log.d(TAG, "TWO_FINGER: ACTION_DOWN outside header -> ignored header=${headerRect}")
+      return false
     }
 
-    if (state != GestureState.GESTURE_ACTIVE && state != GestureState.SINGLE_FINGER_LONG_PRESS) return false
-
-    if (gestureType == GestureType.SINGLE_FINGER_EDGE_DRAG) {
-      // Handle single-finger edge drag gesture
-      val firstIndex = event.findPointerIndex(firstPointerId)
-      if (firstIndex == -1) {
-        resetState()
-        return false
-      }
-
-      val currentX = event.getX(firstIndex)
-      val currentY = event.getY(firstIndex)
-
-      // Check if finger is at screen edge
-      val isAtEdgeNow = isAtScreenEdge(currentX, currentY)
-      Log.d(TAG, "Edge detection: pos=($currentX, $currentY), atEdge=$isAtEdgeNow, state=$state")
-
-      if (state == GestureState.SINGLE_FINGER_LONG_PRESS && isAtEdgeNow) {
-        // Just arrived at edge during long press - start the gesture
-        state = GestureState.GESTURE_ACTIVE
-        isAtEdge = true
-        lastHapticTime = currentTime
-        singleFingerLongPressStartTime = currentTime // Reset timer for hold duration
-        Log.d(TAG, "Single-finger gesture started at edge ($currentX, $currentY)")
-      } else if (state == GestureState.GESTURE_ACTIVE) {
-        if (!isAtEdge && isAtEdgeNow) {
-          // Just arrived at edge - start edge hold timer
-          isAtEdge = true
-          lastHapticTime = currentTime
-          Log.d(TAG, "Finger reached edge at ($currentX, $currentY)")
-        } else if (isAtEdge && !isAtEdgeNow) {
-          // Moved away from edge - cancel gesture
-          Log.d(TAG, "Finger moved away from edge")
-          resetState()
-          return false
-        }
-      }
-
-      // Check drift tolerance from edge position
-      if (isAtEdge) {
-        val driftFromEdge = calculateDistance(currentX, currentY, singleFingerStartX, singleFingerStartY)
-        if (driftFromEdge > driftTolerancePx) {
-          Log.d(TAG, "Drift from edge exceeded: $driftFromEdge > $driftTolerancePx")
-          resetState()
-          return false
-        }
-
-        // Check hold duration at edge
-        val holdTime = currentTime - singleFingerLongPressStartTime
-        if (holdTime >= holdDurationMs) {
-          triggerGesture()
-          return true
-        }
-
-        // Provide haptic feedback during hold
-        if (currentTime - lastHapticTime >= HAPTIC_FEEDBACK_INTERVAL_MS) {
-          provideHapticFeedback()
-          lastHapticTime = currentTime
-        }
-      }
-
-      return true // Consume the event during active gesture
-    } else {
-      // Handle multi-finger gestures (original logic)
-      val firstIndex = event.findPointerIndex(firstPointerId)
-      val secondIndex = event.findPointerIndex(secondPointerId)
-      if (firstIndex == -1 || secondIndex == -1) {
-        resetState()
-        return false
-      }
-
-      // Check drift tolerance
-      val firstX = event.getX(firstIndex)
-      val firstY = event.getY(firstIndex)
-      val secondX = event.getX(secondIndex)
-      val secondY = event.getY(secondIndex)
-
-      val firstDrift = calculateDistance(firstX, firstY, firstPointerStartX, firstPointerStartY)
-      val secondDrift = calculateDistance(secondX, secondY, secondPointerStartX, secondPointerStartY)
-
-      if (firstDrift > driftTolerancePx || secondDrift > driftTolerancePx) {
-        resetState()
-        return false
-      }
-
-      // Check hold duration
-      val holdTime = minOf(
-        currentTime - firstPointerDownTime,
-        currentTime - secondPointerDownTime
-      )
-
-      if (holdTime >= holdDurationMs) {
-        triggerGesture()
-        return true
-      }
-
-      // Provide haptic feedback during hold
-      if (currentTime - lastHapticTime >= HAPTIC_FEEDBACK_INTERVAL_MS) {
-        provideHapticFeedback()
-        lastHapticTime = currentTime
-      }
-
-      return true // Consume the event during active gesture
-    }
-  }
-
-  private fun handlePointerUp(event: MotionEvent, pointerIndex: Int): Boolean {
-    val pointerId = event.getPointerId(pointerIndex)
-
-    // If either tracked pointer goes up, cancel gesture
-    // For the triple-tap debug gesture we intentionally do NOT reset on pointer up
-    // since the gesture is based on consecutive ACTION_DOWN events within a timeout.
-    if (gestureType != GestureType.TRIPLE_TAP_DEBUG) {
-      if (pointerId == firstPointerId || pointerId == secondPointerId) {
-        resetState()
-      }
-    }
-
-    return false
-  }
-
-  private fun isValidGestureStart(secondX: Float, secondY: Float): Boolean {
-    return when (gestureType) {
-      GestureType.OPPOSITE_CORNERS -> isValidCornerGesture(secondX, secondY)
-      GestureType.HEADER_HOLD -> isValidHeaderGesture(secondX, secondY)
-      GestureType.SINGLE_FINGER_EDGE_DRAG -> false // Single-finger gestures don't use this method
-      GestureType.TRIPLE_TAP_DEBUG -> false // Triple tap doesn't use this method
-    }
-  }
-
-  private fun isValidCornerGesture(secondX: Float, secondY: Float): Boolean {
-    // Check if pointers are in opposite corners
-    val firstInTopLeft = isInCorner(firstPointerStartX, firstPointerStartY, isTopLeft = true)
-    val firstInBottomRight = isInCorner(firstPointerStartX, firstPointerStartY, isTopLeft = false)
-    val secondInTopLeft = isInCorner(secondX, secondY, isTopLeft = true)
-    val secondInBottomRight = isInCorner(secondX, secondY, isTopLeft = false)
-
-    val isValidPair = (firstInTopLeft && secondInBottomRight) || (firstInBottomRight && secondInTopLeft)
-    if (!isValidPair) return false
-
-    // Check minimum distance between pointers
-    val distance = calculateDistance(secondX, secondY, firstPointerStartX, firstPointerStartY)
-    return distance >= minDistancePx
-  }
-
-  private fun isValidHeaderGesture(secondX: Float, secondY: Float): Boolean {
-    val headerBounds = headerBoundsProvider()
-    return headerBounds.contains(firstPointerStartX.toInt(), firstPointerStartY.toInt()) &&
-           headerBounds.contains(secondX.toInt(), secondY.toInt())
-  }
-
-  private fun isValidSingleFingerEdgeGesture(x: Float, y: Float): Boolean {
-    // For single-finger edge drag, we just need to record the start position
-    // The actual edge detection happens during the move phase
-    singleFingerStartX = x
-    singleFingerStartY = y
-    singleFingerLongPressStartTime = System.currentTimeMillis()
+    state = GestureState.FIRST_POINTER_DOWN
+    firstPointerId = event.getPointerId(0)
+    firstPointerDownTime = now
+    firstPointerStartX = x
+    firstPointerStartY = y
+    Log.d(TAG, "FIRST_POINTER_DOWN id=${firstPointerId} start=(${firstPointerStartX.toInt()},${firstPointerStartY.toInt()})")
     return true
   }
 
-  private fun isInCorner(x: Float, y: Float, isTopLeft: Boolean): Boolean {
-    return if (isTopLeft) {
-      x <= cornerSizePx && y <= cornerSizePx
-    } else {
-      x >= (screenWidth - cornerSizePx) && y >= (screenHeight - cornerSizePx)
-    }
+  private fun handlePointerDown(event: MotionEvent): Boolean {
+    if (currentGestureType() != AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD) return false
+    if (state != GestureState.FIRST_POINTER_DOWN) return false
+
+    val idx = event.actionIndex
+    val x = event.getX(idx)
+    val y = event.getY(idx)
+    val now = System.currentTimeMillis()
+
+    if (now - firstPointerDownTime > pointerTimeoutMs) { resetState(); return false }
+    if (!headerBoundsInset().contains(x.toInt(), y.toInt())) { resetState(); return false }
+
+    secondPointerId = event.getPointerId(idx)
+    secondPointerDownTime = now
+    secondPointerStartX = x
+    secondPointerStartY = y
+    state = GestureState.SECOND_POINTER_DOWN
+    return true
   }
 
-  private fun calculateDistance(x1: Float, y1: Float, x2: Float, y2: Float): Float {
+  private fun handleMove(event: MotionEvent): Boolean {
+    if (currentGestureType() != AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD) return false
+    if (state != GestureState.SECOND_POINTER_DOWN && state != GestureState.GESTURE_ACTIVE) return false
+
+    val firstIndex = event.findPointerIndex(firstPointerId)
+    val secondIndex = event.findPointerIndex(secondPointerId)
+    if (firstIndex == -1 || secondIndex == -1) { resetState(); return false }
+
+    val firstX = event.getX(firstIndex)
+    val firstY = event.getY(firstIndex)
+    val secondX = event.getX(secondIndex)
+    val secondY = event.getY(secondIndex)
+
+    // Both must stay within header bounds (inset) and within drift tolerance from start
+    val header = headerBoundsInset()
+    if (!header.contains(firstX.toInt(), firstY.toInt()) || !header.contains(secondX.toInt(), secondY.toInt())) {
+      resetState(); return false
+    }
+
+    val firstDrift = distance(firstX, firstY, firstPointerStartX, firstPointerStartY)
+    val secondDrift = distance(secondX, secondY, secondPointerStartX, secondPointerStartY)
+    if (firstDrift > driftTolerancePx || secondDrift > driftTolerancePx) { resetState(); return false }
+
+    val now = System.currentTimeMillis()
+    val holdTime = minOf(now - firstPointerDownTime, now - secondPointerDownTime)
+    if (holdTime >= holdDurationMs) {
+      triggerGesture()
+      return true
+    }
+
+    // Ensure we compare Longs: KV stores an Int, convert to Long and fall back to default Long
+    val hapticInterval = if (SignalStore.accessibilityMode.exitHapticFeedbackIntervalMs > 0)
+      SignalStore.accessibilityMode.exitHapticFeedbackIntervalMs.toLong()
+    else
+      DEFAULT_HAPTIC_FEEDBACK_INTERVAL_MS
+
+    if (now - lastHapticTime >= hapticInterval) {
+      lastHapticTime = now
+      // TODO: Provide subtle haptic feedback if available (use view.performHapticFeedback when appropriate)
+    }
+
+    state = GestureState.GESTURE_ACTIVE
+    return true
+  }
+
+  private fun handlePointerUp(event: MotionEvent): Boolean {
+    if (currentGestureType() == AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG) {
+      // Do not reset on UP for triple tap; DOWNs carry the logic
+      return true
+    }
+
+    val upId = event.getPointerId(event.actionIndex)
+    if (upId == firstPointerId || upId == secondPointerId) {
+      resetState()
+      return true
+    }
+    return false
+  }
+
+  private fun distance(x1: Float, y1: Float, x2: Float, y2: Float): Float {
     val dx = x1 - x2
     val dy = y1 - y2
     return sqrt(dx * dx + dy * dy)
   }
 
-  private fun isAtScreenEdge(x: Float, y: Float): Boolean {
-    val edgeTolerancePx = context.resources.displayMetrics.density * 24f // 24dp tolerance
-    return x <= edgeTolerancePx || // Left edge
-           x >= (screenWidth - edgeTolerancePx) || // Right edge
-           y <= edgeTolerancePx || // Top edge
-           y >= (screenHeight - edgeTolerancePx) // Bottom edge
-  }
-
   private fun triggerGesture() {
-    Log.i(TAG, "Exit gesture triggered!")
+    Log.i(TAG, "Exit gesture triggered")
     resetState()
     onTriggered()
   }
@@ -431,33 +262,5 @@ class AccessibilityModeExitToSettingsGestureDetector(
     secondPointerStartX = 0f
     secondPointerStartY = 0f
     lastHapticTime = 0L
-
-    // Reset single-finger edge drag state
-    singleFingerLongPressStartTime = 0L
-    singleFingerStartX = 0f
-    singleFingerStartY = 0f
-    isAtEdge = false
-
-    // Reset triple tap state
-    tapCount = 0
-    lastTapTime = 0L
-
-    Log.d(TAG, "Gesture state reset")
-  }
-
-  private fun provideHapticFeedback() {
-    // TODO: Implement haptic feedback
-    // view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-  }
-
-  // Debug method to get current gesture state
-  fun getCurrentState(): String {
-    return when (state) {
-      GestureState.IDLE -> "IDLE"
-      GestureState.FIRST_POINTER_DOWN -> "FIRST_POINTER_DOWN"
-      GestureState.SECOND_POINTER_DOWN -> "SECOND_POINTER_DOWN"
-      GestureState.SINGLE_FINGER_LONG_PRESS -> "SINGLE_FINGER_LONG_PRESS"
-      GestureState.GESTURE_ACTIVE -> "GESTURE_ACTIVE"
-    }
   }
 }
