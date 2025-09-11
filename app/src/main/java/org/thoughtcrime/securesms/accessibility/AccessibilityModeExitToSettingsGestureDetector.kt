@@ -60,23 +60,36 @@ class AccessibilityModeExitToSettingsGestureDetector(
     return AccessibilityModeExitGestureType.fromValue(value)
   }
 
-  // --- Gesture-global state --------------------------------------------------
-  private var firstPointerId = -1
-  private var secondPointerId = -1
-  private var firstPointerDownTime = 0L
-  private var secondPointerDownTime = 0L
-  private var firstPointerStartX = 0f
-  private var firstPointerStartY = 0f
-  private var secondPointerStartX = 0f
-  private var secondPointerStartY = 0f
-  private var lastHapticTime = 0L
+  // --- Gesture contexts (per-family, mutable) --------------------------------
+  private class TwoFingerCtx {
+    var firstPointerId: Int = -1
+    var secondPointerId: Int = -1
+    var firstPointerDownTime: Long = 0L
+    var secondPointerDownTime: Long = 0L
+    var firstPointerStartX: Float = 0f
+    var firstPointerStartY: Float = 0f
+    var secondPointerStartX: Float = 0f
+    var secondPointerStartY: Float = 0f
+    fun clear() {
+      firstPointerId = -1; secondPointerId = -1
+      firstPointerDownTime = 0L; secondPointerDownTime = 0L
+      firstPointerStartX = 0f; firstPointerStartY = 0f
+      secondPointerStartX = 0f; secondPointerStartY = 0f
+    }
+  }
+  private class TripleTapCtx {
+    var startX: Float = 0f
+    var startY: Float = 0f
+    var lastTapTime: Long = 0L
+    var flowStartTime: Long = 0L
+    fun clear() { startX = 0f; startY = 0f; lastTapTime = 0L; flowStartTime = 0L }
+  }
+
+  private val two = TwoFingerCtx()
+  private val tri = TripleTapCtx()
 
   // Triple-tap anchors & timing
-  private var lastTapTime = 0L
   private var gestureStartTime = 0L
-  private var tripleTapStartX = 0f
-  private var tripleTapStartY = 0f
-  private val touchSlop: Int by lazy { ViewConfiguration.get(context).scaledTouchSlop }
 
   // Scheduling infra with versioning to invalidate stale lambdas
   private val mainHandler = Handler(Looper.getMainLooper())
@@ -118,7 +131,14 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   // --- State pattern ---------------------------------------------------------
-  private var state: State = Idle()
+  // Singleton state instances (per detector instance)
+  private val idleState = Idle()
+  private val tripleTapWaitSecondState = TripleTapWaitSecond()
+  private val tripleTapWaitThirdState = TripleTapWaitThird()
+  private val twoFingerFirstDownState = TwoFingerFirstDown()
+  private val twoFingerSecondDownState = TwoFingerSecondDown()
+
+  private var state: State = idleState
 
   private fun setState(newState: State) {
     if (state === newState) return
@@ -139,9 +159,10 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
   // Gesture-family base states ------------------------------------------------
   private abstract inner class TripleTap : State() {
+    protected val touchSlop: Int by lazy { ViewConfiguration.get(context).scaledTouchSlop }
     protected fun isWithinSlop(x: Float, y: Float): Boolean {
-      val dx = x - tripleTapStartX
-      val dy = y - tripleTapStartY
+      val dx = x - tri.startX
+      val dy = y - tri.startY
       return (dx * dx + dy * dy) <= (touchSlop * touchSlop)
     }
     override fun handleMove(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
@@ -154,7 +175,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
       }
     }
     override fun handlePointerUp(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
-      // DOWNs drive the logic; UPs are ignored during triple‑tap sequencing
+      // DOWNs drive the logic; UPs are ignored during triple-tap sequencing
       return true
     }
   }
@@ -162,6 +183,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private abstract inner class TwoFingers : State() {
     protected fun headerContains(x: Float, y: Float): Boolean = headerBoundsInset().contains(x.toInt(), y.toInt())
     protected fun withinDrift(x: Float, y: Float, sx: Float, sy: Float): Boolean = distance(x, y, sx, sy) <= driftTolerancePx
+    protected fun firstIndex(event: MotionEvent): Int = event.findPointerIndex(two.firstPointerId)
+    protected fun secondIndex(event: MotionEvent): Int = event.findPointerIndex(two.secondPointerId)
     override fun handlePointerDown(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
       // Any third pointer cancels the two-finger gesture
       Log.d(TAG, "TWO_FINGER: Third pointer down -> reset")
@@ -184,17 +207,11 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
       return when (currentGestureType()) {
         AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG -> {
-          // First tap anchors
-          tripleTapStartX = x; tripleTapStartY = y
-          lastTapTime = now
-          setState(TripleTapWaitSecond())
-          // Inter‑tap timeout
-          scheduleRunnable(tripleTapIntervalMs.toLong()) {
-            if (state is TripleTapWaitSecond && SystemClock.uptimeMillis() - lastTapTime >= tripleTapIntervalMs) {
-              Log.d(TAG, "TRIPLE_TAP: inter-tap timeout (second)"); resetState()
-            }
-          }
-          // Overall triple‑tap window
+          // Seed triple-tap context
+          tri.startX = x; tri.startY = y
+          tri.flowStartTime = now; tri.lastTapTime = now
+          setState(tripleTapWaitSecondState)
+          // Overall triple-tap window still enforced here
           scheduleRunnable(tripleTapWindowMs.toLong()) {
             if (gestureStartTime != 0L && SystemClock.uptimeMillis() - gestureStartTime >= tripleTapWindowMs) {
               Log.d(TAG, "TRIPLE_TAP: overall window timeout"); resetState()
@@ -203,13 +220,14 @@ class AccessibilityModeExitToSettingsGestureDetector(
           true
         }
         AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD -> {
-          firstPointerId = event.getPointerId(idx)
-          firstPointerStartX = x; firstPointerStartY = y
-          firstPointerDownTime = now
-          setState(TwoFingerFirstDown())
+          // Seed two-finger context with first pointer
+          two.firstPointerId = event.getPointerId(idx)
+          two.firstPointerStartX = x; two.firstPointerStartY = y
+          two.firstPointerDownTime = now
+          setState(twoFingerFirstDownState)
           // Require second finger soon
           scheduleRunnable(pointerTimeoutMs.toLong()) {
-            if (state is TwoFingerFirstDown) { Log.d(TAG, "TWO_FINGER: second finger timeout"); resetState() }
+            if (state === twoFingerFirstDownState) { Log.d(TAG, "TWO_FINGER: second finger timeout"); resetState() }
           }
           true
         }
@@ -218,22 +236,31 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   private inner class TripleTapWaitSecond : TripleTap() {
-    override fun handleActionDown(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
-      if (!inHeader) return false
-      lastTapTime = now
-      setState(TripleTapWaitThird())
-      // Inter‑tap timeout for third tap
+    override fun onEnter() {
+      // Inter-tap timeout for the second tap
       scheduleRunnable(tripleTapIntervalMs.toLong()) {
-        if (state is TripleTapWaitThird && SystemClock.uptimeMillis() - lastTapTime >= tripleTapIntervalMs) {
-          Log.d(TAG, "TRIPLE_TAP: inter-tap timeout (third)"); resetState()
+        if (state === tripleTapWaitSecondState && SystemClock.uptimeMillis() - tri.lastTapTime >= tripleTapIntervalMs) {
+          Log.d(TAG, "TRIPLE_TAP: inter-tap timeout (second)"); resetState()
         }
       }
+    }
+    override fun handleActionDown(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
+      if (!inHeader) return false
+      tri.lastTapTime = now
+      setState(tripleTapWaitThirdState)
       return true
     }
-
   }
 
   private inner class TripleTapWaitThird : TripleTap() {
+    override fun onEnter() {
+      // Inter-tap timeout waiting for the third tap
+      scheduleRunnable(tripleTapIntervalMs.toLong()) {
+        if (state === tripleTapWaitThirdState && SystemClock.uptimeMillis() - tri.lastTapTime >= tripleTapIntervalMs) {
+          Log.d(TAG, "TRIPLE_TAP: inter-tap timeout (third)"); resetState()
+        }
+      }
+    }
     override fun handleActionDown(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
       if (!inHeader) return false
       Log.d(TAG, "TRIPLE_TAP: third tap -> trigger")
@@ -244,16 +271,16 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private inner class TwoFingerFirstDown : TwoFingers() {
     override fun handlePointerDown(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
       if (!inHeader) { Log.d(TAG, "SECOND_POINTER_DOWN outside header"); resetState(); return false }
-      secondPointerId = event.getPointerId(idx)
-      secondPointerDownTime = now
-      secondPointerStartX = x; secondPointerStartY = y
-      Log.d(TAG, "SECOND_POINTER_DOWN id=$secondPointerId start=(${secondPointerStartX.toInt()},${secondPointerStartY.toInt()})")
-      setState(TwoFingerSecondDown())
+      two.secondPointerId = event.getPointerId(idx)
+      two.secondPointerDownTime = now
+      two.secondPointerStartX = x; two.secondPointerStartY = y
+      Log.d(TAG, "SECOND_POINTER_DOWN id=${two.secondPointerId} start=(${two.secondPointerStartX.toInt()},${two.secondPointerStartY.toInt()})")
+      setState(twoFingerSecondDownState)
 
       // Hold completion at first-pointer baseline
-      val timeUntilHold = (firstPointerDownTime + holdDurationMs) - now
+      val timeUntilHold = (two.firstPointerDownTime + holdDurationMs) - now
       scheduleRunnable(kotlin.math.max(0L, timeUntilHold)) {
-        if (state is TwoFingerSecondDown) {
+        if (state === twoFingerSecondDownState) {
           Log.d(TAG, "TWO_FINGER: hold complete -> trigger")
           triggerGesture()
         }
@@ -262,10 +289,10 @@ class AccessibilityModeExitToSettingsGestureDetector(
       // Periodic haptics while holding (kept as in your design)
       val hapticInterval = SignalStore.accessibilityMode.exitHapticFeedbackIntervalMs.takeIf { it > 0 }?.toLong()
         ?: DEFAULT_HAPTIC_FEEDBACK_INTERVAL_MS
-      val firstHapticDelay = kotlin.math.max(0L, firstPointerDownTime + hapticInterval - now)
+      val firstHapticDelay = kotlin.math.max(0L, two.firstPointerDownTime + hapticInterval - now)
       val tick = object : Runnable {
         override fun run() {
-          if (state !is TwoFingerSecondDown) return
+          if (state !== twoFingerSecondDownState) return
           try {
             Log.d(TAG, "TWO_FINGER: haptic tick")
           } finally {
@@ -279,27 +306,27 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
     override fun handleMove(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
       // Allow small drift within header while waiting for second finger
-      val i0 = event.findPointerIndex(firstPointerId)
+      val i0 = firstIndex(event)
       if (i0 == -1) { resetState(); return false }
       val fx = event.getX(i0); val fy = event.getY(i0)
       val header = headerBoundsInset()
       if (!header.contains(fx.toInt(), fy.toInt())) { Log.d(TAG, "TWO_FINGER: MOVE outside header before second finger"); resetState(); return false }
-      val drift = distance(fx, fy, firstPointerStartX, firstPointerStartY)
+      val drift = distance(fx, fy, two.firstPointerStartX, two.firstPointerStartY)
       if (drift > driftTolerancePx) { Log.d(TAG, "TWO_FINGER: MOVE beyond drift before second finger"); resetState(); return false }
       return true
     }
 
     override fun handlePointerUp(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
       val upId = event.getPointerId(idx)
-      if (upId == firstPointerId) { resetState(); return true }
+      if (upId == two.firstPointerId) { resetState(); return true }
       return false
     }
   }
 
   private inner class TwoFingerSecondDown : TwoFingers() {
     override fun handleMove(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
-      val i0 = event.findPointerIndex(firstPointerId)
-      val i1 = event.findPointerIndex(secondPointerId)
+      val i0 = firstIndex(event)
+      val i1 = secondIndex(event)
       if (i0 == -1 || i1 == -1) { resetState(); return false }
       val f0x = event.getX(i0); val f0y = event.getY(i0)
       val f1x = event.getX(i1); val f1y = event.getY(i1)
@@ -307,18 +334,17 @@ class AccessibilityModeExitToSettingsGestureDetector(
       if (!header.contains(f0x.toInt(), f0y.toInt()) || !header.contains(f1x.toInt(), f1y.toInt())) {
         Log.d(TAG, "TWO_FINGER: MOVE outside header bounds"); resetState(); return false
       }
-      val d0 = distance(f0x, f0y, firstPointerStartX, firstPointerStartY)
-      val d1 = distance(f1x, f1y, secondPointerStartX, secondPointerStartY)
+      val d0 = distance(f0x, f0y, two.firstPointerStartX, two.firstPointerStartY)
+      val d1 = distance(f1x, f1y, two.secondPointerStartX, two.secondPointerStartY)
       if (d0 > driftTolerancePx || d1 > driftTolerancePx) {
         Log.d(TAG, "TWO_FINGER: MOVE beyond drift"); resetState(); return false
       }
       return true
     }
 
-
     override fun handlePointerUp(event: MotionEvent, idx: Int, x: Float, y: Float, now: Long, inHeader: Boolean): Boolean {
       val upId = event.getPointerId(idx)
-      if (upId == firstPointerId || upId == secondPointerId) { resetState(); return true }
+      if (upId == two.firstPointerId || upId == two.secondPointerId) { resetState(); return true }
       return false
     }
   }
@@ -351,13 +377,9 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
   private fun resetState(): Boolean {
     cancelScheduledRunnables()
-    firstPointerId = -1; secondPointerId = -1
-    firstPointerDownTime = 0L; secondPointerDownTime = 0L
-    firstPointerStartX = 0f; firstPointerStartY = 0f
-    secondPointerStartX = 0f; secondPointerStartY = 0f
-    lastHapticTime = 0L
-    gestureStartTime = 0L; lastTapTime = 0L
-    setState(Idle())
+    gestureStartTime = 0L
+    two.clear(); tri.clear()
+    setState(idleState)
     return true
   }
 
