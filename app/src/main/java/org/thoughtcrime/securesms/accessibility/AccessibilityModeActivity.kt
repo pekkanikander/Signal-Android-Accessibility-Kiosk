@@ -32,6 +32,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
   }
 
   private lateinit var exitGestureDetector: AccessibilityModeExitToSettingsGestureDetector
+  private var overlayView: View? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -92,6 +93,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
     // Add the overlay to the root view
     val rootView = findViewById<View>(android.R.id.content) as ViewGroup
     rootView.addView(overlayView)
+    this.overlayView = overlayView
 
     // Add debug info to logcat
     Log.d(TAG, "Exit gesture detector initialized and attached to overlay view")
@@ -120,5 +122,16 @@ class AccessibilityModeActivity : AppCompatActivity() {
     Log.d(TAG, "AccessibilityModeActivity.onStart() called")
     AccessibilityModeRouter.routeIfNeeded(this)
     Log.d(TAG, "AccessibilityModeActivity.onStart() completed")
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    try {
+      exitGestureDetector.dispose()
+    } catch (_: Exception) {}
+    try {
+      val rootView = findViewById<View>(android.R.id.content) as? ViewGroup
+      overlayView?.let { rootView?.removeView(it) }
+    } catch (_: Exception) {}
   }
 }
