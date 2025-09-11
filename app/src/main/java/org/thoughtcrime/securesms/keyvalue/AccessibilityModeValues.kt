@@ -12,25 +12,26 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   companion object {
     // Setting keys
     const val ACCESSIBILITY_MODE_ENABLED = "accessibility_mode.enabled"
-    const val ACCESSIBILITY_THREAD_ID = "accessibility_thread.id"
+    const val ACCESSIBILITY_THREAD_ID = "accessibility_thread.id" // XXX: add _mode
     const val EXIT_GESTURE_TYPE = "accessibility_mode.exit_gesture_type"
     const val EXIT_GESTURE_REQUIRE_PIN = "accessibility_mode.exit_gesture_require_pin"
     const val EXIT_GESTURE_PIN_HASH = "accessibility_mode.exit_gesture_pin_hash"
     const val EXIT_GESTURE_PIN_SALT = "accessibility_mode.exit_gesture_pin_salt"
 
     // Advanced configuration keys (Phase 2.5)
+    const val EXIT_HEADER_DEADZONE_DP = "accessibility_mode.exit_header_deadzone_dp"
+    const val EXIT_HEADER_EXTRA_BOTTOM_DP = "accessibility_mode.exit_header_extra_bottom_dp"
+    const val EXIT_HEADER_HEIGHT_DP = "accessibility_mode.exit_header_height_dp"
     const val EXIT_GESTURE_HOLD_MS = "accessibility_mode.exit_gesture_hold_ms"
     const val EXIT_GESTURE_CONFIRM_MS = "accessibility_mode.exit_gesture_confirm_ms"
     const val EXIT_GESTURE_TIMEOUT_MS = "accessibility_mode.exit_gesture_timeout_ms"
     const val EXIT_GESTURE_CORNER_DP = "accessibility_mode.exit_gesture_corner_dp"
     const val EXIT_GESTURE_DRIFT_DP = "accessibility_mode.exit_gesture_drift_dp"
     const val EXIT_GESTURE_POINTER_TIMEOUT_MS = "accessibility_mode.exit_gesture_pointer_timeout_ms"
-    const val EXIT_HEADER_DEADZONE_DP = "accessibility_mode.exit_header_deadzone_dp"
     const val EXIT_TRIPLE_TAP_INTERVAL_MS = "accessibility_mode.exit_triple_tap_interval_ms"
     const val EXIT_TRIPLE_TAP_WINDOW_MS = "accessibility_mode.exit_triple_tap_window_ms"
-    const val EXIT_HEADER_EXTRA_BOTTOM_DP = "accessibility_mode.exit_header_extra_bottom_dp"
     const val EXIT_CONFIRM_TIMEOUT_MS = "accessibility_mode.exit_confirm_timeout_ms"
-    const val EXIT_HEADER_HEIGHT_DP = "accessibility_mode.exit_header_height_dp"
+    const val EXIT_HAPTIC_FEEDBACK_INTERVAL_MS = "accessibility_mode.exit_haptic_feedback_interval_ms"
   }
 
   // Boolean values using booleanValue delegate
@@ -68,7 +69,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   // Confirmation popup timeout (ms)
   var exitConfirmTimeoutMs: Int by integerValue(EXIT_CONFIRM_TIMEOUT_MS, 5000)
   // Haptic feedback interval (ms) used during hold gestures
-  var exitHapticFeedbackIntervalMs: Int by integerValue("accessibility_mode.exit_haptic_feedback_interval_ms", 500)
+  var exitHapticFeedbackIntervalMs: Int by integerValue(EXIT_HAPTIC_FEEDBACK_INTERVAL_MS, 500)
 
   public override fun onFirstEverAppLaunch() = Unit
 
