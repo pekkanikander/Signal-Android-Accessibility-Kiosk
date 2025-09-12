@@ -8,10 +8,12 @@ package org.thoughtcrime.securesms.accessibility
 import android.content.Context
 import android.graphics.Rect
 import android.graphics.PointF
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.accessibility.AccessibilityManager
@@ -132,6 +134,21 @@ class AccessibilityModeExitToSettingsGestureDetector(
     scheduledRunnables.clear()
   }
 
+  // --- Haptics --------------------------------------------------------------
+  private fun hapticTick() {
+    currentTouchView?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+  }
+  private fun hapticConfirm() {
+    if (Build.VERSION.SDK_INT >= 30) {
+      currentTouchView?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+    } else {
+      currentTouchView?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+    }
+  }
+  private fun hapticReject() {
+    // Silent, no haptic feedback
+  }
+
   // Geometry helpers
   private fun headerBoundsInset(): Rect {
     val src = headerBoundsProvider()
@@ -199,6 +216,10 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   private inner class Cancelled : Active() {
+    override fun onEnter(event: MotionEvent?) {
+      super.onEnter(event)
+      hapticReject()
+    }
     override fun handleActionDown(event: MotionEvent) {}
     override fun handlePointerDown(event: MotionEvent) {}
     override fun handleMove(event: MotionEvent) {}
@@ -210,7 +231,11 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   private inner class Completed : Active() {
-    override fun handleActionDown(event: MotionEvent) {}
+    override fun onEnter(event: MotionEvent?) {
+      super.onEnter(event)
+      hapticConfirm()
+    }
+      override fun handleActionDown(event: MotionEvent) {}
     override fun handlePointerDown(event: MotionEvent) {}
     override fun handleMove(event: MotionEvent) {}
     override fun handlePointerUp(event: MotionEvent) { /* ignore non-final UPs */ }
@@ -314,6 +339,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
           if (state !== expectedState) return
           try {
             Log.d(TAG, "TWO_FINGER: haptic tick")
+            hapticTick()
           } finally {
             scheduleRunnable(intervalMs, this)
           }
