@@ -8727,5 +8727,15 @@
     <string name="preferences__accessibility_mode_exit_gesture_type">Exit Gesture</string>
     <string name="preferences__accessibility_mode_exit_gesture_require_pin">Require PIN to exit</string>
 
+    <!-- Accessibility Mode (Compose UI) -->
+    <string name="acc_mode_enable">Enable Accessibility Mode</string>
+    <string name="acc_mode_advanced">Advanced…</string>
+    <string name="acc_mode_advanced_subtitle">Exit gesture and more</string>
+    <string name="acc_mode_no_chats">No chats available yet. Start a conversation first!</string>
+    <string name="acc_mode_select_chat">Select a chat for Accessibility Mode</string>
+    <string name="acc_mode_chat_selected_id">Chat selected (ID: %1$d)</string>
+    <string name="acc_mode_advanced_title">Accessibility Mode – Advanced</string>
+    <string name="acc_mode_select_chat_title">Select Chat</string>
+
     <!-- EOF -->
 </resources>
