@@ -389,6 +389,7 @@
         android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.ChatSelectionFragment"
         android:label="Select Chat"
         tools:layout="@layout/dsl_settings_fragment" />
+
     <!-- endregion -->
 
     <!-- region Chats settings and subpages -->

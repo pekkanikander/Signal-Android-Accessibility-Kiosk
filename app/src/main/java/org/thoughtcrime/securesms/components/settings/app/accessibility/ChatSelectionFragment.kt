@@ -12,43 +12,42 @@ import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsFragment
 import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsViewModel
 
-class ChatSelectionFragment : ComposeFragment() {
+class ChatSelectionFragment : androidx.fragment.app.Fragment() {
 
-  private val viewModel: ChatSelectionViewModel by viewModels()
+  private val PICK_CONVERSATION_REQUEST = 1
 
-
-
-  @Composable
-  override fun FragmentContent() {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val callbacks = remember { Callbacks() }
-
-    ChatSelectionScreen(
-      chats = state.chats,
-      onChatSelected = callbacks::onChatSelected,
-      onNavigationClick = callbacks::onNavigationClick
-    )
-  }
-
-          private inner class Callbacks {
-    fun onChatSelected(chat: ChatSelectionItem) {
-      Log.d("ChatSelection", "Chat selected: ${chat.threadId}")
-
-      // Return selection via Fragment Result API (read by AccessibilityModeSettingsFragment)
-      parentFragmentManager.setFragmentResult("pick_thread", bundleOf("thread_id" to chat.threadId))
-
-      // Show success message
-      android.widget.Toast.makeText(
-        requireContext(),
-        "Chat selected: ${chat.recipient.getShortDisplayName(requireContext())}",
-        android.widget.Toast.LENGTH_SHORT
-      ).show()
-
-      // Navigate back
+  override fun onCreateView(inflater: android.view.LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: android.os.Bundle?): android.view.View? {
+    // Immediately launch the existing Signal conversation picker activity and finish
+    // We reuse the platform picker by starting the ChooseConversationActivity if available.
+    try {
+      val intent = android.content.Intent().apply {
+        // The canonical picker in Signal is org.thoughtcrime.securesms.conversation.ChooseConversationActivity
+        setClassName(requireContext(), "org.thoughtcrime.securesms.conversation.ChooseConversationActivity")
+        putExtra("showAll", true)
+      }
+      startActivityForResult(intent, PICK_CONVERSATION_REQUEST)
+    } catch (e: Exception) {
+      // Fallback: show toast and close
+      android.widget.Toast.makeText(requireContext(), "Unable to open conversation picker", android.widget.Toast.LENGTH_SHORT).show()
       requireActivity().onBackPressedDispatcher.onBackPressed()
     }
 
-    fun onNavigationClick() {
+    // Return an empty view as this fragment only acts as a launcher
+    return android.view.View(requireContext())
+  }
+
+  override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+    super.onActivityResult(requestCode, resultCode, data)
+    if (requestCode == PICK_CONVERSATION_REQUEST) {
+      if (resultCode == android.app.Activity.RESULT_OK && data != null) {
+        // The ChooseConversationActivity typically returns a thread id under "thread_id"
+        val threadId = data.getLongExtra("thread_id", -1L)
+        if (threadId > 0) {
+          parentFragmentManager.setFragmentResult("pick_thread", bundleOf("thread_id" to threadId))
+        }
+      }
+
+      // Navigate back regardless
       requireActivity().onBackPressedDispatcher.onBackPressed()
     }
   }
