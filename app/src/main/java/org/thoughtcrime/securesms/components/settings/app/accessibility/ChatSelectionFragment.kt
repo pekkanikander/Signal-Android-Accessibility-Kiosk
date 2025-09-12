@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.util.Log
+import androidx.core.os.bundleOf
 import org.thoughtcrime.securesms.compose.ComposeFragment
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsFragment
@@ -33,9 +34,8 @@ class ChatSelectionFragment : ComposeFragment() {
     fun onChatSelected(chat: ChatSelectionItem) {
       Log.d("ChatSelection", "Chat selected: ${chat.threadId}")
 
-      // Store the selected thread ID in the activity's intent extras
-      // This will be read when we return to the accessibility settings
-      requireActivity().intent.putExtra("selected_thread_id", chat.threadId)
+      // Return selection via Fragment Result API (read by AccessibilityModeSettingsFragment)
+      parentFragmentManager.setFragmentResult("pick_thread", bundleOf("thread_id" to chat.threadId))
 
       // Show success message
       android.widget.Toast.makeText(

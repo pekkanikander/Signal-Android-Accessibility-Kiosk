@@ -17,88 +17,34 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
 
   private val viewModel: AccessibilityModeSettingsViewModel by viewModels()
 
-  override fun onResume() {
-    super.onResume()
+  override fun onCreate(savedInstanceState: android.os.Bundle?) {
+    super.onCreate(savedInstanceState)
 
-    // Check if we received a selected thread ID from chat selection
-    val selectedThreadId = requireActivity().intent.getLongExtra("selected_thread_id", -1L)
-    if (selectedThreadId != -1L) {
-      Log.d("AccessibilityFragment", "Received selected thread ID: $selectedThreadId")
-      viewModel.setThreadId(selectedThreadId)
-
-      // Clear the extra so it doesn't get processed again
-      requireActivity().intent.removeExtra("selected_thread_id")
+    // Listen for conversation picker results via Fragment Result API
+    parentFragmentManager.setFragmentResultListener("pick_thread", this) { _, bundle ->
+      val id = bundle.getLong("thread_id")
+      viewModel.onSelectConversation(id)
     }
   }
 
   @Composable
   override fun FragmentContent() {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val callbacks = remember { Callbacks() }
-
     AccessibilityModeSettingsScreen(
-      state = state,
-      callbacks = callbacks
+      viewModel = viewModel,
+      navigateToAdvanced = {
+        try {
+          findNavController().navigate(R.id.action_accessibilityModeSettingsFragment_to_accessibilityModeAdvancedSettingsFragment)
+        } catch (_: Exception) {
+          // nav entry may not exist yet; ignore
+        }
+      },
+      launchPicker = {
+        try {
+          findNavController().navigate(R.id.action_accessibilityModeSettingsFragment_to_chatSelectionFragment)
+        } catch (_: Exception) {
+        }
+      }
     )
   }
 
-  private inner class Callbacks : AccessibilityModeSettingsCallbacks {
-    override fun onNavigationClick() {
-      requireActivity().onBackPressedDispatcher.onBackPressed()
-    }
-
-    override fun onThreadSelectionClick() {
-      // Check if there are any conversations available
-      val hasChatsAvailable = SignalDatabase.threads
-        .getUnarchivedConversationListCount(ConversationFilter.OFF) > 0
-
-      if (!hasChatsAvailable) {
-        android.widget.Toast.makeText(
-          requireContext(),
-          "No chats available yet. Start a conversation first!",
-          android.widget.Toast.LENGTH_LONG
-        ).show()
-        return
-      }
-
-      // Navigate to chat selection screen
-      findNavController().navigate(R.id.action_accessibilityModeSettingsFragment_to_chatSelectionFragment)
-    }
-
-    override fun onAccessibilityModeToggled(enabled: Boolean) {
-      // Only allow enabling if a chat is selected
-      if (enabled && viewModel.state.value.threadId == -1L) {
-        android.widget.Toast.makeText(
-          requireContext(),
-          "Please select a chat first before enabling Accessibility Mode",
-          android.widget.Toast.LENGTH_SHORT
-        ).show()
-        return
-      }
-      viewModel.setAccessibilityMode(enabled)
-    }
-
-    override fun onStartAccessibilityModeClick() {
-      // Launch the accessibility activity with the selected thread ID
-      val intent = android.content.Intent(requireContext(), org.thoughtcrime.securesms.accessibility.AccessibilityModeActivity::class.java)
-      intent.putExtra("selected_thread_id", viewModel.state.value.threadId)
-      startActivity(intent)
-    }
-
-    override fun onExitGestureTypeClick() {
-      val currentType = viewModel.state.value.exitGestureType
-      val newType = when (currentType) {
-        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD ->
-          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG
-        org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG ->
-          org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD
-        else -> org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD // to be removed
-      }
-      viewModel.setExitGestureType(newType)
-    }
-
-    override fun onExitGestureRequirePinToggled(requirePin: Boolean) {
-      viewModel.setExitGestureRequirePin(requirePin)
-    }
-  }
 }
