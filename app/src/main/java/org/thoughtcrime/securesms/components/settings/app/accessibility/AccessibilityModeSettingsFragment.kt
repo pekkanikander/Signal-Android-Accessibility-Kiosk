@@ -1,17 +1,10 @@
 package org.thoughtcrime.securesms.components.settings.app.accessibility
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
-import android.util.Log
 import org.thoughtcrime.securesms.compose.ComposeFragment
 import org.thoughtcrime.securesms.R
-import org.thoughtcrime.securesms.conversationlist.model.ConversationFilter
-import org.thoughtcrime.securesms.database.SignalDatabase
-import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 
 class AccessibilityModeSettingsFragment : ComposeFragment() {
 

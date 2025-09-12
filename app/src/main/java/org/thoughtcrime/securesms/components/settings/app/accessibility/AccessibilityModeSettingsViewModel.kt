@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.*
 import org.thoughtcrime.securesms.database.RxDatabaseObserver
 import org.thoughtcrime.securesms.conversationlist.model.ConversationFilter
@@ -99,13 +98,14 @@ class AccessibilityModeSettingsViewModel(
           }
         } catch (_: Exception) { emptyList<Long>() }
       }
+      .distinctUntilChanged()
       .onEach { _conversationsFlow.value = it }
       .launchIn(viewModelScope)
 
     // Keep persisted store values synced into the in-memory state flows
-    store.threadIdFlow.onEach { _selectedThreadId.value = it }.launchIn(viewModelScope)
-    store.enabledFlow.onEach { _enabled.value = it }.launchIn(viewModelScope)
-    store.exitGestureFlow.onEach { _exitGesture.value = it }.launchIn(viewModelScope)
+//    store.threadIdFlow.onEach { _selectedThreadId.value = it }.launchIn(viewModelScope)
+//    store.enabledFlow.onEach { _enabled.value = it }.launchIn(viewModelScope)
+//    store.exitGestureFlow.onEach { _exitGesture.value = it }.launchIn(viewModelScope)
 
     // Drive UI state from combined sources.
     combine(
@@ -114,7 +114,7 @@ class AccessibilityModeSettingsViewModel(
       enabledFlow,
       exitGestureFlow
     ) { conversations, sel, en, gesture ->
-      val hasSelection = sel != null && conversations.contains(sel)
+      val hasSelection = sel != null
       val canEnable = hasSelection
       val effectiveEnabled = if (!canEnable) false else en
       AccessibilitySettingsUiState(conversations, sel, canEnable, effectiveEnabled, gesture)
@@ -145,9 +145,8 @@ class AccessibilityModeSettingsViewModel(
   }
 
   fun onToggleEnabled(enabled: Boolean) {
-    // Guard: cannot enable without a valid selection present in conversations
     val sel = _selectedThreadId.value
-    if (sel == null || !conversationsFlow.value.contains(sel)) return
+    if (sel == null) return
     _enabled.value = enabled
     store.enabled = enabled
   }
