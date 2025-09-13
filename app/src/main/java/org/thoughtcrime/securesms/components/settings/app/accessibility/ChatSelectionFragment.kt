@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
@@ -15,36 +16,67 @@ import org.thoughtcrime.securesms.contacts.ContactSelectionDisplayMode
 import org.thoughtcrime.securesms.contacts.SelectedContact
 import org.thoughtcrime.securesms.contacts.paged.ChatType
 import org.thoughtcrime.securesms.groups.SelectionLimits
+import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.util.ViewUtil
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.R
 import org.signal.core.util.concurrent.SimpleTask
+import android.util.Log
 
 class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.OnContactSelectedListener {
 
   private lateinit var contactFilterView: ContactFilterView
   private lateinit var selectionFragment: ContactSelectionListFragment
 
+  private val TAG = "ChatSelection"
+
+  private fun has(mask: Int, flag: Int) = (mask and flag) != 0
+
+  private fun logDisplayMode(where: String, mask: Int) {
+    Log.d(TAG, buildString {
+      append(where)
+      append(" displayMode=0x")
+      append(String.format("%08X", mask))
+      append(" [")
+      append("PUSH=").append(has(mask, ContactSelectionDisplayMode.FLAG_PUSH)).append(',')
+      append("SMS=").append(has(mask, ContactSelectionDisplayMode.FLAG_SMS)).append(',')
+      append("BLOCK=").append(has(mask, ContactSelectionDisplayMode.FLAG_BLOCK)).append(',')
+      append("HIDE_NEW=").append(has(mask, ContactSelectionDisplayMode.FLAG_HIDE_NEW)).append(',')
+      append("ACTIVE_GROUPS=").append(has(mask, ContactSelectionDisplayMode.FLAG_ACTIVE_GROUPS)).append(',')
+      append("GROUPS_AFTER_CONTACTS=").append(has(mask, ContactSelectionDisplayMode.FLAG_GROUPS_AFTER_CONTACTS)).append(',')
+      append("HIDE_GROUPS_V1=").append(has(mask, ContactSelectionDisplayMode.FLAG_HIDE_GROUPS_V1)).append(',')
+      append("HIDE_RECENT_HEADER=").append(has(mask, ContactSelectionDisplayMode.FLAG_HIDE_RECENT_HEADER))
+      append("]")
+    })
+  }
+
   override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+
+    val currentSelection = ArrayList<RecipientId>(/* XXX: TODO */)
 
     // Configure child fragment arguments for single-selection, existing-chat-only behavior
     childFragmentManager.addFragmentOnAttachListener { _, fragment ->
-      fragment.arguments = Bundle().apply {
-        putInt(ContactSelectionListFragment.DISPLAY_MODE,
+      val mask = (
         ContactSelectionDisplayMode.FLAG_PUSH or
-        ContactSelectionDisplayMode.FLAG_GROUPS_AFTER_CONTACTS or
         ContactSelectionDisplayMode.FLAG_ACTIVE_GROUPS or
-        ContactSelectionDisplayMode.FLAG_HIDE_GROUPS_V1 or
-        ContactSelectionDisplayMode.FLAG_HIDE_RECENT_HEADER)
+        ContactSelectionDisplayMode.FLAG_HIDE_RECENT_HEADER or
+        ContactSelectionDisplayMode.FLAG_GROUPS_AFTER_CONTACTS
+      )
+      Log.d(TAG, "onAttach: assigning args to ${fragment::class.java.simpleName}")
+      logDisplayMode("onAttach(args)", mask)
+      fragment.arguments = Bundle().apply {
+        putInt(ContactSelectionListFragment.DISPLAY_MODE, mask)
         putBoolean(ContactSelectionListFragment.REFRESHABLE, false)
         putBoolean(ContactSelectionListFragment.RECENTS, true)
         putParcelable(ContactSelectionListFragment.SELECTION_LIMITS, SelectionLimits.NO_LIMITS)
+        putParcelableArrayList(ContactSelectionListFragment.CURRENT_SELECTION, currentSelection)
         putBoolean(ContactSelectionListFragment.HIDE_COUNT, true)
-        putBoolean(ContactSelectionListFragment.DISPLAY_CHIPS, true)
+        putBoolean(ContactSelectionListFragment.DISPLAY_CHIPS, false)
         putBoolean(ContactSelectionListFragment.CAN_SELECT_SELF, false)
         putBoolean(ContactSelectionListFragment.RV_CLIP, false)
         putInt(ContactSelectionListFragment.RV_PADDING_BOTTOM, ViewUtil.dpToPx(60))
+        putBoolean(ContactSelectionListFragment.INCLUDE_CHAT_TYPES, false)
       }
     }
 
@@ -58,6 +90,7 @@ class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.On
 
     toolbar.setTitle(R.string.acc_mode_select_chat_title)
     toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+    Log.d(TAG, "ChatSelection opened")
 
     childFragmentManager.setFragmentResultListener("dummy", this) { _, _ -> }
 
@@ -72,6 +105,13 @@ class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.On
 
     selectionFragment = childFragmentManager.findFragmentById(R.id.contact_selection_list) as ContactSelectionListFragment
 
+    val argsMask = selectionFragment.arguments?.getInt(ContactSelectionListFragment.DISPLAY_MODE, -1) ?: -1
+    val intentMask = requireActivity().intent.getIntExtra(ContactSelectionListFragment.DISPLAY_MODE, -1)
+    logDisplayMode("onViewCreated(args)", argsMask)
+    logDisplayMode("onViewCreated(intent)", intentMask)
+
+    Log.d(TAG, "Replacing child selection fragment instance: ${selectionFragment}")
+
     childFragmentManager.beginTransaction()
       .replace(R.id.contact_selection_list, selectionFragment)
       .commitNowAllowingStateLoss()
@@ -85,21 +125,26 @@ class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.On
     callback: java.util.function.Consumer<Boolean>) {
     // We will handle selection; tell the list not to mutate selection itself
 
+    Log.d(TAG, "onBeforeContactSelected: unknownKey=${isFromUnknownSearchKey} hasRid=${recipientId.isPresent} number=${number} chatTypePresent=${chatType.isPresent}")
+
     callback.accept(false)
+    if (isFromUnknownSearchKey) return
 
     if (recipientId.isPresent) {
       val rid = recipientId.get()
-      // Resolve existing thread id on background thread and return via fragment result
       SimpleTask.run({
-        return@run SignalDatabase.threads.getThreadIdIfExistsFor(rid)
-      }, { threadId ->
+        val recipient = Recipient.resolved(rid)
+        val threads = SignalDatabase.threads
+        threads.getOrCreateThreadIdFor(recipient)
+      }) { threadId ->
+        Log.d(TAG, "resolved threadId=${threadId} for rid=${rid}")
         if (threadId != null && threadId > 0L) {
           parentFragmentManager.setFragmentResult("pick_thread", bundleOf("thread_id" to threadId))
           findNavController().popBackStack()
         } else {
-          android.widget.Toast.makeText(requireContext(), org.thoughtcrime.securesms.R.string.preferences__accessibility_mode_no_chats_available, android.widget.Toast.LENGTH_SHORT).show()
+          Toast.makeText(requireContext(), R.string.acc_mode_select_chat, Toast.LENGTH_SHORT).show()
         }
-      })
+      }
     }
   }
 

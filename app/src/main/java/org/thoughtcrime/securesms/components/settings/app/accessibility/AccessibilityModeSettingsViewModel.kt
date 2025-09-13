@@ -81,7 +81,7 @@ class AccessibilityModeSettingsViewModel(
               conversationFilter = ConversationFilter.OFF,
               pinned = false,
               offset = 0L,
-              limit = 50L,
+              limit = 200L,
               chatFolder = ChatFolderRecord()
             )
 
@@ -102,11 +102,6 @@ class AccessibilityModeSettingsViewModel(
       .onEach { _conversationsFlow.value = it }
       .launchIn(viewModelScope)
 
-    // Keep persisted store values synced into the in-memory state flows
-//    store.threadIdFlow.onEach { _selectedThreadId.value = it }.launchIn(viewModelScope)
-//    store.enabledFlow.onEach { _enabled.value = it }.launchIn(viewModelScope)
-//    store.exitGestureFlow.onEach { _exitGesture.value = it }.launchIn(viewModelScope)
-
     // Drive UI state from combined sources.
     combine(
       conversationsFlow,
@@ -121,20 +116,6 @@ class AccessibilityModeSettingsViewModel(
     }
       .onEach { _ui.value = it }
       .launchIn(viewModelScope)
-
-    // If the selected thread is no longer present, clear selection and force disabled.
-    combine(conversationsFlow, selectedThreadIdFlow) { conversations, sel ->
-      Pair(conversations, sel)
-    }.onEach { (conversations, sel) ->
-      if (sel != null && !conversations.contains(sel)) {
-        _selectedThreadId.value = null
-        store.selectedThreadId = null
-        if (_enabled.value) {
-          _enabled.value = false
-          store.enabled = false
-        }
-      }
-    }.launchIn(viewModelScope)
   }
 
   // Commands

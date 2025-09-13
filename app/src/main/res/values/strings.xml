@@ -8717,17 +8717,6 @@
 
     <!-- Accessibility Mode Settings -->
     <string name="preferences__accessibility_mode">Accessibility Mode</string>
-    <string name="preferences__accessibility_mode_enabled">Enable Accessibility Mode</string>
-    <string name="preferences__accessibility_mode_chat_selected">Chat %1$s selected</string>
-    <string name="preferences__accessibility_mode_description">Accessibility Mode provides a simplified interface for users who need assistance with Signal. When enabled, it will launch a dedicated accessibility interface.</string>
-    <string name="preferences__accessibility_mode_no_chat_selected">No chat selected yet.</string>
-    <string name="preferences__accessibility_mode_no_chats_available">No chats yet. Create a chat first; send a message to someone.</string>
-    <string name="preferences__accessibility_mode_select_chat">Select Chat</string>
-    <string name="preferences__accessibility_mode_start">Start Accessibility Mode</string>
-    <string name="preferences__accessibility_mode_exit_gesture_type">Exit Gesture</string>
-    <string name="preferences__accessibility_mode_exit_gesture_require_pin">Require PIN to exit</string>
-
-    <!-- Accessibility Mode (Compose UI) -->
     <string name="acc_mode_enable">Enable Accessibility Mode</string>
     <string name="acc_mode_advanced">Advanced…</string>
     <string name="acc_mode_advanced_subtitle">Exit gesture and more</string>
@@ -8735,7 +8724,7 @@
     <string name="acc_mode_select_chat">Select a chat for Accessibility Mode</string>
     <string name="acc_mode_chat_selected_id">Chat selected (ID: %1$d)</string>
     <string name="acc_mode_advanced_title">Accessibility Mode – Advanced</string>
-    <string name="acc_mode_select_chat_title">Select Chat</string>
+    <string name="acc_mode_select_chat_title">Select Chat or a Contact</string>
 
     <!-- EOF -->
 </resources>
