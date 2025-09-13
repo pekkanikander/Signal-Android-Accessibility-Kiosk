@@ -1,83 +1,109 @@
 package org.thoughtcrime.securesms.components.settings.app.accessibility
 
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.navigation.fragment.findNavController
+import org.thoughtcrime.securesms.ContactSelectionListFragment
+import org.thoughtcrime.securesms.LoggingFragment
+import org.thoughtcrime.securesms.components.ContactFilterView
+import org.thoughtcrime.securesms.contacts.ContactSelectionDisplayMode
+import org.thoughtcrime.securesms.contacts.SelectedContact
+import org.thoughtcrime.securesms.contacts.paged.ChatType
+import org.thoughtcrime.securesms.groups.SelectionLimits
+import org.thoughtcrime.securesms.recipients.RecipientId
+import org.thoughtcrime.securesms.util.ViewUtil
+import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.R
+import org.signal.core.util.concurrent.SimpleTask
 
-class ChatSelectionFragment : Fragment() {
+class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.OnContactSelectedListener {
 
-  private val pickConversation = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-    if (result.resultCode == Activity.RESULT_OK) {
-      val data = result.data
-      // Be tolerant about extra naming
-      val threadIdFromThreadId = data?.getLongExtra("thread_id", -1L) ?: -1L
-      val threadIdFromCamel = data?.getLongExtra("threadId", -1L) ?: -1L
-      val threadIdFromUri = data?.data?.lastPathSegment?.toLongOrNull() ?: -1L
-      val threadId = listOf(threadIdFromThreadId, threadIdFromCamel, threadIdFromUri).firstOrNull { it > 0L } ?: -1L
-      if (threadId > 0L) {
-        parentFragmentManager.setFragmentResult("pick_thread", bundleOf("thread_id" to threadId))
+  private lateinit var contactFilterView: ContactFilterView
+  private lateinit var selectionFragment: ContactSelectionListFragment
+
+  override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+
+    // Configure child fragment arguments for single-selection, existing-chat-only behavior
+    childFragmentManager.addFragmentOnAttachListener { _, fragment ->
+      fragment.arguments = Bundle().apply {
+        putInt(ContactSelectionListFragment.DISPLAY_MODE,
+        ContactSelectionDisplayMode.FLAG_PUSH or
+        ContactSelectionDisplayMode.FLAG_GROUPS_AFTER_CONTACTS or
+        ContactSelectionDisplayMode.FLAG_ACTIVE_GROUPS or
+        ContactSelectionDisplayMode.FLAG_HIDE_GROUPS_V1 or
+        ContactSelectionDisplayMode.FLAG_HIDE_RECENT_HEADER)
+        putBoolean(ContactSelectionListFragment.REFRESHABLE, false)
+        putBoolean(ContactSelectionListFragment.RECENTS, true)
+        putParcelable(ContactSelectionListFragment.SELECTION_LIMITS, SelectionLimits.NO_LIMITS)
+        putBoolean(ContactSelectionListFragment.HIDE_COUNT, true)
+        putBoolean(ContactSelectionListFragment.DISPLAY_CHIPS, true)
+        putBoolean(ContactSelectionListFragment.CAN_SELECT_SELF, false)
+        putBoolean(ContactSelectionListFragment.RV_CLIP, false)
+        putInt(ContactSelectionListFragment.RV_PADDING_BOTTOM, ViewUtil.dpToPx(60))
       }
     }
-    // Always go back after handling the result (success or cancel)
-    safePop()
+
+    return inflater.inflate(R.layout.fragment_chat_selection, container, false)
   }
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    // Launch as early as possible; this fragment is just a bridge
-    launchPicker()
+  override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    super.onViewCreated(view, savedInstanceState)
+
+    val toolbar: Toolbar = view.findViewById(R.id.toolbar)
+
+    toolbar.setTitle(R.string.acc_mode_select_chat_title)
+    toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+
+    childFragmentManager.setFragmentResultListener("dummy", this) { _, _ -> }
+
+    contactFilterView = view.findViewById(R.id.contact_filter_edit_text)
+    contactFilterView.setOnFilterChangedListener {
+      if (it.isNullOrEmpty()) {
+        selectionFragment.resetQueryFilter()
+      } else {
+        selectionFragment.setQueryFilter(it)
+      }
+    }
+
+    selectionFragment = childFragmentManager.findFragmentById(R.id.contact_selection_list) as ContactSelectionListFragment
+
+    childFragmentManager.beginTransaction()
+      .replace(R.id.contact_selection_list, selectionFragment)
+      .commitNowAllowingStateLoss()
   }
 
-  override fun onCreateView(
-    inflater: android.view.LayoutInflater,
-    container: android.view.ViewGroup?,
-    savedInstanceState: Bundle?
-  ): android.view.View {
-    // Minimal view; we immediately navigate away once a result arrives
-    return android.view.View(requireContext())
-  }
+  override fun onBeforeContactSelected(
+    isFromUnknownSearchKey: Boolean,
+    recipientId: java.util.Optional<RecipientId>,
+    number: String?,
+    chatType: java.util.Optional<ChatType>,
+    callback: java.util.function.Consumer<Boolean>) {
+    // We will handle selection; tell the list not to mutate selection itself
 
-  private fun launchPicker() {
-    val ctx = requireContext()
-    val pm = ctx.packageManager
-    val pkg = ctx.packageName
+    callback.accept(false)
 
-    // Try a small set of known candidates. We keep them fully-qualified.
-    val candidates = listOf(
-      // Newer/explicit picker in some Signal versions
-      "org.thoughtcrime.securesms.conversation.ChooseConversationActivity",
-      // Fallbacks for other versions
-      "org.thoughtcrime.securesms.conversationlist.ConversationListActivity",
-      "org.thoughtcrime.securesms.recipients.ChooseRecipientActivity"
-    )
-
-    val intent = candidates.asSequence()
-      .map { className ->
-        Intent().apply {
-          setClassName(pkg, className)
-          putExtra("showAll", true)
-          addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    if (recipientId.isPresent) {
+      val rid = recipientId.get()
+      // Resolve existing thread id on background thread and return via fragment result
+      SimpleTask.run({
+        return@run SignalDatabase.threads.getThreadIdIfExistsFor(rid)
+      }, { threadId ->
+        if (threadId != null && threadId > 0L) {
+          parentFragmentManager.setFragmentResult("pick_thread", bundleOf("thread_id" to threadId))
+          findNavController().popBackStack()
+        } else {
+          android.widget.Toast.makeText(requireContext(), org.thoughtcrime.securesms.R.string.preferences__accessibility_mode_no_chats_available, android.widget.Toast.LENGTH_SHORT).show()
         }
-      }
-      .firstOrNull { it.resolveActivity(pm) != null }
-
-    if (intent != null) {
-      pickConversation.launch(intent)
-    } else {
-      Toast.makeText(ctx, "Unable to open conversation picker", Toast.LENGTH_SHORT).show()
-      safePop()
+      })
     }
   }
 
-  private fun safePop() {
-    // Prefer nav pop if hosted in NavController; fallback to back press dispatcher
-    val nav = findNavController()
-    val popped = try { nav.popBackStack(); true } catch (_: IllegalStateException) { false }
-    if (!popped) requireActivity().onBackPressedDispatcher.onBackPressed()
-  }
+  override fun onContactDeselected(recipientId: java.util.Optional<RecipientId>, number: String?, chatType: java.util.Optional<org.thoughtcrime.securesms.contacts.paged.ChatType>) {}
+
+  override fun onSelectionChanged() {}
 }
