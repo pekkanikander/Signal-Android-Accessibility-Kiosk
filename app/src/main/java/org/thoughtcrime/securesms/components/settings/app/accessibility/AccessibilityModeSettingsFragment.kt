@@ -5,6 +5,9 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import org.thoughtcrime.securesms.compose.ComposeFragment
 import org.thoughtcrime.securesms.R
+import android.os.Bundle
+import android.view.View
+import androidx.appcompat.widget.Toolbar
 
 class AccessibilityModeSettingsFragment : ComposeFragment() {
 
