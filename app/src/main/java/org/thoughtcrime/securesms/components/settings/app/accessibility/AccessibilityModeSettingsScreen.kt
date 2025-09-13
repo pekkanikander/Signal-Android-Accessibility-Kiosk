@@ -1,70 +1,96 @@
 package org.thoughtcrime.securesms.components.settings.app.accessibility
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
-import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsViewModel
+import org.signal.core.ui.compose.Scaffolds
 import org.thoughtcrime.securesms.R
 
 @Composable
 fun AccessibilityModeSettingsScreen(
-  viewModel: AccessibilityModeSettingsViewModel,
-  navigateToAdvanced: () -> Unit,
-  launchPicker: () -> Unit
+  ui: AccessibilitySettingsUiState,
+  callbacks: AccessibilityModeSettingsCallbacks
 ) {
-  val ui by viewModel.ui.collectAsState()
-
-  Column(
-    Modifier
-      .fillMaxSize()
-      .verticalScroll(rememberScrollState())
-  ) {
-    // Conversation selection row first
-    ConversationSelectionRow(ui.conversations, ui.selectedThreadId, launchPicker)
-
-    Divider()
-
-    // Enable toggle
-    ListItem(
-      headlineContent = { Text(stringResource(R.string.acc_mode_enable), style = MaterialTheme.typography.bodyLarge) },
-      trailingContent = {
-        Switch(
-          checked = ui.enabled && ui.canEnable,
-          onCheckedChange = { viewModel.onToggleEnabled(it) },
-          enabled = ui.canEnable
-        )
-      },
+  Scaffolds.Settings(
+    title = stringResource(R.string.preferences__accessibility_mode),
+    onNavigationClick = callbacks::onNavigationClick,
+    navigationIcon = ImageVector.vectorResource(R.drawable.symbol_arrow_start_24)
+  ) { paddingValues ->
+    LazyColumn(
       modifier = Modifier
-        .fillMaxWidth()
-        .clickable(enabled = ui.canEnable) {
-          viewModel.onToggleEnabled(!ui.enabled)
-        }
-        .padding(horizontal = 8.dp)
-    )
+        .fillMaxSize()
+        .padding(paddingValues)
+    ) {
+      item {
+        // Conversation selection row first
+        ConversationSelectionRow(
+          items = ui.conversations,
+          selectedId = ui.selectedThreadId,
+          onClick = callbacks::onLaunchPicker
+        )
+      }
 
-    Divider()
+      item { Divider() }
 
-    // Advanced link
-    ListItem(
-      headlineContent = { Text(stringResource(R.string.acc_mode_advanced), style = MaterialTheme.typography.bodyLarge) },
-      supportingContent = { Text(stringResource(R.string.acc_mode_advanced_subtitle), style = MaterialTheme.typography.bodySmall) },
-      modifier = Modifier.clickable { navigateToAdvanced() }
-    )
+      item {
+        // Enable toggle
+        ListItem(
+          headlineContent = {
+            Text(
+              stringResource(R.string.acc_mode_enable),
+              style = MaterialTheme.typography.bodyLarge
+            )
+          },
+          trailingContent = {
+            Switch(
+              checked = ui.enabled && ui.canEnable,
+              onCheckedChange = { callbacks.onToggleEnabled(it) },
+              enabled = ui.canEnable
+            )
+          },
+          modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = ui.canEnable) {
+              callbacks.onToggleEnabled(!ui.enabled)
+            }
+            .padding(horizontal = 8.dp)
+        )
+      }
+
+      item { Divider() }
+
+      item {
+        // Advanced link
+        ListItem(
+          headlineContent = {
+            Text(
+              stringResource(R.string.acc_mode_advanced),
+              style = MaterialTheme.typography.bodyLarge
+            )
+          },
+          supportingContent = {
+            Text(
+              stringResource(R.string.acc_mode_advanced_subtitle),
+              style = MaterialTheme.typography.bodySmall
+            )
+          },
+          modifier = Modifier.clickable { callbacks.onOpenAdvanced() }
+        )
+      }
+    }
   }
 }
 
@@ -85,7 +111,11 @@ private fun ConversationSelectionRow(items: List<Long>, selectedId: Long?, onCli
 
     else ->
       ListItem(
-        headlineContent = { Text(stringResource(R.string.acc_mode_chat_selected_id, selectedId)) },
+        headlineContent = {
+          Text(
+            stringResource(R.string.acc_mode_chat_selected_id, selectedId)
+          )
+        },
         modifier = Modifier.clickable(onClick = onClick)
       )
   }

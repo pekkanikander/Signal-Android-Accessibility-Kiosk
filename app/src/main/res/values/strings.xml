@@ -8717,14 +8717,17 @@
 
     <!-- Accessibility Mode Settings -->
     <string name="preferences__accessibility_mode">Accessibility Mode</string>
-    <string name="acc_mode_enable">Enable Accessibility Mode</string>
-    <string name="acc_mode_advanced">Advanced…</string>
-    <string name="acc_mode_advanced_subtitle">Exit gesture and more</string>
+    <string name="acc_mode_select_chat_title">Select Chat or a Contact</string>
     <string name="acc_mode_no_chats">No chats available yet. Start a conversation first!</string>
     <string name="acc_mode_select_chat">Select a chat for Accessibility Mode</string>
     <string name="acc_mode_chat_selected_id">Chat selected (ID: %1$d)</string>
+    <string name="acc_mode_enable">Enable Accessibility Mode</string>
+    <string name="acc_mode_advanced">Advanced…</string>
+    <string name="acc_mode_advanced_subtitle">Exit gesture and more</string>
     <string name="acc_mode_advanced_title">Accessibility Mode – Advanced</string>
-    <string name="acc_mode_select_chat_title">Select Chat or a Contact</string>
+    <string name="acc_mode_exit_gesture_header">Exit Gesture</string>
+    <string name="acc_mode_gesture_two_fingers_hold_prod">Two fingers hold</string>
+    <string name="acc_mode_gesture_triple_tap_debug">Triple tap</string>
 
     <!-- EOF -->
 </resources>
