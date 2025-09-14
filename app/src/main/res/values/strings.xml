@@ -8720,6 +8720,10 @@
     <string name="acc_mode_select_chat_title">Select Chat or a Contact</string>
     <string name="acc_mode_no_chats">No chats available yet. Start a conversation first!</string>
     <string name="acc_mode_select_chat">Select a chat for Accessibility Mode</string>
+    <string name="acc_mode_selected_chat_header">Selected chat</string>
+    <string name="acc_mode_selected_chat_subtitle">Only this chat is available while Accessibility Mode is enabled. Tap to change.</string>
+    <string name="acc_mode_choose_chat_header">Choose a chat</string>
+    <string name="acc_mode_choose_chat_subtitle">Used when Accessibility Mode is enabled. Tap to pick one.</string>
     <string name="acc_mode_chat_selected_id">Chat selected (ID: %1$d)</string>
     <string name="acc_mode_enable">Enable Accessibility Mode</string>
     <string name="acc_mode_advanced">Advanced…</string>

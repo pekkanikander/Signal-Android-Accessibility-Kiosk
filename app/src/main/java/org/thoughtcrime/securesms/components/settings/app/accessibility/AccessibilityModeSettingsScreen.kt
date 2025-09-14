@@ -52,6 +52,41 @@ fun AccessibilityModeSettingsScreen(
         .fillMaxSize()
         .padding(paddingValues)
     ) {
+
+      item {
+        if (ui.selectedThreadId != null) {
+          ListItem(
+            headlineContent = {
+              Text(
+                stringResource(R.string.acc_mode_selected_chat_header),
+                style = MaterialTheme.typography.bodyLarge
+              )
+            },
+            supportingContent = {
+              Text(
+                stringResource(R.string.acc_mode_selected_chat_subtitle),
+                style = MaterialTheme.typography.bodySmall
+              )
+            }
+          )
+        } else {
+          ListItem(
+            headlineContent = {
+              Text(
+                stringResource(R.string.acc_mode_choose_chat_header),
+                style = MaterialTheme.typography.bodyLarge
+              )
+            },
+            supportingContent = {
+              Text(
+                stringResource(R.string.acc_mode_choose_chat_subtitle),
+                style = MaterialTheme.typography.bodySmall
+              )
+            }
+          )
+        }
+      }
+
       item {
         // Conversation selection row first
         ConversationSelectionRow(
