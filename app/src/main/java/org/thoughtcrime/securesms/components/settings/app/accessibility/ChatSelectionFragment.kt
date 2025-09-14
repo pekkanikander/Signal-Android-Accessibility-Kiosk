@@ -19,7 +19,9 @@ import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.util.ViewUtil
 import org.thoughtcrime.securesms.R
 
-class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.OnContactSelectedListener {
+class ChatSelectionFragment : LoggingFragment(),
+    ContactSelectionListFragment.OnContactSelectedListener,
+    ContactSelectionListFragment.NewConversationCallback {
 
   private lateinit var contactFilterView: ContactFilterView
   private lateinit var selectionFragment: ContactSelectionListFragment
@@ -33,7 +35,6 @@ class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.On
       val mask = (
         ContactSelectionDisplayMode.FLAG_PUSH or
         ContactSelectionDisplayMode.FLAG_ACTIVE_GROUPS or
-        ContactSelectionDisplayMode.FLAG_HIDE_RECENT_HEADER or
         ContactSelectionDisplayMode.FLAG_GROUPS_AFTER_CONTACTS
       )
       fragment.arguments = Bundle().apply {
@@ -104,4 +105,16 @@ class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.On
   override fun onContactDeselected(recipientId: java.util.Optional<RecipientId>, number: String?, chatType: java.util.Optional<org.thoughtcrime.securesms.contacts.paged.ChatType>) {}
 
   override fun onSelectionChanged() {}
+
+  override fun onNewGroup(forceV1: Boolean) {
+    // Optional: persist the flag somewhere if you need to force v1 here.
+    // XXX: TBD
+    //    findNavController().safeNavigate(
+    //  R.id.action_chatSelectionFragment_to_selectMembersFragment  // <- use your real action id
+    //)
+  }
+
+  override fun onInvite() {
+    // Intentionally no-op for now.
+  }
 }
