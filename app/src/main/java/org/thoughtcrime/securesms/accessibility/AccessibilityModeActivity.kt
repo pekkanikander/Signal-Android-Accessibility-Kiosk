@@ -16,6 +16,16 @@ import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitToSettingsGestureDetector
 import org.thoughtcrime.securesms.accessibility.IntentFactory
 
+import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.thoughtcrime.securesms.conversation.ConversationTitleView
+import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.recipients.Recipient
+import org.thoughtcrime.securesms.recipients.RecipientId
+
 /**
  * Main accessibility interface for Signal conversations.
  *
@@ -46,6 +56,8 @@ class AccessibilityModeActivity : AppCompatActivity() {
     // Get the selected thread ID from intent
     val selectedThreadId = intent.getLongExtra("selected_thread_id", -1L)
     Log.d(TAG, "Selected thread ID: $selectedThreadId")
+
+    bindHeader(selectedThreadId)
 
     // Add the accessibility fragment if this is the first creation
     if (savedInstanceState == null) {
@@ -101,10 +113,29 @@ class AccessibilityModeActivity : AppCompatActivity() {
   }
 
   private fun computeHeaderBounds(): android.graphics.Rect {
-    val heightDp = org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitHeaderHeightDp
-    val heightPx = (resources.displayMetrics.density * heightDp).toInt()
+    val header = findViewById<View>(R.id.accessibility_title_view)
+    val measured = header?.height ?: 0
+    val heightPx = if (measured > 0) measured else {
+      val heightDp = org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitHeaderHeightDp
+      (resources.displayMetrics.density * heightDp).toInt()
+    }
     val width = resources.displayMetrics.widthPixels
     return android.graphics.Rect(0, 0, width, heightPx)
+  }
+
+  private fun bindHeader(threadId: Long) {
+    val header = findViewById<View>(R.id.accessibility_title_view) as? ConversationTitleView ?: return
+    if (threadId <= 0L) return
+
+    lifecycleScope.launch {
+      val recipient: Recipient? = withContext(Dispatchers.IO) {
+        val rid: RecipientId? = SignalDatabase.threads.getRecipientIdForThreadId(threadId)
+        rid?.let { Recipient.resolved(it) }
+      }
+      recipient?.let { r ->
+        header.setTitle(Glide.with(header), r)
+      }
+    }
   }
 
   private fun showExitConfirmationOverlay() {
