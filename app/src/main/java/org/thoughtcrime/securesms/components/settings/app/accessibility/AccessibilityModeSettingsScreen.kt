@@ -1,5 +1,23 @@
 package org.thoughtcrime.securesms.components.settings.app.accessibility
 
+import android.view.LayoutInflater
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.bumptech.glide.Glide
+import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.thoughtcrime.securesms.BindableConversationListItem
+import org.thoughtcrime.securesms.conversationlist.model.ConversationSet
+import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.database.model.ThreadRecord
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -109,14 +127,62 @@ private fun ConversationSelectionRow(items: List<Long>, selectedId: Long?, onCli
         modifier = Modifier.clickable(onClick = onClick)
       )
 
-    else ->
-      ListItem(
-        headlineContent = {
-          Text(
-            stringResource(R.string.acc_mode_chat_selected_id, selectedId)
-          )
-        },
-        modifier = Modifier.clickable(onClick = onClick)
-      )
+    else -> SelectedConversationExactRow(
+      threadId = selectedId,
+      onClick = onClick
+    )
   }
+}
+
+
+@Composable
+private fun SelectedConversationExactRow(threadId: Long, onClick: () -> Unit) {
+  val context = LocalContext.current
+  val lifecycleOwner = LocalLifecycleOwner.current
+
+  var record: ThreadRecord? by remember(threadId) { mutableStateOf<ThreadRecord?>(null) }
+
+  LaunchedEffect(threadId) {
+    record = withContext(Dispatchers.IO) {
+      SignalDatabase.threads.getThreadRecord(threadId)
+    }
+  }
+
+  val fallback: @Composable () -> Unit = {
+    ListItem(
+      headlineContent = { Text(stringResource(R.string.acc_mode_chat_selected_id, threadId)) },
+      modifier = Modifier.clickable(onClick = onClick)
+    )
+  }
+
+  if (record == null) {
+    fallback()
+    return
+  }
+
+  AndroidView(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onClick)
+      .padding(horizontal = 8.dp),
+    factory = { ctx ->
+      LayoutInflater.from(ctx).inflate(
+        R.layout.conversation_list_item_view,
+        null,
+        false
+      ) as android.view.View
+    },
+    update = { view ->
+      val item = view as BindableConversationListItem
+      item.bind(
+        lifecycleOwner,
+        record!!,
+        Glide.with(view),
+        Locale.getDefault(),
+        emptySet<Long>(),
+        ConversationSet(),
+        0L
+      )
+    }
+  )
 }
