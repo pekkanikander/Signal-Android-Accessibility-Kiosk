@@ -10,6 +10,10 @@ import androidx.navigation.fragment.findNavController
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.compose.ComposeFragment
 import org.thoughtcrime.securesms.util.navigation.safeNavigate
+import org.thoughtcrime.securesms.recipients.Recipient
+import org.thoughtcrime.securesms.recipients.RecipientId
+import org.thoughtcrime.securesms.database.SignalDatabase
+import org.signal.core.util.concurrent.SimpleTask
 
 class AccessibilityModeSettingsFragment : ComposeFragment() {
 
@@ -17,9 +21,18 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     // Scope result to the view lifecycle (matches baseline settings fragments)
-    parentFragmentManager.setFragmentResultListener("pick_thread", viewLifecycleOwner) { _, bundle ->
-      val id = bundle.getLong("thread_id")
-      viewModel.onSelectConversation(id)
+    parentFragmentManager.setFragmentResultListener("pick_recipient", viewLifecycleOwner) { _, bundle ->
+      val rid: RecipientId? = bundle.getParcelable("recipient_id")
+      if (rid != null) {
+        SimpleTask.run({
+          val recipient = Recipient.resolved(rid)
+          SignalDatabase.threads.getOrCreateThreadIdFor(recipient)
+        }) { threadId ->
+          if (threadId != null && threadId > 0L) {
+            viewModel.onSelectConversation(threadId)
+          }
+        }
+      }
     }
   }
 

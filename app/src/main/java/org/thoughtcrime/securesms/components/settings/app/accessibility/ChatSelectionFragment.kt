@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
@@ -16,12 +15,9 @@ import org.thoughtcrime.securesms.contacts.ContactSelectionDisplayMode
 import org.thoughtcrime.securesms.contacts.SelectedContact
 import org.thoughtcrime.securesms.contacts.paged.ChatType
 import org.thoughtcrime.securesms.groups.SelectionLimits
-import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.util.ViewUtil
-import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.R
-import org.signal.core.util.concurrent.SimpleTask
 
 class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.OnContactSelectedListener {
 
@@ -97,18 +93,11 @@ class ChatSelectionFragment : LoggingFragment(), ContactSelectionListFragment.On
 
     if (recipientId.isPresent) {
       val rid = recipientId.get()
-      SimpleTask.run({
-        val recipient = Recipient.resolved(rid)
-        val threads = SignalDatabase.threads
-        threads.getOrCreateThreadIdFor(recipient)
-      }) { threadId ->
-        if (threadId != null && threadId > 0L) {
-          parentFragmentManager.setFragmentResult("pick_thread", bundleOf("thread_id" to threadId))
-          findNavController().popBackStack()
-        } else {
-          Toast.makeText(requireContext(), R.string.acc_mode_select_chat, Toast.LENGTH_SHORT).show()
-        }
-      }
+      parentFragmentManager.setFragmentResult(
+        "pick_recipient",
+        bundleOf("recipient_id" to rid)
+      )
+      findNavController().popBackStack()
     }
   }
 
