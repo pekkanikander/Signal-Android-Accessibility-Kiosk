@@ -38,6 +38,11 @@ Gesture detection for exiting accessibility mode.
 - **Purpose**: Detects configured exit gestures
 - **Features**: Production gesture + debug gesture options
 
+#### `AccessibilityModeExitGestureType.kt`
+Gesture type enumeration for exit gestures.
+- **Location**: `app/src/main/java/org/thoughtcrime/securesms/accessibility/`
+- **Purpose**: Defines supported production and debug gesture types
+
 ### Settings Integration
 
 #### `AccessibilityModeSettingsFragment.kt`
@@ -80,18 +85,34 @@ app/src/main/java/org/thoughtcrime/securesms/
 │   ├── AccessibilityModeActivity.kt          # Main activity
 │   ├── AccessibilityModeFragment.kt          # Conversation fragment
 │   ├── AccessibilityModeRouter.kt            # Routing logic
-│   ├── IntentFactory.kt                      # Intent utilities
-│   ├── AccessibilityItemClickListener.kt     # Simplified interactions
-│   ├── AccessibilityModeExitToSettingsGestureDetector.kt  # Gesture detection
 │   └── AccessibilityModeStore.kt             # State management
+│   ├── IntentFactory.kt                      # Intent utilities
+│   ├── AccessibilityModeItemClickListener.kt # Simplified interactions
+│   ├── AccessibilityModeExitGestureType.kt                # Exit gesture type enum
+│   ├── AccessibilityModeExitToSettingsGestureDetector.kt  # Exit gesture detection
+│   ├── AccessibilityModeExitConfirmationDialog.kt         # Exit confirmation dialog
 ├── components/settings/app/accessibility/
 │   ├── AccessibilityModeSettingsFragment.kt  # Settings UI
 │   ├── AccessibilityModeSettingsScreen.kt    # Compose UI
 │   ├── AccessibilityModeSettingsViewModel.kt # Settings logic
+│   ├── AccessibilityModeSettingsState.kt     # Settings state
+│   ├── AccessibilityModeSettingsCallbacks.kt # Settings callbacks
+│   ├── AccessibilityModeSettingsTestTags.kt  # Test tags (UI)
 │   ├── ChatSelectionFragment.kt              # Conversation picker
-│   └── ChatSelectionScreen.kt                # Picker UI
+│   ├── ChatSelectionScreen.kt                # Picker UI
+│   ├── ChatSelectionViewModel.kt             # Picker logic
+│   └── ChatSelectionTestTags.kt              # Test tags (picker)
 └── keyvalue/
     └── AccessibilityModeValues.kt            # Persistent storage
+```
+
+Additional resources:
+
+```
+app/src/main/res/layout/
+├── activity_accessibility_mode.xml           # Activity layout
+├── fragment_accessibility_mode.xml           # Fragment layout
+└── dialog_accessibility_exit_confirmation.xml # Exit confirmation dialog layout
 ```
 
 ## Dependencies
@@ -119,49 +140,78 @@ No additional build dependencies required. All functionality uses existing Signa
 <activity
     android:name=".accessibility.AccessibilityModeActivity"
     android:exported="false"
-    android:theme="@style/Signal.DayNight" />
+    android:theme="@style/Theme.Signal.DayNight.NoActionBar" />
 
 <!-- Navigation integration -->
-<navigation
-    android:id="@+id/accessibility_mode_settings"
-    app:startDestination="@id/accessibilityModeSettingsFragment" />
+<!-- Accessibility settings are registered inside the main app settings graph:
+     `app/src/main/res/navigation/app_settings_with_change_number.xml`
+     Look for the fragment with id `@+id/accessibilityModeSettingsFragment`. -->
+<!-- Example (host graph contains the fragment): -->
+<!--
+  <fragment
+      android:id="@+id/accessibilityModeSettingsFragment"
+      android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsFragment"
+      android:label="@string/preferences__accessibility_mode" />
+-->
 ```
 
 ## Testing Strategy
 
+### Policy
+- Prefer pure-JVM unit tests (fakes) for algorithmic logic, timing windows, and state machines. These tests are fast, deterministic, and do not rely on Android framework or native libraries.
+- Use Robolectric only for narrowly scoped Android integration tests that require `Context`, `Resources`, `View`, or `Handler` behavior.
+- Do not modify production code to satisfy tests (for example, avoid changing native library loaders). Use test-only shadows, rules, and mocks instead.
+
 ### Unit Tests
-- Core logic testing for gesture detection
-- Router logic validation
-- Settings persistence verification
+- Core logic testing for gesture detection (prefer pure-JVM fakes)
+- Router logic validation (pure-JVM where possible)
+- Settings persistence verification (use `mockkObject` for singletons)
 
-### Integration Tests
-- End-to-end accessibility mode flow
-- Signal component compatibility
-- Gesture detection accuracy
+### Robolectric / Integration Tests
+- Keep Robolectric integration tests minimal and focused on View / Handler / Resource interactions.
+- Recommended Robolectric checklist:
+  - Use `ApplicationProvider.getApplicationContext()` for Context when possible.
+  - Annotate with `@Config(manifest = Config.NONE)` unless the test needs a manifest.
+  - Prefer `application = org.thoughtcrime.securesms.testing.TestApplication::class` in `@Config` for tests that need a test Application.
+  - Prevent native/encrypted libraries from loading using test-only Shadows (e.g., `ShadowSqlCipherLibraryLoader`) rather than editing production loader code.
+  - When tests post work to the main Looper, call `shadowOf(Looper.getMainLooper()).idle()` to execute queued runnables.
+  - Inject Android services as needed with `Shadows.shadowOf(app as Application).setSystemService(...)`.
+  - Stub `View.parent` with a relaxed `ViewParent` mock if production code calls `getParent()` in tests.
 
-### Accessibility Tests
-- TalkBack compatibility verification
-- Screen reader announcement testing
-- Accessibility service integration
+### Accessibility / End-to-end Tests
+- One focused Robolectric integration test per feature should verify View/Handler interactions and system-service integration (e.g., `AccessibilityManager`, TalkBack announcements). Keep these small; use pure-JVM tests for the rest.
+
+### Test Utilities and Rules
+- Reuse repository canonical test helpers where appropriate:
+  - `testutil/MockAppDependenciesRule` — for isolating `AppDependencies` and mocking global singletons.
+  - `testutil/SignalDatabaseRule` — in-memory DB for database tests; avoid Robolectric for DB tests that rely on native/encrypted libs.
+  - Use MockK's `mockkObject(...)`/`unmockkObject(...)` to override singletons like `SignalStore` in tests.
+
+### Examples / References
+- Pure-JVM fake pattern: `app/src/test/.../AccessibilityGestureRouterUnitTest.kt`
+- Robolectric integration example: `app/src/test/.../AccessibilityRouterTest.kt`
+- Upstream UI Robolectric example: `app/src/test/.../stories/StoryFirstTimeNavigationViewTest.kt`
+- Test Application and shadows: `app/src/test/java/org/thoughtcrime/securesms/testing/TestApplication.kt`, `app/src/test/java/org/thoughtcrime/securesms/testing/ShadowSqlCipherLibraryLoader.kt`
 
 ## Deployment Checklist
 
 ### Pre-deployment
-- [ ] All tests pass
-- [ ] Accessibility audit completed
-- [ ] Manual testing on target devices
-- [ ] Documentation updated
+- [ ] All unit and integration tests pass (see Testing Strategy). Prefer pure-JVM verification for algorithms and a single focused Robolectric integration test for View/Handler interactions.
+- [ ] Accessibility audit completed (WCAG checklist reviewed and issues documented).
+- [ ] Manual testing on target devices (phones/tablets) covering TalkBack and common screen sizes.
+- [ ] Documentation updated (`docs/IMPLEMENTATION-GUIDE.md`, `ACCESSIBILITY-MODE.md`, and relevant README sections).
 
 ### Integration Verification
-- [ ] Settings navigation works
-- [ ] Mode switching functions correctly
-- [ ] Gestures work as expected
-- [ ] No regressions in core Signal functionality
+- **Manifest & Theme**: Confirm `AccessibilityModeActivity` is declared in `app/src/main/AndroidManifest.xml` with the intended theme (`@style/Theme.Signal.DayNight.NoActionBar`).
+- **Navigation**: Verify `AccessibilityModeSettingsFragment` is registered in `app/src/main/res/navigation/app_settings_with_change_number.xml` (or the current app settings graph).
+- **Mode switching**: Verify `AccessibilityModeRouter.routeIfNeeded(...)` is invoked from `MainActivity.onStart()` and that intents contain the correct extras/flags.
+- **Gestures**: Confirm a Robolectric integration test covers the touch-to-exit interaction and that timing/edge cases are covered by pure-JVM tests.
+- **Singletons & DB**: Ensure `SignalStore` and other singletons are mocked in tests (e.g., via `mockkObject` or `MockAppDependenciesRule`). Do not modify native DB loader code for tests; use shadows if needed.
+- **Baseline intact**: No regressions in core Signal functionality
 
 ### Post-deployment
-- [ ] Monitor for accessibility-related issues
-- [ ] User feedback collection
-- [ ] Performance impact assessment
+- [ ] Monitor for accessibility-related issues via crash reports and user feedback channels
+- [ ] Collect and triage user feedback specific to accessibility flows
 
 ## Maintenance Guidelines
 
@@ -188,6 +238,7 @@ No additional build dependencies required. All functionality uses existing Signa
 - **Settings not appearing**: Verify navigation XML configuration
 - **Gestures not working**: Check gesture detector attachment in activity
 - **Conversation not loading**: Verify `ConversationViewModel` integration
+- **Test flakiness due to global singletons**: Ensure tests that touch `AppDependencies` or `SignalStore` use `MockAppDependenciesRule` or `mockkObject(...)` to isolate and mock global singletons; avoid relying on real `SignalStore` state in unit tests.
 
 ### Debug Tools
 - Gesture detection logging available in debug builds
