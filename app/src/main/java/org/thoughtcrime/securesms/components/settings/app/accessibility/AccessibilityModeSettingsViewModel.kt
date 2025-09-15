@@ -13,6 +13,7 @@ import kotlinx.coroutines.reactive.asFlow
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.recipients.Recipient
+import org.thoughtcrime.securesms.database.ThreadTable
 
 // Small store wrapper to make testing easier
 interface AccessibilityModeStore {
@@ -49,8 +50,16 @@ class AccessibilityModeSettingsViewModel(
   private val store: AccessibilityModeStore = SignalAccessibilityModeStore()
 ) : ViewModel() {
 
+  // Typed snapshot of current conversations and their recipient ids
+  private data class Snapshot(val threadIds: List<Long>, val recipientIds: Set<RecipientId>)
+
   // 1) Reactive conversation IDs (map Unit -> read DB)
   private val _conversationsFlow = MutableStateFlow<List<Long>>(emptyList())
+
+  // Track which recipients currently have existing threads (for auto-disable when deleted)
+  private val _recipientPresenceFlow = MutableStateFlow<Set<RecipientId>?>(null)
+  private val recipientPresenceFlow: StateFlow<Set<RecipientId>?> = _recipientPresenceFlow.asStateFlow()
+
   private val conversationsFlow: StateFlow<List<Long>> = _conversationsFlow.asStateFlow()
 
   // 2) Store-backed state (reactive within this screen)
@@ -65,10 +74,21 @@ class AccessibilityModeSettingsViewModel(
   private val selectedThreadIdFlow: Flow<Long?> = selectedRecipientIdFlow.mapLatest { rid ->
     if (rid == null) return@mapLatest null
     withContext(Dispatchers.IO) {
-      val recipient = Recipient.resolved(rid)
-      SignalDatabase.threads.getOrCreateThreadIdFor(recipient)
+      SignalDatabase.threads.getThreadIdIfExistsFor(rid)
     }
   }
+
+  // Track whether a thread has ever existed for the current recipient (to detect deletions)
+  private val everExistedForRecipient = MutableStateFlow(false)
+
+  // Re-evaluate existence on DB changes and recipient changes
+  private val selectedThreadExistsFlow: Flow<Boolean> =
+    combine(selectedRecipientIdFlow, RxDatabaseObserver.conversationList.asFlow()) { rid, _ -> rid }
+      .mapLatest { rid ->
+        if (rid == null) return@mapLatest false
+        withContext(Dispatchers.IO) { SignalDatabase.threads.getThreadIdIfExistsFor(rid) != null }
+      }
+      .distinctUntilChanged()
 
   // 3) combined UI state
   private val _ui = MutableStateFlow(AccessibilitySettingsUiState())
@@ -79,7 +99,6 @@ class AccessibilityModeSettingsViewModel(
       .mapLatest {
         try {
           withContext(Dispatchers.IO) {
-            // lightweight query - return thread ids (reuse existing DB access pattern)
             val cursor = SignalDatabase.threads.getUnarchivedConversationList(
               conversationFilter = ConversationFilter.OFF,
               pinned = false,
@@ -88,36 +107,65 @@ class AccessibilityModeSettingsViewModel(
               chatFolder = ChatFolderRecord()
             )
 
-            val ids = mutableListOf<Long>()
-            cursor.use {
-              val reader = SignalDatabase.threads.readerFor(it)
-              while (it.moveToNext()) {
-                val threadRecord = reader.getCurrent()
-                if (threadRecord != null) ids.add(threadRecord.threadId)
+            cursor.use { c ->
+              val reader = SignalDatabase.threads.readerFor(c)
+              val threadIds = ArrayList<Long>(128)
+              val recipientIds = LinkedHashSet<RecipientId>(128)
+              val recipIdx = c.getColumnIndexOrThrow(ThreadTable.RECIPIENT_ID)
+              while (c.moveToNext()) {
+                val tr = reader.getCurrent()
+                if (tr != null) threadIds.add(tr.threadId)
+                val ridLong = c.getLong(recipIdx)
+                if (ridLong > 0) recipientIds.add(RecipientId.from(ridLong))
               }
+              Snapshot(threadIds, recipientIds)
             }
-
-            ids
           }
-        } catch (_: Exception) { emptyList<Long>() }
+        } catch (_: Exception) {
+          // On error, surface empty snapshot (don’t crash UI)
+          Snapshot(emptyList(), emptySet())
+        }
       }
       .distinctUntilChanged()
-      .onEach { _conversationsFlow.value = it }
+      .onEach { snap: Snapshot ->
+        _conversationsFlow.value = snap.threadIds
+        _recipientPresenceFlow.value = snap.recipientIds
+      }
+      .launchIn(viewModelScope)
+
+    // Reset existence tracker on selection change
+    selectedRecipientIdFlow
+      .onEach { everExistedForRecipient.value = false }
+      .launchIn(viewModelScope)
+
+    // Mark as having existed once we observe an existing thread
+    selectedThreadExistsFlow
+      .onEach { exists -> if (exists) everExistedForRecipient.value = true }
       .launchIn(viewModelScope)
 
     // Drive UI state from combined sources.
     combine(
       conversationsFlow,
       selectedThreadIdFlow,
+      selectedRecipientIdFlow,
       enabledFlow,
       exitGestureFlow
-    ) { conversations, sel, en, gesture ->
-      val hasSelection = sel != null
+    ) { conversations, selThread, selRecipient, en, gesture ->
+      val hasSelection = selRecipient != null
       val canEnable = hasSelection
-      val effectiveEnabled = if (!canEnable) false else en
-      AccessibilitySettingsUiState(conversations, sel, canEnable, effectiveEnabled, gesture)
+      val effectiveEnabled = en && canEnable
+      AccessibilitySettingsUiState(conversations, selThread, canEnable, effectiveEnabled, gesture)
     }
       .onEach { _ui.value = it }
+      .launchIn(viewModelScope)
+
+    selectedThreadExistsFlow
+      .onEach { exists ->
+        if (!exists && everExistedForRecipient.value && _enabled.value) {
+          _enabled.value = false
+          store.enabled = false
+        }
+      }
       .launchIn(viewModelScope)
   }
 
