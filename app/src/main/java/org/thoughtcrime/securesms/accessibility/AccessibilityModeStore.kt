@@ -48,4 +48,9 @@ class SignalAccessibilityModeStore : AccessibilityModeStore {
     SignalStore.accessibilityMode.isAccessibilityModeEnabled = enabled
     SignalStore.accessibilityMode.accessibilityRecipientId = recipientId?.toLong() ?: -1L
   }
+
+  // Advanced option: suppress notifications while accessibility mode is active
+  var suppressNotifications: Boolean
+    get() = SignalStore.accessibilityMode.suppressNotifications
+    set(value) { SignalStore.accessibilityMode.suppressNotifications = value }
 }
