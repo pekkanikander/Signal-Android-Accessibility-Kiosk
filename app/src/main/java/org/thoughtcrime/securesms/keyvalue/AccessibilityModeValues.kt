@@ -14,9 +14,6 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     const val ACCESSIBILITY_MODE_ENABLED = "accessibility_mode.enabled"
     const val ACCESSIBILITY_RECIPIENT_ID = "accessibility_mode.recipient_id"
     const val EXIT_GESTURE_TYPE = "accessibility_mode.exit_gesture_type"
-    const val EXIT_GESTURE_REQUIRE_PIN = "accessibility_mode.exit_gesture_require_pin"
-    const val EXIT_GESTURE_PIN_HASH = "accessibility_mode.exit_gesture_pin_hash"
-    const val EXIT_GESTURE_PIN_SALT = "accessibility_mode.exit_gesture_pin_salt"
 
     // Advanced configuration keys (Phase 2.5)
     const val EXIT_HEADER_DEADZONE_DP = "accessibility_mode.exit_header_deadzone_dp"
@@ -42,10 +39,6 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
 
   // Exit gesture configuration
   var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD.value)
-  var exitGestureRequirePin: Boolean by booleanValue(EXIT_GESTURE_REQUIRE_PIN, false)
-  // PIN configuration, not implemented yet
-  var exitGesturePinHash: String by stringValue(EXIT_GESTURE_PIN_HASH, "")
-  var exitGesturePinSalt: String by stringValue(EXIT_GESTURE_PIN_SALT, "")
 
   // Advanced configuration
   // Overall timeout, to catch device sleeps et (ms)
@@ -78,9 +71,6 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
       ACCESSIBILITY_MODE_ENABLED,
       ACCESSIBILITY_RECIPIENT_ID,
       EXIT_GESTURE_TYPE,
-      EXIT_GESTURE_REQUIRE_PIN,
-      EXIT_GESTURE_PIN_HASH,
-      EXIT_GESTURE_PIN_SALT,
       EXIT_GESTURE_HOLD_MS,
       EXIT_GESTURE_CONFIRM_MS,
       EXIT_GESTURE_TIMEOUT_MS,
