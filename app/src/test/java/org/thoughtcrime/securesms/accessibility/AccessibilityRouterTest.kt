@@ -11,7 +11,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.thoughtcrime.securesms.MainActivity
@@ -20,7 +21,8 @@ import org.thoughtcrime.securesms.recipients.RecipientId
 /**
  * Router behaviour tests against AccessibilityModeRouter.
  */
-@RunWith(JUnit4::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.TestApplication::class)
 class AccessibilityRouterTest {
 
   private class TestStore(var enabled: Boolean, var rid: RecipientId?) : AccessibilityModeStore {

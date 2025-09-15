@@ -5,7 +5,8 @@ import android.graphics.Rect
 import android.view.MotionEvent
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import io.mockk.mockk
 import io.mockk.every
 import io.mockk.mockkObject
@@ -21,7 +22,8 @@ import org.hamcrest.MatcherAssert.assertThat
  * This test validates the gesture detection logic with real MotionEvent sequences.
  * Tests focus on state machine transitions and gesture recognition accuracy.
  */
-@RunWith(JUnit4::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.TestApplication::class)
 class AccessibilityGestureDetectionTest {
 
     private val mockContext = mockk<Context>()

@@ -11,6 +11,11 @@ object SqlCipherLibraryLoader {
 
   @JvmStatic
   fun load() {
+    if (isRunningUnderRobolectric()) {
+      // Skip loading native SQLCipher when running Robolectric JVM tests.
+      return
+    }
+
     if (!loaded) {
       synchronized(LOCK) {
         if (!loaded) {
@@ -18,6 +23,14 @@ object SqlCipherLibraryLoader {
           loaded = true
         }
       }
+    }
+  }
+
+  private fun isRunningUnderRobolectric(): Boolean {
+    return try {
+      Class.forName("org.robolectric.Robolectric") != null
+    } catch (_: Throwable) {
+      false
     }
   }
 }
