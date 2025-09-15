@@ -11,26 +11,21 @@ import org.thoughtcrime.securesms.components.settings.app.chats.folders.ChatFold
 import org.thoughtcrime.securesms.database.SignalDatabase
 import kotlinx.coroutines.reactive.asFlow
 import org.thoughtcrime.securesms.keyvalue.SignalStore
+import org.thoughtcrime.securesms.recipients.RecipientId
+import org.thoughtcrime.securesms.recipients.Recipient
 
 // Small store wrapper to make testing easier
 interface AccessibilityModeStore {
-  val threadIdFlow: Flow<Long?>
-  val enabledFlow: Flow<Boolean>
-  val exitGestureFlow: Flow<Int>
-
-  var selectedThreadId: Long?
+  var selectedRecipientId: RecipientId?
   var enabled: Boolean
   var exitGestureTypeValue: Int
 }
 
 class SignalAccessibilityModeStore : AccessibilityModeStore {
-  override val threadIdFlow: Flow<Long?> = flow { emit(SignalStore.accessibilityMode.accessibilityThreadId.takeIf { it > 0 }) }
-  override val enabledFlow: Flow<Boolean> = flow { emit(SignalStore.accessibilityMode.isAccessibilityModeEnabled) }
-  override val exitGestureFlow: Flow<Int> = flow { emit(SignalStore.accessibilityMode.exitGestureType) }
-
-  override var selectedThreadId: Long?
-    get() = SignalStore.accessibilityMode.accessibilityThreadId.takeIf { it > 0 }
-    set(value) { SignalStore.accessibilityMode.accessibilityThreadId = value ?: -1L }
+  override var selectedRecipientId: RecipientId?
+    get() = SignalStore.accessibilityMode.accessibilityRecipientId
+      .takeIf { it > 0 }?.let { RecipientId.from(it) }
+    set(value) { SignalStore.accessibilityMode.accessibilityRecipientId = value?.toLong() ?: -1L }
 
   override var enabled: Boolean
     get() = SignalStore.accessibilityMode.isAccessibilityModeEnabled
@@ -59,13 +54,21 @@ class AccessibilityModeSettingsViewModel(
   private val conversationsFlow: StateFlow<List<Long>> = _conversationsFlow.asStateFlow()
 
   // 2) Store-backed state (reactive within this screen)
-  private val _selectedThreadId = MutableStateFlow(store.selectedThreadId)
+  private val _selectedRecipientId = MutableStateFlow(store.selectedRecipientId)
   private val _enabled = MutableStateFlow(store.enabled)
   private val _exitGesture = MutableStateFlow(store.exitGestureTypeValue)
 
-  private val selectedThreadIdFlow = _selectedThreadId.asStateFlow()
+  private val selectedRecipientIdFlow = _selectedRecipientId.asStateFlow()
   private val enabledFlow = _enabled.asStateFlow()
   private val exitGestureFlow = _exitGesture.asStateFlow()
+
+  private val selectedThreadIdFlow: Flow<Long?> = selectedRecipientIdFlow.mapLatest { rid ->
+    if (rid == null) return@mapLatest null
+    withContext(Dispatchers.IO) {
+      val recipient = Recipient.resolved(rid)
+      SignalDatabase.threads.getOrCreateThreadIdFor(recipient)
+    }
+  }
 
   // 3) combined UI state
   private val _ui = MutableStateFlow(AccessibilitySettingsUiState())
@@ -119,14 +122,13 @@ class AccessibilityModeSettingsViewModel(
   }
 
   // Commands
-  fun onSelectConversation(threadId: Long) {
-    _selectedThreadId.value = threadId
-    store.selectedThreadId = threadId
-    // Do not auto-enable; user must toggle explicitly
+  fun onSelectRecipient(rid: RecipientId) {
+    _selectedRecipientId.value = rid
+    store.selectedRecipientId = rid
   }
 
   fun onToggleEnabled(enabled: Boolean) {
-    val sel = _selectedThreadId.value
+    val sel = _selectedRecipientId.value
     if (sel == null) return
     _enabled.value = enabled
     store.enabled = enabled

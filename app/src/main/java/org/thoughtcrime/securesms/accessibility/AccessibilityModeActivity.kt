@@ -25,6 +25,7 @@ import org.thoughtcrime.securesms.conversation.ConversationTitleView
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
+import org.thoughtcrime.securesms.keyvalue.SignalStore
 
 /**
  * Main accessibility interface for Signal conversations.
@@ -52,6 +53,27 @@ class AccessibilityModeActivity : AppCompatActivity() {
 
     // Hide action bar to remove back button
     supportActionBar?.hide()
+
+    val selectedRecipientId: RecipientId? = intent.getParcelableExtra("selected_recipient_id")
+    if (selectedRecipientId != null) {
+      bindHeader(selectedRecipientId)
+      if (savedInstanceState == null) {
+        lifecycleScope.launch {
+          val threadId: Long = withContext(Dispatchers.IO) {
+            val recipient = Recipient.resolved(selectedRecipientId)
+            SignalDatabase.threads.getOrCreateThreadIdFor(recipient) ?: -1L
+          }
+          val fragment = AccessibilityModeFragment().apply {
+            arguments = Bundle().apply { putLong("selected_thread_id", threadId) }
+          }
+          supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .commit()
+        }
+      }
+      setupExitGestureDetector()
+      return
+    }
 
     // Get the selected thread ID from intent
     val selectedThreadId = intent.getLongExtra("selected_thread_id", -1L)
@@ -135,6 +157,14 @@ class AccessibilityModeActivity : AppCompatActivity() {
       recipient?.let { r ->
         header.setTitle(Glide.with(header), r)
       }
+    }
+  }
+
+  private fun bindHeader(recipientId: RecipientId) {
+    val header = findViewById<View>(R.id.accessibility_title_view) as? ConversationTitleView ?: return
+    lifecycleScope.launch {
+      val recipient: Recipient? = withContext(Dispatchers.IO) { Recipient.resolved(recipientId) }
+      recipient?.let { r -> header.setTitle(Glide.with(header), r) }
     }
   }
 

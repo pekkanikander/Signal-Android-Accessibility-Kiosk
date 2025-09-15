@@ -4,50 +4,48 @@
  */
 
 package org.thoughtcrime.securesms.accessibility
-
+import android.app.Activity
+import android.content.Context
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import org.thoughtcrime.securesms.keyvalue.SignalStore
+import org.thoughtcrime.securesms.recipients.RecipientId
 
 /**
  * Store for Accessibility Mode state management.
  * Provides a clean interface to Accessibility Mode settings.
  */
 interface AccessibilityModeStore {
-  fun state(): Flow<AccessibilityModeState>
+  fun state(): kotlinx.coroutines.flow.Flow<AccessibilityModeState>
   fun current(): AccessibilityModeState
-  fun setEnabled(enabled: Boolean, threadId: Long?)
+  fun setEnabled(enabled: Boolean, recipientId: RecipientId?)
 }
-
 /**
  * Immutable Accessibility Mode state.
  */
 data class AccessibilityModeState(
   val enabled: Boolean,
-  val threadId: Long?
+  val recipientId: RecipientId?,
 )
-
 /**
  * Implementation using existing SignalStore.accessibilityMode.
  */
 class SignalAccessibilityModeStore : AccessibilityModeStore {
-  override fun state(): Flow<AccessibilityModeState> {
-    // For now, return a simple flow that reads current state
-    // TODO: Implement proper Flow when SignalStore supports it
-    return kotlinx.coroutines.flow.flowOf(current())
+  override fun state(): kotlinx.coroutines.flow.Flow<AccessibilityModeState> {
+    return flowOf(current())
   }
 
   override fun current(): AccessibilityModeState {
+    val ridLong = SignalStore.accessibilityMode.accessibilityRecipientId
+    val rid = if (ridLong > 0) RecipientId.from(ridLong) else null
     return AccessibilityModeState(
       enabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
-      threadId = SignalStore.accessibilityMode.accessibilityThreadId.takeIf { it > 0 }
+      recipientId = rid
     )
   }
 
-  override fun setEnabled(enabled: Boolean, threadId: Long?) {
+  override fun setEnabled(enabled: Boolean, recipientId: RecipientId?) {
     SignalStore.accessibilityMode.isAccessibilityModeEnabled = enabled
-    if (threadId != null) {
-      SignalStore.accessibilityMode.accessibilityThreadId = threadId
-    }
+    SignalStore.accessibilityMode.accessibilityRecipientId = recipientId?.toLong() ?: -1L
   }
 }

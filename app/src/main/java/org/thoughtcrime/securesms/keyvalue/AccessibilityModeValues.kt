@@ -12,7 +12,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   companion object {
     // Setting keys
     const val ACCESSIBILITY_MODE_ENABLED = "accessibility_mode.enabled"
-    const val ACCESSIBILITY_THREAD_ID = "accessibility_thread.id" // XXX: add _mode
+    const val ACCESSIBILITY_RECIPIENT_ID = "accessibility_mode.recipient_id"
     const val EXIT_GESTURE_TYPE = "accessibility_mode.exit_gesture_type"
     const val EXIT_GESTURE_REQUIRE_PIN = "accessibility_mode.exit_gesture_require_pin"
     const val EXIT_GESTURE_PIN_HASH = "accessibility_mode.exit_gesture_pin_hash"
@@ -37,8 +37,8 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   // Boolean values using booleanValue delegate
   var isAccessibilityModeEnabled: Boolean by booleanValue(ACCESSIBILITY_MODE_ENABLED, false)
 
-  // Long value for thread ID
-  var accessibilityThreadId: Long by longValue(ACCESSIBILITY_THREAD_ID, -1L)
+  // Long value for recipient ID
+  var accessibilityRecipientId: Long by longValue(ACCESSIBILITY_RECIPIENT_ID, -1L)
 
   // Exit gesture configuration
   var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD.value)
@@ -76,7 +76,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   public override fun getKeysToIncludeInBackup(): List<String> {
     return listOf(
       ACCESSIBILITY_MODE_ENABLED,
-      ACCESSIBILITY_THREAD_ID,
+      ACCESSIBILITY_RECIPIENT_ID,
       EXIT_GESTURE_TYPE,
       EXIT_GESTURE_REQUIRE_PIN,
       EXIT_GESTURE_PIN_HASH,
