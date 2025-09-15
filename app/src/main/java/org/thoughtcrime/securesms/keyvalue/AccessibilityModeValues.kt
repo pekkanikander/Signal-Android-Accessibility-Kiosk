@@ -10,12 +10,12 @@ import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
 
   companion object {
-    // Setting keys
+    // Basic setting keys
     const val ACCESSIBILITY_MODE_ENABLED = "accessibility_mode.enabled"
     const val ACCESSIBILITY_RECIPIENT_ID = "accessibility_mode.recipient_id"
-    const val EXIT_GESTURE_TYPE = "accessibility_mode.exit_gesture_type"
 
-    // Advanced configuration keys (Phase 2.5)
+    // Advanced settings keys (many not implented in the UI yet)
+    const val EXIT_GESTURE_TYPE = "accessibility_mode.exit_gesture_type"
     const val EXIT_HEADER_DEADZONE_DP = "accessibility_mode.exit_header_deadzone_dp"
     const val EXIT_HEADER_EXTRA_BOTTOM_DP = "accessibility_mode.exit_header_extra_bottom_dp"
     const val EXIT_HEADER_HEIGHT_DP = "accessibility_mode.exit_header_height_dp"
@@ -29,6 +29,9 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     const val EXIT_TRIPLE_TAP_WINDOW_MS = "accessibility_mode.exit_triple_tap_window_ms"
     const val EXIT_CONFIRM_TIMEOUT_MS = "accessibility_mode.exit_confirm_timeout_ms"
     const val EXIT_HAPTIC_FEEDBACK_INTERVAL_MS = "accessibility_mode.exit_haptic_feedback_interval_ms"
+
+    // Suppress message notifications while Accessibility Mode is active
+    const val SUPPRESS_NOTIFICATIONS = "accessibility_mode.suppress_notifications"
   }
 
   // Boolean values using booleanValue delegate
@@ -64,6 +67,9 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   // Haptic feedback interval (ms) used during hold gestures
   var exitHapticFeedbackIntervalMs: Int by integerValue(EXIT_HAPTIC_FEEDBACK_INTERVAL_MS, 500)
 
+  // Suppress message notifications while Accessibility Mode is active
+  var suppressNotifications: Boolean by booleanValue(SUPPRESS_NOTIFICATIONS, true)
+
   public override fun onFirstEverAppLaunch() = Unit
 
   public override fun getKeysToIncludeInBackup(): List<String> {
@@ -81,7 +87,8 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
       EXIT_TRIPLE_TAP_INTERVAL_MS,
       EXIT_TRIPLE_TAP_WINDOW_MS,
       EXIT_CONFIRM_TIMEOUT_MS,
-      EXIT_HEADER_HEIGHT_DP
+      EXIT_HEADER_HEIGHT_DP,
+      SUPPRESS_NOTIFICATIONS
     )
   }
 }

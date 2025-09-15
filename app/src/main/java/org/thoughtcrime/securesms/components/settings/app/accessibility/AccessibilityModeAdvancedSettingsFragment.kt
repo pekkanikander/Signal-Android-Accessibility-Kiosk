@@ -78,6 +78,21 @@ private fun AccessibilityModeAdvancedSettingsScreen(
         selected = ui.exitGestureTypeValue == 3,
         onClick = { callbacks.onChangeGesture(3) }
       )
+      // Suppress notifications toggle (advanced option)
+      androidx.compose.material3.ListItem(
+        headlineContent = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_suppress_notifications)) },
+        supportingContent = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_suppress_notifications_subtitle)) },
+        trailingContent = {
+          androidx.compose.material3.Switch(
+            checked = ui.suppressNotifications,
+            onCheckedChange = { callbacks.onSetSuppressNotifications(it) }
+          )
+        },
+        modifier = androidx.compose.ui.Modifier
+          .fillMaxWidth()
+          .clickable(onClick = { callbacks.onSetSuppressNotifications(!ui.suppressNotifications) })
+          .padding(horizontal = 8.dp)
+      )
     }
   }
 }
@@ -102,12 +117,16 @@ private fun RadioRow(title: String, selected: Boolean, onClick: () -> Unit) {
     override fun onChangeGesture(typeValue: Int) {
       viewModel.onChangeGesture(typeValue)
     }
+    override fun onSetSuppressNotifications(enabled: Boolean) {
+      viewModel.onSetSuppressNotifications(enabled)
+    }
   }
 }
 
 interface AccessibilityModeAdvancedSettingsCallbacks {
   fun onNavigationClick() = Unit
   fun onChangeGesture(typeValue: Int) = Unit
+  fun onSetSuppressNotifications(enabled: Boolean) = Unit
 
   object Empty : AccessibilityModeAdvancedSettingsCallbacks
 }

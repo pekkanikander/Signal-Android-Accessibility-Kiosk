@@ -131,6 +131,18 @@ class DefaultMessageNotifier(context: Application) : MessageNotifier {
     conversationId: ConversationId?,
     defaultBubbleState: BubbleState
   ) {
+    // Global suppression: if Accessibility Mode is enabled and suppression is on, cancel and skip
+    try {
+      if (SignalStore.accessibilityMode.isAccessibilityModeEnabled && SignalStore.accessibilityMode.suppressNotifications) {
+        Log.i(TAG, "Accessibility Mode suppression active: cancelling message notifications")
+        NotificationCancellationHelper.cancelAllMessageNotifications(context, stickyThreads.map { it.value.notificationId }.toSet())
+        updateBadge(context, 0)
+        clearReminderInternal(context)
+        return
+      }
+    } catch (t: Throwable) {
+      Log.w(TAG, t)
+    }
     NotificationChannels.getInstance().ensureCustomChannelConsistency()
 
     if (!Recipient.isSelfSet) {

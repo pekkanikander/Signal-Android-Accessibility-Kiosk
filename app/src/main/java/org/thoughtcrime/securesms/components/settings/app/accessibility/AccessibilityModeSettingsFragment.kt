@@ -83,6 +83,16 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
         R.id.action_accessibilityModeSettingsFragment_to_accessibilityModeAdvancedSettingsFragment
       )
     }
+
+    // Provide a concrete implementation callable from composables
+    fun onSetSuppressNotifications(enabled: Boolean) {
+      viewModel.onSetSuppressNotifications(enabled)
+    }
+  }
+
+  // Adapter interface to expose the concrete callbacks to composables
+  private interface AccessibilityModeSettingsCallbacksImpl {
+    fun onSetSuppressNotifications(enabled: Boolean)
   }
 
 @Composable
@@ -193,6 +203,10 @@ private fun AccessibilityModeSettingsScreen(
           modifier = Modifier.clickable { callbacks.onOpenAdvanced() }
         )
       }
+
+      item { Divider() }
+
+      // Suppress notifications is an advanced option; link to advanced settings instead of duplicating UI here.
     }
   }
 }

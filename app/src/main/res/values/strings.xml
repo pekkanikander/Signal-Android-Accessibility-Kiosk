@@ -8728,6 +8728,8 @@
     <string name="acc_mode_enable">Enable Accessibility Mode</string>
     <string name="acc_mode_advanced">Advanced…</string>
     <string name="acc_mode_advanced_subtitle">Exit gesture and more</string>
+    <string name="acc_mode_suppress_notifications">Suppress message notifications while Accessibility Mode is active</string>
+    <string name="acc_mode_suppress_notifications_subtitle">When enabled, incoming message notifications are suppressed to avoid popups and unexpected interactions.</string>
     <string name="acc_mode_advanced_title">Accessibility Mode – Advanced</string>
     <string name="acc_mode_exit_gesture_header">Exit Gesture</string>
     <string name="acc_mode_gesture_two_fingers_hold_prod">Two fingers hold</string>

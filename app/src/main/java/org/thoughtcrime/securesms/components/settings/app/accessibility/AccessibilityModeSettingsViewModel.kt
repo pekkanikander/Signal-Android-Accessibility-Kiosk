@@ -23,6 +23,7 @@ interface AccessibilityModeStore {
   var selectedRecipientId: RecipientId?
   var enabled: Boolean
   var exitGestureTypeValue: Int
+  var suppressNotifications: Boolean
 }
 
 class SignalAccessibilityModeStore : AccessibilityModeStore {
@@ -38,6 +39,10 @@ class SignalAccessibilityModeStore : AccessibilityModeStore {
   override var exitGestureTypeValue: Int
     get() = SignalStore.accessibilityMode.exitGestureType
     set(value) { SignalStore.accessibilityMode.exitGestureType = value }
+
+  override var suppressNotifications: Boolean
+    get() = SignalStore.accessibilityMode.suppressNotifications
+    set(value) { SignalStore.accessibilityMode.suppressNotifications = value }
 }
 
 // UI state returned to Compose
@@ -46,7 +51,8 @@ data class AccessibilitySettingsUiState(
   val selectedThreadId: Long? = null,
   val canEnable: Boolean = false,
   val enabled: Boolean = false,
-  val exitGestureTypeValue: Int = 0
+  val exitGestureTypeValue: Int = 0,
+  val suppressNotifications: Boolean = true
 )
 
 class AccessibilityModeSettingsViewModel(
@@ -69,10 +75,12 @@ class AccessibilityModeSettingsViewModel(
   private val _selectedRecipientId = MutableStateFlow(store.selectedRecipientId)
   private val _enabled = MutableStateFlow(store.enabled)
   private val _exitGesture = MutableStateFlow(store.exitGestureTypeValue)
+  private val _suppressNotifications = MutableStateFlow(store.suppressNotifications)
 
   private val selectedRecipientIdFlow = _selectedRecipientId.asStateFlow()
   private val enabledFlow = _enabled.asStateFlow()
   private val exitGestureFlow = _exitGesture.asStateFlow()
+  private val suppressNotificationsFlow = _suppressNotifications.asStateFlow()
 
   private val selectedThreadIdFlow: Flow<Long?> = selectedRecipientIdFlow.mapLatest { rid ->
     if (rid == null) return@mapLatest null
@@ -155,8 +163,8 @@ class AccessibilityModeSettingsViewModel(
       .onEach { exists -> if (exists) everExistedForRecipient.value = true }
       .launchIn(viewModelScope)
 
-    // Drive UI state from combined sources.
-    combine(
+    // Drive UI state from combined sources in two steps to keep overloads explicit.
+    val baseStateFlow = combine(
       conversationsFlow,
       selectedThreadIdFlow,
       selectedRecipientIdFlow,
@@ -167,6 +175,11 @@ class AccessibilityModeSettingsViewModel(
       val canEnable = hasSelection
       val effectiveEnabled = en && canEnable
       AccessibilitySettingsUiState(conversations, selThread, canEnable, effectiveEnabled, gesture)
+    }
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccessibilitySettingsUiState())
+
+    combine(baseStateFlow, suppressNotificationsFlow) { base, suppress ->
+      base.copy(suppressNotifications = suppress)
     }
       .onEach { _ui.value = it }
       .launchIn(viewModelScope)
@@ -197,6 +210,11 @@ class AccessibilityModeSettingsViewModel(
   fun onChangeGesture(typeValue: Int) {
     _exitGesture.value = typeValue
     store.exitGestureTypeValue = typeValue
+  }
+
+  fun onSetSuppressNotifications(enabled: Boolean) {
+    _suppressNotifications.value = enabled
+    store.suppressNotifications = enabled
   }
 
 }
