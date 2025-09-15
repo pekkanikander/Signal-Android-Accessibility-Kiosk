@@ -14,6 +14,9 @@ import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.database.ThreadTable
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import org.thoughtcrime.securesms.database.model.ThreadRecord
 
 // Small store wrapper to make testing easier
 interface AccessibilityModeStore {
@@ -77,6 +80,15 @@ class AccessibilityModeSettingsViewModel(
       SignalDatabase.threads.getThreadIdIfExistsFor(rid)
     }
   }
+
+  // Expose the selected thread's record (null if thread does not yet exist). No creation here.
+  val selectedThreadRecord: StateFlow<ThreadRecord?> =
+    selectedThreadIdFlow
+      .mapLatest { id ->
+        if (id == null) return@mapLatest null
+        withContext(Dispatchers.IO) { SignalDatabase.threads.getThreadRecord(id) }
+      }
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
   // Track whether a thread has ever existed for the current recipient (to detect deletions)
   private val everExistedForRecipient = MutableStateFlow(false)

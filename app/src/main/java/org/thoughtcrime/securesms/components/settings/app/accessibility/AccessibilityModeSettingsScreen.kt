@@ -1,23 +1,6 @@
 package org.thoughtcrime.securesms.components.settings.app.accessibility
 
 import android.view.LayoutInflater
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.bumptech.glide.Glide
-import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.thoughtcrime.securesms.BindableConversationListItem
-import org.thoughtcrime.securesms.conversationlist.model.ConversationSet
-import org.thoughtcrime.securesms.database.SignalDatabase
-import org.thoughtcrime.securesms.database.model.ThreadRecord
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,8 +13,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.bumptech.glide.Glide
+import java.util.Locale
+import org.thoughtcrime.securesms.BindableConversationListItem
+import org.thoughtcrime.securesms.conversationlist.model.ConversationSet
+import org.thoughtcrime.securesms.database.model.ThreadRecord
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import org.signal.core.ui.compose.Scaffolds
@@ -40,6 +30,7 @@ import org.thoughtcrime.securesms.R
 @Composable
 fun AccessibilityModeSettingsScreen(
   ui: AccessibilitySettingsUiState,
+  record: ThreadRecord?,
   callbacks: AccessibilityModeSettingsCallbacks
 ) {
   Scaffolds.Settings(
@@ -92,6 +83,7 @@ fun AccessibilityModeSettingsScreen(
         ConversationSelectionRow(
           items = ui.conversations,
           selectedId = ui.selectedThreadId,
+          record = record,
           onClick = callbacks::onLaunchPicker
         )
       }
@@ -148,7 +140,7 @@ fun AccessibilityModeSettingsScreen(
 }
 
 @Composable
-private fun ConversationSelectionRow(items: List<Long>, selectedId: Long?, onClick: () -> Unit) {
+private fun ConversationSelectionRow(items: List<Long>, selectedId: Long?, record: ThreadRecord?, onClick: () -> Unit) {
   when {
     items.isEmpty() ->
       ListItem(
@@ -163,35 +155,21 @@ private fun ConversationSelectionRow(items: List<Long>, selectedId: Long?, onCli
       )
 
     else -> SelectedConversationExactRow(
-      threadId = selectedId,
+      record = record,
       onClick = onClick
     )
   }
 }
 
-
 @Composable
-private fun SelectedConversationExactRow(threadId: Long, onClick: () -> Unit) {
-  val context = LocalContext.current
+private fun SelectedConversationExactRow(record: ThreadRecord?, onClick: () -> Unit) {
   val lifecycleOwner = LocalLifecycleOwner.current
 
-  var record: ThreadRecord? by remember(threadId) { mutableStateOf<ThreadRecord?>(null) }
-
-  LaunchedEffect(threadId) {
-    record = withContext(Dispatchers.IO) {
-      SignalDatabase.threads.getThreadRecord(threadId)
-    }
-  }
-
-  val fallback: @Composable () -> Unit = {
+  if (record == null) {
     ListItem(
-      headlineContent = { Text(stringResource(R.string.acc_mode_chat_selected_id, threadId)) },
+      headlineContent = { Text(stringResource(R.string.acc_mode_select_chat)) },
       modifier = Modifier.clickable(onClick = onClick)
     )
-  }
-
-  if (record == null) {
-    fallback()
     return
   }
 
@@ -211,7 +189,7 @@ private fun SelectedConversationExactRow(threadId: Long, onClick: () -> Unit) {
       val item = view as BindableConversationListItem
       item.bind(
         lifecycleOwner,
-        record!!,
+        record,
         Glide.with(view),
         Locale.getDefault(),
         emptySet<Long>(),

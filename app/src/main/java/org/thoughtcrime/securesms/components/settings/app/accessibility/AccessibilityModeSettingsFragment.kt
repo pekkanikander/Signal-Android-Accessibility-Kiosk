@@ -29,10 +29,12 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
   @Composable
   override fun FragmentContent() {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val record by viewModel.selectedThreadRecord.collectAsStateWithLifecycle()
     val callbacks = Callbacks()
 
     AccessibilityModeSettingsScreen(
       ui = ui,
+      record = record,
       callbacks = callbacks
     )
   }
