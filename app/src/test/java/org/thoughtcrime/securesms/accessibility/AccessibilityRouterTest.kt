@@ -22,7 +22,12 @@ import org.thoughtcrime.securesms.recipients.RecipientId
  * Router behaviour tests against AccessibilityModeRouter.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.TestApplication::class)
+@Config(
+  sdk = [28],
+  manifest = Config.NONE,
+  application = org.thoughtcrime.securesms.testing.TestApplication::class,
+  shadows = [org.thoughtcrime.securesms.testing.ShadowSqlCipherLibraryLoader::class]
+)
 class AccessibilityRouterTest {
 
   private class TestStore(var enabled: Boolean, var rid: RecipientId?) : AccessibilityModeStore {
