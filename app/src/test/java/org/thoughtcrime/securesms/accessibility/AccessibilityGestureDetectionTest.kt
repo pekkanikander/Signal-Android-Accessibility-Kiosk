@@ -36,7 +36,7 @@ class AccessibilityGestureDetectionTest {
         mockkObject(SignalStore)
         val mockAccessibilityValues = mockk<org.thoughtcrime.securesms.keyvalue.AccessibilityModeValues>(relaxed = true)
         // Provide a mutable backing for mocked properties so tests can set/get values normally
-        var currentExitGesture = org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD.value
+        var currentExitGesture = org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD.value
         every { mockAccessibilityValues.exitGestureType } answers { currentExitGesture }
         every { mockAccessibilityValues.exitGestureType = any() } answers { currentExitGesture = it.invocation.args[0] as Int }
         every { mockAccessibilityValues.exitGestureHoldMs } returns 2500
@@ -99,9 +99,7 @@ class AccessibilityGestureDetectionTest {
         // Given: Different gesture types are configured
         val gestureTypes = listOf(
             AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG,
-            AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD,
-            AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD,
-            AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD
+            AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD
         )
 
         // When/Then: Each gesture type should be properly configured
