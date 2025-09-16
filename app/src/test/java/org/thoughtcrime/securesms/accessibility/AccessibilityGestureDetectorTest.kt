@@ -148,6 +148,7 @@ class AccessibilityGestureDetectorTest {
     fake.advanceTimeTo(start + 700)
 
     assertFalse("third pointer should cancel two-finger hold", fake.triggered)
+    assertEquals(0, fake.triggerCount)
   }
 
   @Test
@@ -169,6 +170,7 @@ class AccessibilityGestureDetectorTest {
 
     // no new ticks after cancellation
     assertEquals("no additional haptic ticks after cancellation", ticksBefore, fake.hapticTickCount)
+    assertEquals(0, fake.triggerCount)
   }
 
   @Test
@@ -190,6 +192,7 @@ class AccessibilityGestureDetectorTest {
     // and the hold can still complete if we advance past hold duration
     fake.advanceTimeTo(start + 1200)
     assertTrue("hold should still be able to complete after state version change", fake.triggered)
+    assertEquals(1, fake.triggerCount)
   }
 }
 
