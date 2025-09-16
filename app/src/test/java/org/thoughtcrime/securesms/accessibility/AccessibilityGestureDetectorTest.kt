@@ -4,12 +4,6 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.thoughtcrime.securesms.keyvalue.AccessibilityModeValues
-import org.thoughtcrime.securesms.keyvalue.SignalStore
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.verify
 
 /**
  * Pure-JVM unit tests that assert the high-level behavior of the gesture detector
