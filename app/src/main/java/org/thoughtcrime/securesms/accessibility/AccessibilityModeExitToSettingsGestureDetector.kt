@@ -105,10 +105,74 @@ class AccessibilityModeExitToSettingsGestureDetector(
     return headerBoundsInset().contains(event.getX(i).toInt(), event.getY(i).toInt())
   }
 
-  // Scheduling infra with versioning to invalidate stale lambdas
+  // Scheduling infra with versioning to invalidate stale callbacks
   private val mainHandler = Handler(Looper.getMainLooper())
-  private val scheduledRunnables: MutableList<Runnable> = mutableListOf()
-  private var stateVersion = 0L  // stateVersion++ to invalidate stale lambdas
+  private var stateVersion = 0L  // stateVersion++ to invalidate stale callbacks
+
+  /**
+   * Centralized versioned scheduler. Any task scheduled through this helper will
+   * be a no-op if the [stateVersion] has changed since scheduling.
+   */
+  private inner class VersionedScheduler(
+    private val handler: Handler,
+    private val versionProvider: () -> Long,
+  ) {
+    private val entries: MutableList<Runnable> = mutableListOf()
+
+    fun schedule(delayMs: Long, action: () -> Unit) {
+      val myVersion = versionProvider()
+      val r = object : Runnable {
+        override fun run() {
+          if (myVersion != versionProvider()) return
+          try { action() } finally { entries.remove(this) }
+        }
+      }
+      entries.add(r)
+      handler.postDelayed(r, delayMs)
+    }
+
+    fun schedule(delayMs: Long, runnable: Runnable) {
+      val myVersion = versionProvider()
+      val proxy = object : Runnable {
+        override fun run() {
+          if (myVersion != versionProvider()) return
+          try { runnable.run() } finally { entries.remove(this) }
+        }
+      }
+      entries.add(proxy)
+      handler.postDelayed(proxy, delayMs)
+    }
+
+    fun cancelAll() {
+      entries.forEach { handler.removeCallbacks(it) }
+      entries.clear()
+    }
+  }
+
+  private val scheduler = VersionedScheduler(mainHandler) { stateVersion }
+
+  /**
+   * Haptics controller. Starts periodic ticks while the supplied [isActive] remains true,
+   * and automatically stops when the scheduler invalidates entries (outer state change)
+   * or when [isActive] returns false inside a tick.
+   */
+  private inner class HapticsController(private val onTick: () -> Unit) {
+    fun start(firstDelayMs: Long, intervalMs: Long, isActive: () -> Boolean) {
+      val tick = object : Runnable {
+        override fun run() {
+          if (!isActive()) return
+          try {
+            onTick()
+          } finally {
+            scheduler.schedule(intervalMs, this)
+          }
+        }
+      }
+      scheduler.schedule(firstDelayMs, tick)
+    }
+  }
+
+  private val haptics = HapticsController { hapticTick() }
 
   // Event-consumption: once we engage a gesture (enter an Active state),
   // we consume the rest of the stream until the final UP/CANCEL.
@@ -116,22 +180,13 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private var currentTouchView: View? = null
 
   private fun scheduleRunnable(delayMs: Long, runnable: Runnable) {
-    scheduledRunnables.add(runnable)
-    mainHandler.postDelayed(runnable, delayMs)
+    scheduler.schedule(delayMs, runnable)
   }
   private fun scheduleRunnable(delayMs: Long, action: () -> Unit) {
-    val myVersion = stateVersion
-    val r = object : Runnable {
-      override fun run() {
-        if (myVersion != stateVersion) return
-        try { action() } finally { scheduledRunnables.remove(this) }
-      }
-    }
-    scheduleRunnable(delayMs, r)
+    scheduler.schedule(delayMs, action)
   }
   private fun cancelScheduledRunnables() {
-    scheduledRunnables.forEach { mainHandler.removeCallbacks(it) }
-    scheduledRunnables.clear()
+    scheduler.cancelAll()
   }
 
   // --- Haptics --------------------------------------------------------------
@@ -334,18 +389,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
     }
 
     protected fun startHapticsLoop(firstDelayMs: Long, intervalMs: Long, expectedState: State) {
-      val tick = object : Runnable {
-        override fun run() {
-          if (state !== expectedState) return
-          try {
-            Log.d(TAG, "TWO_FINGER: haptic tick")
-            hapticTick()
-          } finally {
-            scheduleRunnable(intervalMs, this)
-          }
-        }
-      }
-      scheduleRunnable(firstDelayMs, tick)
+      haptics.start(firstDelayMs, intervalMs) { state === expectedState }
     }
 
     override fun handlePointerUp(event: MotionEvent) {
