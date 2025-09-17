@@ -1,29 +1,41 @@
-# Signal Android - Care Mode
 
-Signal — Care mode is a simplified Signal UX for congnitively challenged users.
+# Signal Android — Care Mode *(Unofficial fork; aiming toward an upstream PR)*
 
-Signal – Care Mode is a Signal feature that provides a **simplified, single-conversation experience**
-for users with reduced cognitive capacity (elderly, dementia, etc.)
-while maintaining full Signal security and functionality.
+[![Status: Beta](https://img.shields.io/badge/status-beta-orange)](#) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![GitHub Release](https://img.shields.io/github/v/release/pekkanikander/Signal-Android-Accessibility-Kiosk?sort=semver)](https://github.com/pekkanikander/Signal-Android-Accessibility-Kiosk/releases)
 
-> The original upstream Signal Android README is preserved as **`README-SIGNAL.md`**.
+*A one-conversation, high-contrast Signal experience for people who benefit from a simpler messenger (e.g., memory or attention difficulties).
+Security and end-to-end encryption remain exactly the same as Signal.*
+
+> **Status:** Early beta — suitable for limited trials on trusted devices. Expect rough edges. Releases coming soon.
+> **Upstream:** Not affiliated with Signal Messenger, LLC. The original README is preserved as [`README-signal.md`](./README-signal.md).
+> **Naming:** In the app this feature currently appears as **Accessibility Mode**; in this README we call it **Care Mode**.
 
 ---
 
 ## For Caregivers & Family Members
 
-### What is Signal Care Mode?
+## What is Care Mode?
 
-Signal Care Mode transforms Signal into a very **simple messaging app** for your loved one.
-Instead of seeing all many conversations, they see only **one selected conversation** -
-typically with their primary caregiver or family member, or a group chat with a few people.
+Care Mode turns Signal into a **very simple messenger** that shows just **one selected conversation** (a person or a group).
+It hides the conversation list and most menus so your loved one can focus on the people who matter.
+
+### Why this exists
+- **Reduce cognitive load:** No popups, no toasta, no switching between many chats, only one screen
+- **Fewer accidental taps:** Large, clear controls; minimal UI
+- **Keep what matters:** Uses **existing Signal accounts, security, and contacts**
+
+### What it does today
+- Opens directly to **one preselected conversation**
+- Hides the chat list and most app chrome, including settings
+- Large buttons for sending messages and (on supported devices) recording voice notes
 
 ### How It Works
 
 1. **Setup**: You enable Care Mode in Signal Settings and select which conversation to show
 2. **Simplified Interface**: Your loved one sees only their conversation - no complex menus, popups, or multiple chats
-3. **Easy Communication**: Large, clear buttons for sending messages and voice notes
+3. **Easy Communication**: Large, clear buttons for sending messages and voice notes (TBD)
 4. **No Confusion**: No back buttons, settings, popups, or other apps to accidentally tap
+5. **Hard-to-perform gesture to exit**: Prevents unintentional exit from the Care Mode.
 
 ### Key Benefits
 
@@ -32,24 +44,31 @@ typically with their primary caregiver or family member, or a group chat with a 
 - **Familiar Technology**: Works with existing Signal contacts and groups
 - **Easy Setup**: Simple toggle in Signal settings
 
-### Getting Started
+## Privacy & Security
 
-1. Open Signal on your loved one's device
+- **Unchanged Signal security model:** end-to-end encryption, no alternate servers, no analytics
+- **Same account and keys:** this is a UI mode, not a new app or service
+
+## Quick start (for caregivers & family)
+
+1. Open Signal on the assisted user's device
 2. Go to **Settings** → **Accessibility Mode**
 3. Select the conversation you want them to see
 4. Select **Enable Accessibility Mode**
 5. Exit Settings - Signal will switch to Care Mode
-6. Your loved one can now use the simplified interface
+6. Your assisted user can now use the simplified interface
 
 ### Customization
 
-You can adjust, using the baseline Signal settings:
-- **Text size** for better readability
-- **Theme** for dark, light, or dynamic
-New settings, to be implemented:
-- **Contrast** for visual clarity
-- **Touch sensitivity** for easier interaction
-- **Voice note settings** for audio communication
+**Available now (using standard Signal / system settings):**
+- Text size (system display settings)
+- Theme (light / dark / dynamic)
+
+**Planned additions:**
+- Higher-contrast presets
+- Touch-target and sensitivity options
+- Refined voice-note controls
+
 
 ### Exiting Care Mode
 
@@ -65,12 +84,23 @@ Then, confirm that you want to exit accessibility mode.
 
 The exit gesture can be changed at **Settings** → **Accessibility Mode** → **Advanced...**
 
+## Get it / Try it
+
+**Binary releases coming soon.**
+
+- Clone this repo and compile the APK yourself.
+- Enable developer mode in your phone.
+- Install the compiled APK with `adb`.
+
+- Soon: Download builds from this fork’s **GitHub Releases**. *(Unofficial; not from Signal.)*
+- You may need to enable **Install unknown apps** on Android to sideload.
+
+- If you want standard Signal, see **`README-signal.md`**. Don't use this repo.
 
 ## Goals
 
 - **One conversation only**: App opens directly into a preselected conversation
 - **Simplified interface**: Large, high-contrast controls; no complex navigation
-- **Essential actions only**: Send/receive text; later maybe record/send voice notes
 - **Low cognitive load**: Removes surprises and interaction traps
 - **Maintains Signal security**: No changes to protocol, registration, or cryptography
 
@@ -82,7 +112,7 @@ The exit gesture can be changed at **Settings** → **Accessibility Mode** → *
 
 ## License
 
-This fork remains open-source under the same license as the upstream project. See upstream license files for details.
+**License:** Same as upstream (AGPLv3). See upstream license files.
 
 ## Acknowledgements
 
