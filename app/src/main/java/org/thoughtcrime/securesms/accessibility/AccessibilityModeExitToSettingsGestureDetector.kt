@@ -23,7 +23,8 @@ import androidx.annotation.MainThread
 
 /**
  * Detector for Accessibility Mode exit gestures.
- * Production: two-finger header hold. Debug: triple-tap header.
+ * Production: two-finger header hold, TBD.
+ * Debug: triple-tap header.
  */
 class AccessibilityModeExitToSettingsGestureDetector(
   private val context: Context,
@@ -41,7 +42,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
   // --- Configuration (lazy to pick up live values from SignalStore) ---------
   private val holdDurationMs:       Int by lazy { SignalStore.accessibilityMode.exitGestureHoldMs }
-  private val driftTolerancePx:   Float by lazy { context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitGestureDriftDp }
+  private val driftTolerancePx:   Float by lazy {  context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitGestureDriftDp }
   private val headerDeadzonePx:     Int by lazy { (context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitHeaderDeadzoneDp).toInt() }
   private val headerExtraBottomPx:  Int by lazy { (context.resources.displayMetrics.density * SignalStore.accessibilityMode.exitHeaderExtraBottomDp).toInt() }
   private val pointerTimeoutMs:     Int by lazy { SignalStore.accessibilityMode.exitGesturePointerTimeoutMs }
@@ -57,18 +58,18 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private fun now(): Long = SystemClock.uptimeMillis()
   private val driftToleranceSq: Float by lazy { driftTolerancePx * driftTolerancePx }
 
-  // Pointer state for two-finger and triple-tap gestures, seeded from MotionEvent
+  // Pointer state for gestures, seeded from MotionEvent
   private class PointerState {
-    var id: Int = -1
-    var downTime: Long = 0L
-    val start: PointF = PointF()
-    fun setStart(event: MotionEvent) {
+    var id: Int = -1                                // pointer id
+    var downTime: Long = 0L                         // pointer down time
+    val start: PointF = PointF()                    // pointer down position
+    fun setStart(event: MotionEvent) {              // set pointer state from MotionEvent
       val idx = event.actionIndex
       id = event.getPointerId(idx);
       downTime = event.getEventTime()
       start.set(event.getX(idx), event.getY(idx))
     }
-    fun clear() {
+    fun clear() {                                    // clear pointer state
       id = -1;
       downTime = 0L;
       start.set(0f, 0f)
@@ -78,13 +79,13 @@ class AccessibilityModeExitToSettingsGestureDetector(
   // --- Gesture contexts (per-family, mutable) --------------------------------
   private open class GestureCtx
   private class TwoFingerCtx : GestureCtx() {
-    val first  = PointerState()
-    val second = PointerState()
+    val first  = PointerState()                     // state of the first finger in two-finger gesture
+    val second = PointerState()                     // state of the second finger in two-finger gesture
     fun clear() { first.clear(); second.clear() }
   }
   private class TripleTapCtx : GestureCtx() {
-    val start: PointF = PointF()
-    var lastTapTime: Long = 0L
+    val start: PointF = PointF()                    // start position of the triple-tap gesture
+    var lastTapTime: Long = 0L                      // time of the last tap in the triple-tap gesture
     fun setStart(event: MotionEvent) {
       start.set(event.getX(event.actionIndex),
       event.getY(event.actionIndex))
@@ -93,12 +94,6 @@ class AccessibilityModeExitToSettingsGestureDetector(
     fun clear() { start.set(0f, 0f); lastTapTime = 0L }
   }
 
-  // Shared gesture contexts (one per detector instance)
-  private val twoCtx = TwoFingerCtx()
-  private val triCtx = TripleTapCtx()
-
-  // Triple-tap anchors & timing
-  private var gestureStartTime = 0L
 
   // Convenience: is the current action point inside the (inset) header?
   private fun isActionInHeader(event: MotionEvent): Boolean {
@@ -108,6 +103,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
   // Scheduling infra with versioning to invalidate stale callbacks
   private val mainHandler = Handler(Looper.getMainLooper())
+  // XXX: Move inside VersionedScheduler?
   private var stateVersion = 0L  // stateVersion++ to invalidate stale callbacks
 
   /**
@@ -120,67 +116,92 @@ class AccessibilityModeExitToSettingsGestureDetector(
   ) {
     private val entries: MutableList<Runnable> = mutableListOf()
 
-    fun schedule(delayMs: Long, action: () -> Unit) {
+    fun schedule(delayMs: Long, action: () -> Unit): Runnable {
+      return schedule(delayMs, action, { true })
+    }
+    fun schedule(delayMs: Long, action: () -> Unit, predicate: () -> Boolean) : Runnable {
+      return schedule(delayMs, 0L, action, predicate)
+    }
+    fun schedule(firstDelayMs: Long, interval: Long, action: () -> Unit, predicate: () -> Boolean) : Runnable {
       val myVersion = versionProvider()
-      val r = object : Runnable {
+      val runnable = object : Runnable {
         override fun run() {
-          if (myVersion != versionProvider()) return
-          try { action() } finally { entries.remove(this) }
+          try {
+            if (myVersion == versionProvider() && predicate()) {
+              action()
+            }
+          } finally {
+            if (myVersion == versionProvider() && predicate() && interval > 0) {
+              handler.postDelayed(this, interval)
+            } else {
+              entries.remove(this)
+            }
+          }
         }
       }
-      entries.add(r)
-      handler.postDelayed(r, delayMs)
+      entries.add(runnable)
+      handler.postDelayed(runnable, firstDelayMs)
+      return runnable
     }
 
-    fun schedule(delayMs: Long, runnable: Runnable) {
-      val myVersion = versionProvider()
-      val proxy = object : Runnable {
-        override fun run() {
-          if (myVersion != versionProvider()) return
-          try { runnable.run() } finally { entries.remove(this) }
-        }
-      }
-      entries.add(proxy)
-      handler.postDelayed(proxy, delayMs)
+    /** Cancel a specific Runnable. */
+    fun cancel(runnable: Runnable?) {
+      if (runnable == null) return
+      handler.removeCallbacks(runnable)
+      entries.remove(runnable)
     }
 
+    /* Cancel all scheduled runnables. */
     fun cancelAll() {
       entries.forEach { handler.removeCallbacks(it) }
       entries.clear()
+    }
+
+    /** Convenience helper to schedule a cancellation of the current gesture. */
+    fun scheduleCancelGestureAt(delayMs: Long) {
+      schedule(delayMs, { cancelGesture() }, { true })
+    }
+
+    /** Schedule a conditional cancellation; predicate is evaluated when the Runnable runs. */
+    fun scheduleCancelGestureAt(delayMs: Long, predicate: () -> Boolean) {
+      schedule(delayMs, { cancelGesture() }, predicate)
     }
   }
 
   private val scheduler = VersionedScheduler(mainHandler) { stateVersion }
 
   /**
-   * Haptics controller. Starts periodic ticks while the supplied [isActive] remains true,
-   * and automatically stops when the scheduler invalidates entries (outer state change)
-   * or when [isActive] returns false inside a tick.
+   * Haptics controller. Owns haptic effects and schedules periodic ticks while
+   * [predicate] remains true. It uses the detector's scheduler so ticks are
+   * versioned and cancelled automatically on state changes.
    */
-  private inner class HapticsController(private val onTick: () -> Unit) {
-    fun start(firstDelayMs: Long, intervalMs: Long, isActive: () -> Boolean) {
-      val tick = object : Runnable {
-        override fun run() {
-          if (!isActive()) return
-          try {
-            onTick()
-          } finally {
-            scheduler.schedule(intervalMs, this)
-          }
-        }
-      }
-      scheduler.schedule(firstDelayMs, tick)
+  private inner class HapticsController {
+    var tick: Runnable? = null
+    fun start(firstDelayMs: Long, interval: Long, predicate: () -> Boolean) {
+      tick = scheduler.schedule(firstDelayMs, interval, {
+        currentTouchView?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+      }, predicate)
     }
-    fun stop() {
-      scheduler.cancelAll()
+    fun confirm() {
+      if (Build.VERSION.SDK_INT >= 30) {
+        currentTouchView?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+      } else {
+        currentTouchView?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+      }
+      scheduler.cancel(tick)
+      tick = null
+    }
+    fun reject() {
+      scheduler.cancel(tick)
+      tick = null
     }
   }
 
-  private val haptics = HapticsController { hapticTick() }
+  private val haptics = HapticsController()
 
   // --- Outer state machine ---------------------------------------------------
   private sealed class OuterState {
-    object Idle : OuterState()
+    object Idle      : OuterState()
     object Detecting : OuterState()
     object Completed : OuterState()
     object Cancelled : OuterState()
@@ -191,31 +212,6 @@ class AccessibilityModeExitToSettingsGestureDetector(
   // we consume the rest of the stream until the final UP/CANCEL.
   private var consumeStream = false
   private var currentTouchView: View? = null
-
-  private fun scheduleRunnable(delayMs: Long, runnable: Runnable) {
-    scheduler.schedule(delayMs, runnable)
-  }
-  private fun scheduleRunnable(delayMs: Long, action: () -> Unit) {
-    scheduler.schedule(delayMs, action)
-  }
-  private fun cancelScheduledRunnables() {
-    scheduler.cancelAll()
-  }
-
-  // --- Haptics --------------------------------------------------------------
-  private fun hapticTick() {
-    currentTouchView?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-  }
-  private fun hapticConfirm() {
-    if (Build.VERSION.SDK_INT >= 30) {
-      currentTouchView?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-    } else {
-      currentTouchView?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-    }
-  }
-  private fun hapticReject() {
-    // Silent, no haptic feedback
-  }
 
   // Geometry helpers
   private fun headerBoundsInset(): Rect {
@@ -231,7 +227,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
 
   // --- State pattern ---------------------------------------------------------
   // Singleton state instances (per detector instance)
-  private val idleState               = Idle()
+  private val idleState                = Idle()
   private val tripleTapWaitSecondState = TripleTapWaitSecond()
   private val tripleTapWaitThirdState  = TripleTapWaitThird()
   private val twoFingerFirstDownState  = TwoFingerFirstDown()
@@ -255,12 +251,12 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private abstract inner class State {
     open fun onEnter(event: MotionEvent?) {}
     open fun onExit() {}
-    open fun handleActionDown(event: MotionEvent) {}
+    open fun handleActionDown( event: MotionEvent) {}
     open fun handlePointerDown(event: MotionEvent) {}
-    open fun handleMove(event: MotionEvent) {}
-    open fun handlePointerUp(event: MotionEvent) {}
-    open fun handleActionUp(event: MotionEvent) {}
-    open fun handleCancel(event: MotionEvent) {}
+    open fun handleMove(       event: MotionEvent) {}
+    open fun handlePointerUp(  event: MotionEvent) {}
+    open fun handleActionUp(   event: MotionEvent) {}
+    open fun handleCancel(     event: MotionEvent) {}
   }
 
   // Active states consume the touch stream while engaged
@@ -279,15 +275,15 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   private inner class Cancelled : Active() {
-    override fun onEnter(event: MotionEvent?) {
+    override fun onEnter(          event: MotionEvent?) {
+      haptics.reject()
       super.onEnter(event)
-      hapticReject()
     }
-    override fun handleActionDown(event: MotionEvent) {}
+    override fun handleActionDown( event: MotionEvent) {}
     override fun handlePointerDown(event: MotionEvent) {}
-    override fun handleMove(event: MotionEvent) {}
-    override fun handlePointerUp(event: MotionEvent) { /* ignore non-final UPs */ }
-    override fun handleActionUp(event: MotionEvent) {
+    override fun handleMove(       event: MotionEvent) {}
+    override fun handlePointerUp(  event: MotionEvent) { /* ignore non-final UPs */ }
+    override fun handleActionUp(   event: MotionEvent) {
       consumeStream = false
       setState(idleState, event)
       outerState = OuterState.Idle
@@ -295,15 +291,15 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   private inner class Completed : Active() {
-    override fun onEnter(event: MotionEvent?) {
+    override fun onEnter(          event: MotionEvent?) {
+      haptics.confirm()
       super.onEnter(event)
-      hapticConfirm()
     }
-      override fun handleActionDown(event: MotionEvent) {}
+    override fun handleActionDown( event: MotionEvent) {}
     override fun handlePointerDown(event: MotionEvent) {}
-    override fun handleMove(event: MotionEvent) {}
-    override fun handlePointerUp(event: MotionEvent) { /* ignore non-final UPs */ }
-    override fun handleActionUp(event: MotionEvent) {
+    override fun handleMove(       event: MotionEvent) {}
+    override fun handlePointerUp(  event: MotionEvent) { /* ignore non-final UPs */ }
+    override fun handleActionUp(   event: MotionEvent) {
       consumeStream = false
       setState(idleState, event)
       outerState = OuterState.Idle
@@ -315,12 +311,16 @@ class AccessibilityModeExitToSettingsGestureDetector(
     protected abstract val ctx: C
   }
 
+  // Per-detector gesture context (owned by the detector instance).
+  // Placed next to the family state definitions for locality.
+  // NOTE: shared between substates, but not shared between (potential) detector instances, hence not static.
+  private val triCtx = TripleTapCtx()
+
   private abstract inner class TripleTap : InnerState<TripleTapCtx>() {
     override fun onExit() {
-      tri.clear()
+      ctx.clear()
     }
     override val ctx: TripleTapCtx get() = triCtx
-    protected val tri: TripleTapCtx get() = ctx
     protected val touchSlop: Int by lazy { ViewConfiguration.get(context).scaledTouchSlop }
     protected val touchSlopSq: Float by lazy { (touchSlop * touchSlop).toFloat() }
 
@@ -331,8 +331,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
     override fun handleMove(event: MotionEvent) {
       // Only one pointer is allowed in triple-tap; jitter tolerance by slop
       val idx = event.actionIndex
-      val dx = event.getX(idx) - tri.start.x
-      val dy = event.getY(idx) - tri.start.y
+      val dx = event.getX(idx) - ctx.start.x
+      val dy = event.getY(idx) - ctx.start.y
       if ((dx * dx + dy * dy) > touchSlopSq) {
         cancelGesture(event)
       }
@@ -342,13 +342,14 @@ class AccessibilityModeExitToSettingsGestureDetector(
     }
   }
 
+  // NOTE: not shared between (potential) detector instances, hence not static.
+  private val twoCtx = TwoFingerCtx()
+
   private abstract inner class TwoFingers : InnerState<TwoFingerCtx>() {
     override fun onExit() {
       ctx.clear()
     }
     override val ctx: TwoFingerCtx get() = twoCtx
-    protected fun firstIndex(event: MotionEvent): Int = event.findPointerIndex(ctx.first.id)
-    protected fun secondIndex(event: MotionEvent): Int = event.findPointerIndex(ctx.second.id)
 
     override fun handlePointerDown(event: MotionEvent) {
       // Any third pointer cancels the two-finger gesture
@@ -396,12 +397,8 @@ class AccessibilityModeExitToSettingsGestureDetector(
     }
 
     protected fun scheduleHoldCompletionFromFirst(now: Long, expectedState: State) {
-      val timeUntilHold = (ctx.first.downTime + holdDurationMs) - now
-      scheduleRunnable(kotlin.math.max(0L, timeUntilHold)) {
-        if (state === expectedState) {
-          completeGesture()
-        }
-      }
+      val timeUntilHold = maxOf(0L, (ctx.first.downTime + holdDurationMs) - now)
+      scheduler.schedule(timeUntilHold, { completeGesture() }, { state === expectedState })
     }
 
     protected fun startHapticsLoop(firstDelayMs: Long, intervalMs: Long, expectedState: State) {
@@ -421,24 +418,18 @@ class AccessibilityModeExitToSettingsGestureDetector(
   }
 
   // Individual gesture states ------------------------------------------------
+  // gestureStartTime removed: use captured seed times in scheduled runnables instead
 
   private inner class Idle : State() {
     override fun handleActionDown(event: MotionEvent) {
       if (!isActionInHeader(event)) return
-      val now = event.getEventTime()
 
-      gestureStartTime = now
-      // Timeout policy:
+      // Overall timeout policy:
       // - exitGestureTimeoutMs is a hard ceiling for any gesture attempt (safety net).
       // - tripleTapWindowMs bounds the total time for 3 taps; if set longer than exitGestureTimeoutMs,
       //   the overall timeout may pre-empt the triple-tap window; ditto for two fingers touch.
       // Overall safety window (8s by default)
-      scheduleRunnable(exitGestureTimeoutMs.toLong()) {
-        if (now() - gestureStartTime >= exitGestureTimeoutMs) {
-          Log.d(TAG, "Overall window timeout -> reset")
-          cancelGesture(event)
-        }
-      }
+      scheduler.scheduleCancelGestureAt(exitGestureTimeoutMs.toLong())
 
       when (currentGestureType()) {
         AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG -> {
@@ -446,20 +437,14 @@ class AccessibilityModeExitToSettingsGestureDetector(
           setState(tripleTapWaitSecondState, event)
           outerState = OuterState.Detecting
           // Overall triple-tap window still enforced here
-          scheduleRunnable(tripleTapWindowMs.toLong()) {
-            if (gestureStartTime != 0L && now() - gestureStartTime >= tripleTapWindowMs) {
-              Log.d(TAG, "TRIPLE_TAP: overall window timeout"); cancelGesture()
-            }
-          }
+          scheduler.scheduleCancelGestureAt(tripleTapWindowMs.toLong())
         }
         AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD -> {
           // Seed two-finger context with first pointer
           setState(twoFingerFirstDownState, event)
           outerState = OuterState.Detecting
           // Require second finger soon
-          scheduleRunnable(pointerTimeoutMs.toLong()) {
-            if (state === twoFingerFirstDownState) { Log.d(TAG, "TWO_FINGER: second finger timeout"); cancelGesture() }
-          }
+          scheduler.scheduleCancelGestureAt(pointerTimeoutMs.toLong(), { state === twoFingerFirstDownState })
         }
       }
     }
@@ -468,17 +453,13 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private inner class TripleTapWaitSecond : TripleTap() {
     override fun onEnter(event: MotionEvent?) {
       super.onEnter(event)
-      tri.setStart(requireNotNull(event) { "TripleTapWaitSecond requires MotionEvent seed" })
+      ctx.setStart(requireNotNull(event) { "TripleTapWaitSecond requires MotionEvent seed" })
       // Inter-tap timeout for the second tap
-      scheduleRunnable(tripleTapIntervalMs.toLong()) {
-        if (state === tripleTapWaitSecondState && now() - tri.lastTapTime >= tripleTapIntervalMs) {
-          Log.d(TAG, "TRIPLE_TAP: inter-tap timeout (second)"); cancelGesture()
-        }
-      }
+      scheduler.scheduleCancelGestureAt(pointerTimeoutMs.toLong(), { state === tripleTapWaitSecondState })
     }
     override fun handleActionDown(event: MotionEvent) {
       if (!isActionInHeader(event)) return
-      tri.lastTapTime = event.getEventTime()
+      ctx.lastTapTime = event.getEventTime()
       setState(tripleTapWaitThirdState, event)
     }
   }
@@ -486,11 +467,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private inner class TripleTapWaitThird : TripleTap() {
     override fun onEnter(event: MotionEvent?) {
       // Inter-tap timeout waiting for the third tap
-      scheduleRunnable(tripleTapIntervalMs.toLong()) {
-        if (state === tripleTapWaitThirdState && now() - tri.lastTapTime >= tripleTapIntervalMs) {
-          Log.d(TAG, "TRIPLE_TAP: inter-tap timeout (third)"); cancelGesture()
-        }
-      }
+      scheduler.scheduleCancelGestureAt(tripleTapIntervalMs.toLong(), { state === tripleTapWaitThirdState })
     }
     override fun handleActionDown(event: MotionEvent) {
       if (!isActionInHeader(event)) return
@@ -563,6 +540,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
    * Cancels timers and clears contexts, moves to a terminal Active state, then posts the trigger.
    */
   private fun completeGesture(event: MotionEvent? = null) {
+    // Explicitly stop haptics when detection ends
     resetState(completedState, event)
     // Use post to avoid re-entrancy during current dispatch; do not version-guard this.
     mainHandler.post { triggerGesture() } // XXX: Could go to CompletedState.onEnter()
@@ -574,6 +552,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
    * Cancels timers and clears contexts, then moves into a terminal Active state.
    */
   private fun cancelGesture(event: MotionEvent? = null) {
+    // Explicitly stop haptics when detection ends
     resetState(cancelledState, event)
     outerState = OuterState.Cancelled
   }
@@ -590,8 +569,7 @@ class AccessibilityModeExitToSettingsGestureDetector(
    * Note: Does not clear consumption; we keep consuming the current stream until UP/CANCEL.
    */
   private fun resetState(newState: State = idleState, event: MotionEvent? = null) {
-    cancelScheduledRunnables()
-    gestureStartTime = 0L
+    scheduler.cancelAll()
     setState(newState, event)
   }
 
