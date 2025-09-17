@@ -1,24 +1,130 @@
+# Signal Android - Care Mode
+
+Signal — Care mode is a simplified Signal UX for congnitively challenged users.
+
+Signal – Care Mode is a Signal feature that provides a **simplified, single-conversation experience**
+for users with reduced cognitive capacity (elderly, dementia, etc.)
+while maintaining full Signal security and functionality.
+
+> The original upstream Signal Android README is preserved as **`README-SIGNAL.md`**.
 
 ---
 
-# Care Mode — Optimal Intent Stack Architecture (Proposed Design)
+## For Caregivers & Family Members
 
-This section provides the requested deliverables: intent-stack designs per scenario, implementation code, state management, testing plan, edge-case handling, and performance notes. It assumes the current triad of activities (`MainActivity`, `AccessibilityModeActivity`, `AppSettingsActivity`) and aims for minimal, surgical changes.
+### What is Signal Care Mode?
 
-## Design Summary
+Signal Care Mode transforms Signal into a very **simple messaging app** for your loved one.
+Instead of seeing all many conversations, they see only **one selected conversation** -
+typically with their primary caregiver or family member, or a group chat with a few people.
+
+### How It Works
+
+1. **Setup**: You enable Care Mode in Signal Settings and select which conversation to show
+2. **Simplified Interface**: Your loved one sees only their conversation - no complex menus, popups, or multiple chats
+3. **Easy Communication**: Large, clear buttons for sending messages and voice notes
+4. **No Confusion**: No back buttons, settings, popups, or other apps to accidentally tap
+
+### Key Benefits
+
+- **Reduces Cognitive Load**: No complex navigation or multiple conversations
+- **Maintains Privacy**: Uses Signal's secure messaging protocol
+- **Familiar Technology**: Works with existing Signal contacts and groups
+- **Easy Setup**: Simple toggle in Signal settings
+
+### Getting Started
+
+1. Open Signal on your loved one's device
+2. Go to **Settings** → **Accessibility Mode**
+3. Select the conversation you want them to see
+4. Select **Enable Accessibility Mode**
+5. Exit Settings - Signal will switch to Care Mode
+6. Your loved one can now use the simplified interface
+
+### Customization
+
+You can adjust, using the baseline Signal settings:
+- **Text size** for better readability
+- **Theme** for dark, light, or dynamic
+New settings, to be implemented:
+- **Contrast** for visual clarity
+- **Touch sensitivity** for easier interaction
+- **Voice note settings** for audio communication
+
+### Exiting Care Mode
+
+To return to normal Signal:
+- Use the exit gesture to return to **Settings**
+- Go to **Accessibility Mode** → **Enable Accessibility Mode** and disable it
+
+#### Exit gestures
+
+The default exit gesture is two-finger hold on the upper conversation title.
+Keep two fingers on the title until you see a confirmation dialogue to appear.
+Then, confirm that you want to exit accessibility mode.
+
+The exit gesture can be changed at **Settings** → **Accessibility Mode** → **Advanced...**
+
+
+## Goals
+
+- **One conversation only**: App opens directly into a preselected conversation
+- **Simplified interface**: Large, high-contrast controls; no complex navigation
+- **Essential actions only**: Send/receive text; later maybe record/send voice notes
+- **Low cognitive load**: Removes surprises and interaction traps
+- **Maintains Signal security**: No changes to protocol, registration, or cryptography
+
+## Non-Goals
+
+- No changes to the Signal protocol, registration, servers, or cryptography
+- No alternative networks or bridges
+- No theming beyond what's required for clarity and accessibility
+
+## License
+
+This fork remains open-source under the same license as the upstream project. See upstream license files for details.
+
+## Acknowledgements
+
+Thanks to the Signal team for the upstream codebase and to the maintainers of related forks whose build and packaging practices informed this approach.
+
+For the upstream documentation and build notes, see **`README-SIGNAL.md`**.
+
+---
+
+## For Engineers
+
+### Technical Overview
+
+This implementation adds a **parallel accessibility interface** to Signal without modifying existing functionality.
+The approach maintains Signal's user experience and security model while providing a simplified user experience.
+All modifications to the Signal upstream baseline are attempted to be minimal.
+
+**Parallel Interface Design:**
+- New `AccessibilityModeActivity` and `AccessibilityModeFragment`
+- Reuses existing `ConversationViewModel`, `ConversationRepository`, and backend services
+- Zero changes to existing Signal functionality
+- Minimal patchset that rebases cleanly onto upstream
+
+**Component Reuse Strategy:**
+- **Existing**: Message handling, crypto, network, storage, conversation logic
+- **New**: Accessibility UI, simplified attachment handling, accessibility-specific navigation
+- **Minimal changes** to existing Signal code
+
+## Interface Design Summary — Android
 
 - Treat **Care Mode** as a **root-level mode** with its own root activity (`AccessibilityModeActivity`).
-- When toggling mode (either direction), **rebase the task**: start the new root with `NEW_TASK | CLEAR_TASK` and finish the old stack. This guarantees predictable Back/App Switcher behaviour and avoids ghost activities.
-- Do **not** rely on opportunistic redirects in random lifecycle callbacks. Centralise routing in a tiny `CareModeRouter` invoked only in:
+- When toggling mode (either direction), **rebase the task**:
+  - Start the new root with `NEW_TASK | CLEAR_TASK` and finish the old stack.
+    This guarantees predictable Back/App Switcher behaviour and avoids ghost activities.
+- Centralise routing in a tiny `AccessibilityModeRouter` invoked only in:
   - `MainActivity.onStart()`
   - `AccessibilityModeActivity.onStart()`
-  - Immediately after a toggle in `AppSettingsActivity` (to rebase proactively)
 - Keep all other flows (notifications, deeplinks) funneled through a single router method so they respect Care Mode.
-
 
 ## Components
 
-- **CareModeStore**: persistent source of truth `{ enabled: Boolean, threadId: Long? }` (backed by existing `SignalStore.accessibilityMode`).
+- **AccessibilityModeStore**: persistent source of truth `{ enabled: Boolean, threadId: Long? }` (backed by existing `SignalStore.accessibilityMode`).
 - **CareModeRouter**: centralises all routing decisions and task-rebasing.
 - **IntentFactory**: creates intents with the correct flags/extras for both modes.
 
@@ -74,20 +180,20 @@ Same as Scenario 1 → ends with `[`AccessibilityModeActivity (root)`]`.
 
 ## Code Implementation
 
-### 1) CareModeState & Store
+### 1) AccessibilityModeState & Store
 ```kotlin
 @Immutable
-data class CareModeState(val enabled: Boolean, val threadId: Long?)
+data class AccessibilityModeState(val enabled: Boolean, val threadId: Long?)
 
-interface CareModeStore {
-    fun state(): Flow<CareModeState>
-    fun current(): CareModeState // synchronous read (cached)
+interface AccessibilityModeStore {
+    fun state(): Flow<AccessibilityModeState>
+    fun current(): AccessibilityModeState // synchronous read (cached)
     fun setEnabled(enabled: Boolean, threadId: Long?): Unit
 }
 
-class SignalCareModeStore(private val signalStore: SignalStore) : CareModeStore {
-    override fun state(): Flow<CareModeState> = signalStore.accessibilityMode.stateFlow()
-    override fun current(): CareModeState = signalStore.accessibilityMode.read()
+class SignalCareModeStore(private val signalStore: SignalStore) : AccessibilityModeStore {
+    override fun state(): Flow<AccessibilityModeState> = signalStore.accessibilityMode.stateFlow()
+    override fun current(): AccessibilityModeState = signalStore.accessibilityMode.read()
     override fun setEnabled(enabled: Boolean, threadId: Long?) =
         signalStore.accessibilityMode.write(enabled, threadId)
 }
