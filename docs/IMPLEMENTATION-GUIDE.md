@@ -93,15 +93,9 @@ app/src/main/java/org/thoughtcrime/securesms/
 │   ├── AccessibilityModeExitConfirmationDialog.kt         # Exit confirmation dialog
 ├── components/settings/app/accessibility/
 │   ├── AccessibilityModeSettingsFragment.kt  # Settings UI
-│   ├── AccessibilityModeSettingsScreen.kt    # Compose UI
 │   ├── AccessibilityModeSettingsViewModel.kt # Settings logic
 │   ├── AccessibilityModeSettingsState.kt     # Settings state
-│   ├── AccessibilityModeSettingsCallbacks.kt # Settings callbacks
-│   ├── AccessibilityModeSettingsTestTags.kt  # Test tags (UI)
 │   ├── ChatSelectionFragment.kt              # Conversation picker
-│   ├── ChatSelectionScreen.kt                # Picker UI
-│   ├── ChatSelectionViewModel.kt             # Picker logic
-│   └── ChatSelectionTestTags.kt              # Test tags (picker)
 └── keyvalue/
     └── AccessibilityModeValues.kt            # Persistent storage
 ```

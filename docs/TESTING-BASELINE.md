@@ -44,9 +44,20 @@ Representative upstream examples (inspected)
 
 Recommended approach for accessibility tests
 ------------------------------------------
-1. Move algorithmic gesture/timing tests to pure-JVM fakes.
-2. Keep a single focused Robolectric test to verify View/Handler interactions; follow upstream patterns (use ApplicationProvider, rules/shadows, idle looper).
-3. Use `mockkObject` and existing `testutil` rules to isolate singletons.
+1. Algorithmic / store-backed tests (pure-JVM)
+   - All algorithmic or KeyValue-backed tests (timing/state machines, pure logic, and simple KV reads/writes) should be pure-JVM unit tests. Do not use Robolectric for these: mock singletons (e.g. `mockkObject(SignalStore)`) and keep tests fast and deterministic.
+
+2. Focused Robolectric integration tests (UI / notifier / handlers)
+   - Reserve Robolectric for tests that genuinely require Android framework behaviour (Context/Resources/Handler/NotificationManager interaction).
+   - When using Robolectric for these integration tests, follow upstream conventions exactly:
+     - Use the canonical test Application and dependency rule:
+       - `@Config(manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.TestApplication::class)`
+       - `@get:Rule val appDependencies = MockAppDependenciesRule()`
+     - Inject Android services and idle the main looper after posted work (e.g. `Shadows.shadowOf(Looper.getMainLooper()).idle()`).
+     - Prefer test shadows for native/encrypted loaders rather than editing production loader code.
+
+3. Mocking and singletons
+   - Mock singletons with MockK (`mockkObject(...)`) and provide the minimal fields/methods your test needs. For heavier integration tests touching `AppDependencies`, use `MockAppDependenciesRule` to control and clear global state.
 
 Next actions I can perform
 -------------------------
