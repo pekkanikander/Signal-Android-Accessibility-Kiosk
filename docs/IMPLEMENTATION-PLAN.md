@@ -50,6 +50,7 @@
 - [ ] Polish the final code: remove all smells and all too complex arithmetics
 
 ### **Step 4.2: New Settings Implementation**
+- [ ] Polish the Settings UI — proper layout following the other settings, explanations, etc.
 - [ ] Proper error handling and user feedback
 - [ ] Consolidate and deprecate legacy settings/chat selection files to the minimal set
 

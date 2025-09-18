@@ -213,17 +213,6 @@ class AccessibilityModeExitToSettingsGestureDetector(
   private var consumeStream = false
   private var currentTouchView: View? = null
 
-  // Geometry helpers
-  private fun headerBoundsInset(): Rect {
-    val src = headerBoundsProvider()
-    val b = Rect(src)
-    val origBottom = b.bottom
-    b.inset(headerDeadzonePx, 0) // tighten left/right; keep top strict
-    b.bottom = maxOf(b.top, b.bottom - headerDeadzonePx) // reduce bottom a bit
-    val expanded = b.bottom + headerExtraBottomPx
-    b.bottom = maxOf(b.top, kotlin.math.min(expanded, origBottom + headerExtraBottomPx))
-    return b
-  }
 
   // --- State pattern ---------------------------------------------------------
   // Singleton state instances (per detector instance)
@@ -304,6 +293,18 @@ class AccessibilityModeExitToSettingsGestureDetector(
       setState(idleState, event)
       outerState = OuterState.Idle
     }
+  }
+
+  // Geometry helpers — XXX to be cleaned
+  private fun headerBoundsInset(): Rect {
+    val src = headerBoundsProvider()
+    val b = Rect(src)
+    val origBottom = b.bottom
+    b.inset(headerDeadzonePx, 0) // tighten left/right; keep top strict
+    b.bottom = maxOf(b.top, b.bottom - headerDeadzonePx) // reduce bottom a bit
+    val expanded = b.bottom + headerExtraBottomPx
+    b.bottom = maxOf(b.top, kotlin.math.min(expanded, origBottom + headerExtraBottomPx))
+    return b
   }
 
   // Gesture-family base states ------------------------------------------------
