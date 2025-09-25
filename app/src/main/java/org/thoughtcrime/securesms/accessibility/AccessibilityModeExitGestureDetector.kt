@@ -1,5 +1,7 @@
 package org.thoughtcrime.securesms.accessibility
 
+import android.util.Log
+
 import android.content.Context
 import android.graphics.Rect
 import android.os.Handler
@@ -20,8 +22,8 @@ import kotlinx.coroutines.launch
 /**
  * Transparent, always-on exit gesture detector for Accessibility Mode.
  *
- * Scope: active only in the host Activity via an overlay that wires this as an
- * `OnTouchListener`. Policy is Transparent. Exclusive mode is designed but not implemented.
+ * Scope: active only in the host Activity; wired from Activity.dispatchTouchEvent(..)
+ * (calls onTouch and ignores its return). Policy is Transparent. Exclusive mode is designed but not implemented.
  *
  * Lifecycle: a single OuterSM instance lives for the lifetime of this detector and is
  * replaced when the selected gesture or its parameters change (Idle-only).
@@ -31,7 +33,7 @@ class AccessibilityModeExitGestureDetector(
   context: Context,
   private val headerBoundsProvider: () -> Rect,
   private val onTriggered: () -> Unit
-) : View.OnTouchListener {
+) {
 
   // --- Internal wiring ---
 
@@ -41,17 +43,22 @@ class AccessibilityModeExitGestureDetector(
 
   // The selected gesture, which is used to select the right inner state machine
   private var selectedGesture: AccessibilityModeExitGestureType =
-    AccessibilityModeExitGestureType.ChordSlideUp
+    AccessibilityModeExitGestureType.TripleTap
 
   private fun buildInner(id: AccessibilityModeExitGestureType): InnerSM = when (id) {
     AccessibilityModeExitGestureType.TripleTap     -> TripleTapSM()
-    AccessibilityModeExitGestureType.ChordSlideUp  -> ChordSlideUpSM()
+    AccessibilityModeExitGestureType.ChordSlideUp  -> TripleTapSM() // ChordSlideUpSM()
     AccessibilityModeExitGestureType.ChordDial,
-    AccessibilityModeExitGestureType.ChordPinchOut -> ChordSlideUpSM() // placeholders map to default
+    AccessibilityModeExitGestureType.ChordPinchOut -> TripleTapSM() // ChordSlideUpSM() // placeholders map to default
   }
 
   // The outer state machine, which owns the current inner state machine
   private var outer: OuterSM = OuterSM(initialInner = buildInner(selectedGesture))
+
+  private companion object {
+    private const val TAG   = "AMExitGesture"
+    private const val DEBUG = true // set to false to silence logs
+  }
 
   // --- Public API ---
 
@@ -81,8 +88,9 @@ class AccessibilityModeExitGestureDetector(
     outer.transitionTo(outer.Idle, Cause.Dispose)
   }
 
-  // Handle touch events from the View, lie that we did not consume any of them
-  override fun onTouch(v: View?, event: MotionEvent): Boolean {
+  // Handle touch events, lie that we did not consume any of them
+  fun onTouch(v: View?, event: MotionEvent): Boolean {
+    if (DEBUG) Log.d(TAG, "[Detector] onTouch " + event.actionLabel())
     outer.handleEvent(event)
     return false // Transparent policy: do not consume
   }
@@ -108,12 +116,15 @@ class AccessibilityModeExitGestureDetector(
   open inner class StateMachine() {
     protected lateinit var idleRef: State
     private            var current:   State? = null
+    protected open val smTag: String
+      get() = this::class.simpleName ?: "SM"
 
     fun isCurrent(s: State): Boolean = (current === s)
     fun isIdle():            Boolean = (isCurrent(idleRef))
 
     public fun transitionTo(s: State, cause: Cause) {
       if (isCurrent(s)) return
+      if (DEBUG) Log.d(TAG, "[" + smTag + "] " + stateName(current) + " --" + causeLabel(cause) + "--> " + stateName(s))
       current?.onExit()
       current = s
       current!!.onEnter(cause)
@@ -180,8 +191,11 @@ class AccessibilityModeExitGestureDetector(
           // The old outer is now quiescent and will be destroyed by GC.
           return
         }
+        if (cause is Cause.Initial) {
+          inner.transitionTo(inner.Quiescent, cause)
+        }
         // Otherwise, throw if the inner state machine is not quiescent
-        if (!(cause is Cause.Initial) && !inner.isCurrent(inner.Quiescent)) {
+        if (!inner.isCurrent(inner.Quiescent)) {
           throw IllegalStateException("Gesture recognition attempt Inner state machine is not quiescent")
         }
       }
@@ -200,10 +214,14 @@ class AccessibilityModeExitGestureDetector(
       private val timers: TrackingTimers = object : TrackingTimers {
         override fun schedule(delayMs: Long, block: () -> Unit) {
           val s = requireNotNull(attemptScope) { "Gesture recognition attempt TrackingTimers not active" }
+          if (DEBUG) Log.d(TAG, "[Outer] timers.schedule(" + delayMs + "ms)")
           s.launch(Dispatchers.Main.immediate) {
             delay(delayMs)
             if (isCurrent(Tracking)) {
+              if (DEBUG) Log.d(TAG, "[Outer] timer fired after " + delayMs + "ms (state still Tracking)")
               block()
+            } else if (DEBUG) {
+              Log.d(TAG, "[Outer] timer fired after " + delayMs + "ms (ignored; state changed)")
             }
           }
         }
@@ -289,8 +307,16 @@ class AccessibilityModeExitGestureDetector(
       this.timers = timers
     }
 
-    protected fun succeed() { transitionTo(Quiescent, Cause.Internal); outer.transitionTo(outer.Success, Cause.Internal) }
-    protected fun fail()    { transitionTo(Quiescent, Cause.Internal); outer.transitionTo(outer.Idle,    Cause.Internal) }
+    protected fun succeed() {
+      if (DEBUG) Log.d(TAG, "[" + smTag + "] SUCCESS")
+      transitionTo(Quiescent, Cause.Internal)
+      outer.transitionTo(outer.Success, Cause.Internal)
+    }
+    protected fun fail() {
+      if (DEBUG) Log.d(TAG, "[" + smTag + "] FAIL")
+      transitionTo(Quiescent, Cause.Internal)
+      outer.transitionTo(outer.Idle,    Cause.Internal)
+    }
 
     // Default for gesture-specific handlers: fail on up, pointer-up — override as needed
     protected open inner class InnerState : State() {
@@ -420,6 +446,15 @@ class AccessibilityModeExitGestureDetector(
     val dpi = appContext.resources.displayMetrics.densityDpi.toFloat()
     return mm * (dpi / 25.4f)
   }
+
+  private fun MotionEvent.actionLabel(): String = MotionEvent.actionToString(action)
+
+  private fun causeLabel(c: Cause): String = when (c) {
+    is Cause.Touch -> "Touch(" + c.ev.actionLabel() + ")"
+    else           -> (c::class.simpleName ?: "Cause")
+  }
+
+  private fun stateName(s: StateMachine.State?): String = s?.let { it::class.simpleName ?: "<anon>" } ?: "<null>"
 }
 
 /*

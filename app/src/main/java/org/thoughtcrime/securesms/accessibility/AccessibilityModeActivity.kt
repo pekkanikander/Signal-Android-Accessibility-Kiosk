@@ -8,14 +8,13 @@ package org.thoughtcrime.securesms.accessibility
 import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
+// import android.view.ViewGroup (removed)
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import org.signal.core.util.logging.Log
@@ -49,7 +48,6 @@ class AccessibilityModeActivity : AppCompatActivity() {
 
   private lateinit var exitGestureDetector: AccessibilityModeExitGestureDetector
   private val settingsViewModel: AccessibilityModeSettingsViewModel by viewModels()
-  private var overlayView: View? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -111,7 +109,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
     Log.d(TAG, "AccessibilityModeActivity.onCreate() completed")
   }
 
-    private fun setupExitGestureDetector() {
+  private fun setupExitGestureDetector() {
     exitGestureDetector = AccessibilityModeExitGestureDetector(
       this,
       headerBoundsProvider = { computeHeaderBounds() },
@@ -120,24 +118,13 @@ class AccessibilityModeActivity : AppCompatActivity() {
         showExitConfirmationOverlay()
       }
     )
-
-    // Create a transparent overlay view that sits on top of everything
-    val overlayView = View(this).apply {
-      layoutParams = ViewGroup.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT,
-        ViewGroup.LayoutParams.MATCH_PARENT
-      )
-      setOnTouchListener(exitGestureDetector)
+  }
+  override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+    // Passive observe for the exit detector; return value ignored to keep Transparent policy
+    if (::exitGestureDetector.isInitialized) {
+      try { exitGestureDetector.onTouch(null, ev) } catch (_: Exception) {}
     }
-
-    // Add the overlay to the root view
-    val rootView = findViewById<View>(android.R.id.content) as ViewGroup
-    rootView.addView(overlayView)
-    this.overlayView = overlayView
-
-    // Add debug info to logcat
-    Log.d(TAG, "Exit gesture detector initialized and attached to overlay view")
-    Log.d(TAG, "Root view bounds: ${rootView.width}x${rootView.height}")
+    return super.dispatchTouchEvent(ev)
   }
 
   private fun computeHeaderBounds(): android.graphics.Rect {
@@ -204,10 +191,6 @@ class AccessibilityModeActivity : AppCompatActivity() {
     super.onDestroy()
     try {
       exitGestureDetector.dispose()
-    } catch (_: Exception) {}
-    try {
-      val rootView = findViewById<View>(android.R.id.content) as? ViewGroup
-      overlayView?.let { rootView?.removeView(it) }
     } catch (_: Exception) {}
   }
 }
