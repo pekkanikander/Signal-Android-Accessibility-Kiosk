@@ -79,7 +79,8 @@ class AccessibilityModeSettingsViewModel(
 
   private val selectedRecipientIdFlow = _selectedRecipientId.asStateFlow()
   private val enabledFlow = _enabled.asStateFlow()
-  private val exitGestureFlow = _exitGesture.asStateFlow()
+  // Publicly exposed for external observers (Activity) to react to gesture changes
+  val exitGestureFlow = _exitGesture.asStateFlow()
   private val suppressNotificationsFlow = _suppressNotifications.asStateFlow()
 
   private val selectedThreadIdFlow: Flow<Long?> = selectedRecipientIdFlow.mapLatest { rid ->

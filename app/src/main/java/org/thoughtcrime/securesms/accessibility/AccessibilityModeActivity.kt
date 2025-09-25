@@ -9,23 +9,28 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import org.signal.core.util.logging.Log
-import org.thoughtcrime.securesms.R
-import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter
-import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitToSettingsGestureDetector
-import org.thoughtcrime.securesms.accessibility.IntentFactory
-
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+import org.signal.core.util.logging.Log
+import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureDetector
+import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsViewModel
+import org.thoughtcrime.securesms.accessibility.IntentFactory
 import org.thoughtcrime.securesms.conversation.ConversationTitleView
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.keyvalue.SignalStore
+
+import com.bumptech.glide.Glide
 
 /**
  * Main accessibility interface for Signal conversations.
@@ -42,7 +47,8 @@ class AccessibilityModeActivity : AppCompatActivity() {
     private val TAG = "AccessModeActivity"
   }
 
-  private lateinit var exitGestureDetector: AccessibilityModeExitToSettingsGestureDetector
+  private lateinit var exitGestureDetector: AccessibilityModeExitGestureDetector
+  private val settingsViewModel: AccessibilityModeSettingsViewModel by viewModels()
   private var overlayView: View? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,8 +112,8 @@ class AccessibilityModeActivity : AppCompatActivity() {
   }
 
     private fun setupExitGestureDetector() {
-    exitGestureDetector = AccessibilityModeExitToSettingsGestureDetector(
-      context = this,
+    exitGestureDetector = AccessibilityModeExitGestureDetector(
+      this,
       headerBoundsProvider = { computeHeaderBounds() },
       onTriggered = {
         Log.d(TAG, "Exit gesture triggered, launching confirmation")
@@ -183,6 +189,15 @@ class AccessibilityModeActivity : AppCompatActivity() {
     Log.d(TAG, "AccessibilityModeActivity.onStart() called")
     AccessibilityModeRouter.routeIfNeeded(this)
     Log.d(TAG, "AccessibilityModeActivity.onStart() completed")
+
+    // Observe exit gesture selection changes and forward them to the detector.
+    lifecycleScope.launch {
+      settingsViewModel.exitGestureFlow
+        .collectLatest { v ->
+          // May throw if the detector is not Idle, but should never happen.
+          exitGestureDetector.updateSelectedGesture(AccessibilityModeExitGestureType.fromValue(v))
+        }
+    }
   }
 
   override fun onDestroy() {

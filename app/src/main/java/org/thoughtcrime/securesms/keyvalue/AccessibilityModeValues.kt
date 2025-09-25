@@ -41,7 +41,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   var accessibilityRecipientId: Long by longValue(ACCESSIBILITY_RECIPIENT_ID, -1L)
 
   // Exit gesture configuration
-  var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD.value)
+  var exitGestureType: Int by integerValue(EXIT_GESTURE_TYPE, AccessibilityModeExitGestureType.TripleTap.value)
 
   // Advanced configuration
   // Overall timeout, to catch device sleeps et (ms)

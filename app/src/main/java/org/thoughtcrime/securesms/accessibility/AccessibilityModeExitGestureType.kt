@@ -11,12 +11,13 @@ package org.thoughtcrime.securesms.accessibility
  * Production: Two-finger header hold. Debug: Triple-tap header.
  */
 enum class AccessibilityModeExitGestureType(val value: Int, val displayName: String) {
-  TWO_FINGER_HEADER_HOLD(1, "Two-finger header hold"),
-  TRIPLE_TAP_DEBUG(3, "Triple tap on header (debug)");
-
+  TripleTap(1, "Triple tap on header (debug)"),
+  ChordSlideUp(2, "Chord slide up"),
+  ChordPinchOut(3, "Chord pinch out"),
+  ChordDial(4, "Chord dial");
   companion object {
     fun fromValue(value: Int): AccessibilityModeExitGestureType {
-      return values().find { it.value == value } ?: TWO_FINGER_HEADER_HOLD
+      return values().find { it.value == value } ?: ChordSlideUp
     }
   }
 }

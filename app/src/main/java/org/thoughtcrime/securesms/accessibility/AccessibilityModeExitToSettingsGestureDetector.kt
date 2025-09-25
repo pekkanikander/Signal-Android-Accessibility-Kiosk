@@ -433,19 +433,22 @@ class AccessibilityModeExitToSettingsGestureDetector(
       scheduler.scheduleCancelGestureAt(exitGestureTimeoutMs.toLong())
 
       when (currentGestureType()) {
-        AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG -> {
+        AccessibilityModeExitGestureType.TripleTap -> {
           // Seed triple-tap context
           setState(tripleTapWaitSecondState, event)
           outerState = OuterState.Detecting
           // Overall triple-tap window still enforced here
           scheduler.scheduleCancelGestureAt(tripleTapWindowMs.toLong())
         }
-        AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD -> {
+        AccessibilityModeExitGestureType.ChordSlideUp -> {
           // Seed two-finger context with first pointer
           setState(twoFingerFirstDownState, event)
           outerState = OuterState.Detecting
           // Require second finger soon
           scheduler.scheduleCancelGestureAt(pointerTimeoutMs.toLong(), { state === twoFingerFirstDownState })
+        }
+        else -> {
+          Log.d(TAG, "Unsupported gesture type: ${currentGestureType()}")
         }
       }
     }
