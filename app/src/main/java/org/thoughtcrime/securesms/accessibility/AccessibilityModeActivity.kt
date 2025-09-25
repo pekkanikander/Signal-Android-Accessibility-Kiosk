@@ -171,26 +171,35 @@ class AccessibilityModeActivity : AppCompatActivity() {
     startActivity(IntentFactory.settings(this))
   }
 
+  private fun readExitGestureConfig(): ExitGestureConfig {
+    val s = SignalStore.accessibilityMode
+    return ExitGestureConfig(
+      type = AccessibilityModeExitGestureType.fromValue(s.exitGestureType),
+      totalTimeoutMs = s.exitGestureTimeoutMs,
+      tripleTapGapMs = s.exitTripleTapIntervalMs,
+      chordSecondFingerTimeoutMs = s.exitGesturePointerTimeoutMs,
+      headerHeightDp = s.exitHeaderHeightDp
+    )
+  }
+
   override fun onStart() {
     super.onStart()
     Log.d(TAG, "AccessibilityModeActivity.onStart() called")
     AccessibilityModeRouter.routeIfNeeded(this)
     Log.d(TAG, "AccessibilityModeActivity.onStart() completed")
 
-    // Observe exit gesture selection changes and forward them to the detector.
-    lifecycleScope.launch {
-      settingsViewModel.exitGestureFlow
-        .collectLatest { v ->
-          // May throw if the detector is not Idle, but should never happen.
-          exitGestureDetector.updateSelectedGesture(AccessibilityModeExitGestureType.fromValue(v))
-        }
-    }
+    // Snapshot current settings and apply to detector on every (re)start.
+    val cfg = readExitGestureConfig()
+    exitGestureDetector.applyConfig(cfg)
+    exitGestureDetector.updateSelectedGesture(cfg.type, force = true)
   }
 
+  // (Removed debug lifecycle logging overrides)
+
   override fun onDestroy() {
-    super.onDestroy()
     try {
       exitGestureDetector.dispose()
     } catch (_: Exception) {}
+    super.onDestroy()
   }
 }

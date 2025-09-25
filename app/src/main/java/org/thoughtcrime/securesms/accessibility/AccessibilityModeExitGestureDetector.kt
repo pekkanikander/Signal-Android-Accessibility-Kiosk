@@ -17,6 +17,15 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+// Exit gesture configuration snapshot (see also AccessibilityModeActivity).
+data class ExitGestureConfig(
+  val type: AccessibilityModeExitGestureType,
+  val totalTimeoutMs: Int,
+  val tripleTapGapMs: Int,
+  val chordSecondFingerTimeoutMs: Int,
+  val headerHeightDp: Int
+)
+
 /** NOTE: See the end of file for state transition tables and further notes. **/
 
 /**
@@ -41,19 +50,34 @@ class AccessibilityModeExitGestureDetector(
   private val mainHandler: Handler = Handler(Looper.getMainLooper())
   private val touchSlopPx: Int = ViewConfiguration.get(appContext).scaledTouchSlop
 
+  // Latest configuration snapshot (updated by the Activity in onStart()).
+  // Defaults are conservative and will be overridden on first applyConfig().
+  private var cfg: ExitGestureConfig = ExitGestureConfig(
+    type = AccessibilityModeExitGestureType.TripleTap,
+    totalTimeoutMs = 5_000,
+    tripleTapGapMs = 600,
+    chordSecondFingerTimeoutMs = 250,
+    headerHeightDp = 120
+  )
+
+  /** Replace the current configuration snapshot. Call from Activity.onStart(). */
+  fun applyConfig(newCfg: ExitGestureConfig) {
+    cfg = newCfg
+  }
+
   // The selected gesture, which is used to select the right inner state machine
   private var selectedGesture: AccessibilityModeExitGestureType =
     AccessibilityModeExitGestureType.TripleTap
 
   private fun buildInner(id: AccessibilityModeExitGestureType): InnerSM = when (id) {
     AccessibilityModeExitGestureType.TripleTap     -> TripleTapSM()
-    AccessibilityModeExitGestureType.ChordSlideUp  -> TripleTapSM() // ChordSlideUpSM()
+    AccessibilityModeExitGestureType.ChordSlideUp  -> ChordSlideUpSM()
     AccessibilityModeExitGestureType.ChordDial,
-    AccessibilityModeExitGestureType.ChordPinchOut -> TripleTapSM() // ChordSlideUpSM() // placeholders map to default
+    AccessibilityModeExitGestureType.ChordPinchOut -> TripleTapSM() // TODO: implement
   }
 
   // The outer state machine, which owns the current inner state machine
-  private var outer: OuterSM = OuterSM(initialInner = buildInner(selectedGesture))
+  private var outer: OuterSM = OuterSM(initialInner = buildInner(selectedGesture), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
 
   private companion object {
     private const val TAG   = "AMExitGesture"
@@ -72,7 +96,7 @@ class AccessibilityModeExitGestureDetector(
     if (outer.isIdle()) {
       if (!force && id == selectedGesture) return
       selectedGesture = id
-      outer = OuterSM(initialInner = buildInner(id))
+      outer = OuterSM(initialInner = buildInner(id), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
     } else {
       if (!force && id == selectedGesture) return
       pendingGesture = id // latest wins
@@ -329,7 +353,7 @@ class AccessibilityModeExitGestureDetector(
 
   /** Triple-tap recogniser (1 finger). */
   inner class TripleTapSM : InnerSM(maxPointers = 1) {
-    private val maxGapMs: Long = 600L
+    private val maxGapMs: Long get() = cfg.tripleTapGapMs.toLong()
     private var downX: Float = 0f
     private var downY: Float = 0f
 
@@ -383,7 +407,7 @@ class AccessibilityModeExitGestureDetector(
 
   /** Two-finger chord then slide the centroid upwards by ≥20 mm before any finger lifts. */
   inner class ChordSlideUpSM : InnerSM(maxPointers = 2) {
-    private val chordMaxGapMs: Long = 250L
+    private val chordMaxGapMs: Long get() = cfg.chordSecondFingerTimeoutMs.toLong()
     private val slideUpThresholdPx: Float = mmToPx(20f)
 
     private var firstId: Int = -1
