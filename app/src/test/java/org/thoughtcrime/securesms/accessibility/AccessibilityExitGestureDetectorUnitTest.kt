@@ -3,11 +3,12 @@ package org.thoughtcrime.securesms.accessibility
 import org.junit.Test
 import org.junit.Assert.assertEquals
 
-class AccessibilityGestureRouterUnitTest {
+class AccessibilityExitGestureDetector
+UnitTest {
 
   @Test
   fun tripleTap_stateTransitions() {
-    val detector = AccessibilityModeExitToSettingsGestureDetectorFake()
+    val detector = AccessibilityModeExitGestureDetectorFake()
 
     // Simulate three logical taps spaced 100ms apart
     val now = System.currentTimeMillis()
@@ -20,7 +21,7 @@ class AccessibilityGestureRouterUnitTest {
 }
 
 // Pure-JVM fake detector that mimics triple-tap detection without Android types.
-class AccessibilityModeExitToSettingsGestureDetectorFake {
+class AccessibilityModeExitGestureDetectorFake {
   var lastState: String = "IDLE"
   private val tapTimestamps = mutableListOf<Long>()
   private val tripleTapWindowMs = 600L

@@ -21,7 +21,10 @@ class AccessibilityGestureDetectorInstrTest {
     // Ensure detector is configured to use the triple-tap debug gesture for the test
     org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitGestureType = 3
 
-    val detector = AccessibilityModeExitToSettingsGestureDetector(context, { Rect(0,0,100,100) }) {
+    val detector = AccessibilityModeExitGestureDetector(
+      context,
+      headerBoundsProvider = { Rect(0,0,100,100) },
+    ) {
       latch.countDown()
     }
 
@@ -44,5 +47,3 @@ class AccessibilityGestureDetectorInstrTest {
     assertTrue("Triple tap should trigger gesture callback", triggered)
   }
 }
-
-
