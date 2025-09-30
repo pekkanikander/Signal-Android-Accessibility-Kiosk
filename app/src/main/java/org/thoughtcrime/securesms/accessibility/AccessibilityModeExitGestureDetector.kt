@@ -1,3 +1,8 @@
+/*
+ * Copyright 2025 Signal Messenger, LLC
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 package org.thoughtcrime.securesms.accessibility
 
 import android.util.Log
@@ -29,14 +34,41 @@ data class ExitGestureConfig(
 /** NOTE: See the end of file for state transition tables and further notes. **/
 
 /**
- * Transparent, always-on exit gesture detector for Accessibility Mode.
+ * Accessibility Mode – Exit Gesture Detector.
  *
- * Scope: active only in the host Activity; wired from Activity.dispatchTouchEvent(..)
- * (calls onTouch and ignores its return). Policy is Transparent. Exclusive mode is designed but not implemented.
+ * Purpose & motivation
+ * - Provide a hidden-but-simple way for a caregiver to exit the "playground" UI without disturbing
+ *   everyday use. The detector observes touch at the Activity level and never intercepts events.
  *
- * Lifecycle: a single OuterSM instance lives for the lifetime of this detector and is
- * replaced when the selected gesture or its parameters change (Idle-only).
- * Per-attempt timers and coroutine scope exist only during Tracking and are cancelled on exit.
+ * Architecture (Policy vs Recognition)
+ * - Gesture PolicySM: hotspot (header), pointer-cap, total timeout, attempt lifecycle, success callback.
+ * - Gesture RecognitionSM: semantic rules; starts at Quiescent → initialState(); emits succeed()/fail().
+ * - Timers are per-attempt via a coroutine scope; cancelled on any terminal state.
+ * - Invariants: Recognition is Quiescent whenever Policy is Idle; timers never scheduled outside Tracking.
+ *
+ * Event routing & policy
+ * - Wired via Activity.dispatchTouchEvent(): every MotionEvent is seen, return value ignored (transparent).
+ * - Mapping: DOWN→onDown, MOVE→onMove, POINTER_DOWN/UP→onPD/onPU, UP→onUp, CANCEL→onCancel.
+ * - Idle → Tracking: enters Tracking (arms timers) then forwards the same DOWN to Recognition.
+ * - Hotspot test on DOWN only; pointer-cap enforced on POINTER_DOWN; CANCEL/timeout aborts Tracking.
+ *
+ * Configuration
+ * - ExitGestureConfig is snapshotted in AccessibilityModeActivity.onStart() and applied via applyConfig(...).
+ * - Gesture selection updates call updateSelectedGesture(...). While Tracking, updates are queued
+ *   (latest-wins) and applied on the next transition to Idle.
+ * - Supported gestures: TripleTap, ChordSlideUp. Others may be added by mapping in buildRecognition(...).
+ *
+ * Performance
+ * - Transparent observe at Activity: O(1) dispatch per MotionEvent; no allocations on the hot path.
+ * - Per-attempt coroutine scope exists only during Tracking; cancelled on success/fail/abort.
+ * - Debug logging is guardable with DEBUG; reflection (simpleName) used only when DEBUG.
+ *
+ * Adding new gestures (checklist)
+ * 1) Subclass RecognitionSM(maxPointers).
+ * 2) Define initialState() and states; note that default UP/PU ⇒ fail.
+ * 3) Use timers only after Tracking begins (provided in onStart).
+ * 4) Call succeed()/fail() to finish and self-clean to Quiescent.
+ * 5) Add mapping in buildRecognition(...) and include thresholds in ExitGestureConfig if needed.
  */
 class AccessibilityModeExitGestureDetector(
   context: Context,
@@ -65,19 +97,19 @@ class AccessibilityModeExitGestureDetector(
     cfg = newCfg
   }
 
-  // The selected gesture, which is used to select the right inner state machine
+  // The selected gesture, which is used to select the right recognition state machine
   private var selectedGesture: AccessibilityModeExitGestureType =
     AccessibilityModeExitGestureType.TripleTap
 
-  private fun buildInner(id: AccessibilityModeExitGestureType): InnerSM = when (id) {
+  private fun buildRecognition(id: AccessibilityModeExitGestureType): RecognitionSM = when (id) {
     AccessibilityModeExitGestureType.TripleTap     -> TripleTapSM()
     AccessibilityModeExitGestureType.ChordSlideUp  -> ChordSlideUpSM()
     AccessibilityModeExitGestureType.ChordDial,
     AccessibilityModeExitGestureType.ChordPinchOut -> TripleTapSM() // TODO: implement
   }
 
-  // The outer state machine, which owns the current inner state machine
-  private var outer: OuterSM = OuterSM(initialInner = buildInner(selectedGesture), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
+  // The policy state machine, which owns the current recognition state machine
+  private var policy: PolicySM = PolicySM(initialRecognition = buildRecognition(selectedGesture), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
 
   private companion object {
     private const val TAG   = "AMExitGesture"
@@ -92,11 +124,11 @@ class AccessibilityModeExitGestureDetector(
    * If [force] is true, rebuilds even if the type is unchanged (e.g., to apply new thresholds).
    */
   fun updateSelectedGesture(id: AccessibilityModeExitGestureType, force: Boolean = false) {
-    // TODO: Simplify, now some code duplication with OuterSM.IdleState.onEnter()
-    if (outer.isIdle()) {
+    // TODO: Simplify, now some code duplication with PolicySM.IdleState.onEnter()
+    if (policy.isIdle()) {
       if (!force && id == selectedGesture) return
       selectedGesture = id
-      outer = OuterSM(initialInner = buildInner(id), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
+      policy = PolicySM(initialRecognition = buildRecognition(id), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
     } else {
       if (!force && id == selectedGesture) return
       pendingGesture = id // latest wins
@@ -108,14 +140,14 @@ class AccessibilityModeExitGestureDetector(
 
   /** Cancel any in-flight attempt and reset to Idle. */
   fun dispose() {
-    outer.inner.transitionTo(outer.inner.Quiescent, Cause.Dispose)
-    outer.transitionTo(outer.Idle, Cause.Dispose)
+    policy.recognition.transitionTo(policy.recognition.Quiescent, Cause.Dispose)
+    policy.transitionTo(policy.Idle, Cause.Dispose)
   }
 
   // Handle touch events, lie that we did not consume any of them
   fun onTouch(v: View?, event: MotionEvent): Boolean {
     if (DEBUG) Log.d(TAG, "[Detector] onTouch " + event.actionLabel())
-    outer.handleEvent(event)
+    policy.handleEvent(event)
     return false // Transparent policy: do not consume
   }
 
@@ -181,17 +213,17 @@ class AccessibilityModeExitGestureDetector(
     }
   }
 
-  // --- Outer state machine ---
+  // --- Policy state machine ---
 
   /**
-   * Outer state machine: hotspot gating, pointer-cap, total-timeout, policy host.
+   * Policy state machine: hotspot gating, pointer-cap, total-timeout, policy host.
    *
    * - Idle → Tracking (on DOWN in hotspot)
    * - Tracking (per-attempt coroutine scope + timers) → Success | Fail | Timeout
    * - Success auto-hops back to Idle (Internal)
    */
-  inner class OuterSM(
-    initialInner: InnerSM,
+  inner class PolicySM(
+    initialRecognition: RecognitionSM,
     private val maxTotalDurationMs: Long = 5_000L
   ) : StateMachine() {
 
@@ -201,7 +233,7 @@ class AccessibilityModeExitGestureDetector(
       idleRef = Idle
     }
 
-    var inner: InnerSM = initialInner
+    var recognition: RecognitionSM = initialRecognition
 
     private inner class IdleState : State() {
       override fun onEnter(cause: Cause) {
@@ -209,25 +241,28 @@ class AccessibilityModeExitGestureDetector(
         pendingGesture?.let { next ->
           pendingGesture = null
           selectedGesture = next
-          // Replace the entire Outer, with a new inner; this method runs inside the old Outer
-          // At this point, the old Outer is entering the Idle state. Hence, it is safe to replace it.
-          outer = OuterSM(initialInner = buildInner(next))
-          // The old outer is now quiescent and will be destroyed by GC.
+          // Replace the entire Policy, with a new recognition; this method runs inside the old Policy
+          // At this point, the old Policy is entering the Idle state. Hence, it is safe to replace it.
+          policy = PolicySM(
+            initialRecognition = buildRecognition(next),
+            maxTotalDurationMs = cfg.totalTimeoutMs.toLong()
+          )
+          // The old policy is now quiescent and will be destroyed by GC.
           return
         }
         if (cause is Cause.Initial) {
-          inner.transitionTo(inner.Quiescent, cause)
+          recognition.transitionTo(recognition.Quiescent, cause)
         }
-        // Otherwise, throw if the inner state machine is not quiescent
-        if (!inner.isCurrent(inner.Quiescent)) {
-          throw IllegalStateException("Gesture recognition attempt Inner state machine is not quiescent")
+        // Otherwise, throw if the recognition state machine is not quiescent
+        if (!recognition.isCurrent(recognition.Quiescent)) {
+          throw IllegalStateException("Gesture recognition attempt Recognition state machine is not quiescent")
         }
       }
-      // If a finger goes down in the header, transition to Tracking and let the inner handle the event
+      // If a finger goes down in the header, transition to Tracking and let the recognition handle the event
       override fun onDown(ev: MotionEvent) {
         if (!ev.isIn(headerBoundsProvider())) return
-        transitionTo(Tracking, Cause.Touch(ev)) // Create first the new timers, with a coroutine scope, for the inner state machine
-        inner.handleEvent(ev)                   // Only then let the inner state machine handle the event, with the new timers
+        transitionTo(Tracking, Cause.Touch(ev)) // Create first the new timers, with a coroutine scope, for the recognition state machine
+        recognition.handleEvent(ev)                   // Only then let the recognition state machine handle the event, with the new timers
       }
     }
 
@@ -238,14 +273,14 @@ class AccessibilityModeExitGestureDetector(
       private val timers: TrackingTimers = object : TrackingTimers {
         override fun schedule(delayMs: Long, block: () -> Unit) {
           val s = requireNotNull(attemptScope) { "Gesture recognition attempt TrackingTimers not active" }
-          if (DEBUG) Log.d(TAG, "[Outer] timers.schedule(" + delayMs + "ms)")
+          if (DEBUG) Log.d(TAG, "[" + smTag + "] timers.schedule(" + delayMs + "ms)")
           s.launch(Dispatchers.Main.immediate) {
             delay(delayMs)
             if (isCurrent(Tracking)) {
-              if (DEBUG) Log.d(TAG, "[Outer] timer fired after " + delayMs + "ms (state still Tracking)")
+              if (DEBUG) Log.d(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (state still Tracking)")
               block()
             } else if (DEBUG) {
-              Log.d(TAG, "[Outer] timer fired after " + delayMs + "ms (ignored; state changed)")
+              Log.d(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (ignored; state changed)")
             }
           }
         }
@@ -261,27 +296,27 @@ class AccessibilityModeExitGestureDetector(
       override fun onEnter(cause: Cause) {
         assert(attemptScope == null) { "Gesture recognition attempt already active" }
         attemptScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
-        inner.onStart(timers)
-        // Outer-enforced overall timeout
+        recognition.onStart(timers)
+        // Policy-enforced overall timeout
         timers.schedule(maxTotalDurationMs) {
-          inner.transitionTo(inner.Quiescent, Cause.Timeout)
+          recognition.transitionTo(recognition.Quiescent, Cause.Timeout)
           transitionTo(Idle, Cause.Timeout)
         }
       }
 
-      override fun onDown(ev: MotionEvent) { inner.handleEvent(ev) }
-      override fun onMove(ev: MotionEvent) { inner.handleEvent(ev) }
-      override fun onPU  (ev: MotionEvent) { inner.handleEvent(ev) }
-      override fun onUp  (ev: MotionEvent) { inner.handleEvent(ev) }
-      override fun onCancel(cause: Cause)  { inner.transitionTo(inner.Quiescent, cause); transitionTo(Idle, cause) }
+      override fun onDown(ev: MotionEvent) { recognition.handleEvent(ev) }
+      override fun onMove(ev: MotionEvent) { recognition.handleEvent(ev) }
+      override fun onPU  (ev: MotionEvent) { recognition.handleEvent(ev) }
+      override fun onUp  (ev: MotionEvent) { recognition.handleEvent(ev) }
+      override fun onCancel(cause: Cause)  { recognition.transitionTo(recognition.Quiescent, cause); transitionTo(Idle, cause) }
 
       // Pointer-cap: abort if a new pointer would exceed maxPointers
       override fun onPD(ev: MotionEvent)   {
-        if (ev.pointerCount > inner.maxPointers) {
-          inner.transitionTo(inner.Quiescent, Cause.Touch(ev))
+        if (ev.pointerCount > recognition.maxPointers) {
+          recognition.transitionTo(recognition.Quiescent, Cause.Touch(ev))
           transitionTo(Idle, Cause.Touch(ev))
         } else {
-          inner.handleEvent(ev)
+          recognition.handleEvent(ev)
         }
       }
     }
@@ -302,14 +337,14 @@ class AccessibilityModeExitGestureDetector(
     }
   }
 
-  // --- Inner state machine, base class for all gesture-specific state machines ---
+  // --- Recognition state machine, base class for all gesture-specific state machines ---
 
   /**
    * Gesture-specific recogniser base.
    * Responsibilities: pointer semantics, dwell/gap windows, spatial rules, success/fail.
    * Knows nothing about policy. Timers are provided only during Tracking via onStart.
    */
-  open abstract inner class InnerSM(val maxPointers: Int) : StateMachine() {
+  open abstract inner class RecognitionSM(val maxPointers: Int) : StateMachine() {
     // Initialize the idle state first
     private inner class QuiescentState : State() {
       override fun onDown(ev: MotionEvent) {
@@ -321,12 +356,12 @@ class AccessibilityModeExitGestureDetector(
       idleRef = Quiescent
     }
 
-    // Initial state of the inner state machine
+    // Initial state of the recognition state machine
     abstract fun initialState(): State
 
     protected lateinit var timers: TrackingTimers
 
-    /** Start of an attempt: Outer supplies the timers facade. */
+    /** Start of an attempt: Policy supplies the timers facade. */
     public fun onStart(timers: TrackingTimers) {
       this.timers = timers
     }
@@ -334,32 +369,32 @@ class AccessibilityModeExitGestureDetector(
     protected fun succeed() {
       if (DEBUG) Log.d(TAG, "[" + smTag + "] SUCCESS")
       transitionTo(Quiescent, Cause.Internal)
-      outer.transitionTo(outer.Success, Cause.Internal)
+      policy.transitionTo(policy.Success, Cause.Internal)
     }
     protected fun fail() {
       if (DEBUG) Log.d(TAG, "[" + smTag + "] FAIL")
       transitionTo(Quiescent, Cause.Internal)
-      outer.transitionTo(outer.Idle,    Cause.Internal)
+      policy.transitionTo(policy.Idle,    Cause.Internal)
     }
 
     // Default for gesture-specific handlers: fail on up, pointer-up — override as needed
-    protected open inner class InnerState : State() {
+    protected open inner class RecognitionState : State() {
       override fun onUp(ev: MotionEvent) { fail() }
       override fun onPU(ev: MotionEvent) { fail() }
     }
   }
 
-  // --- Concrete inners ---
+  // --- Concrete recognition state submachines ---
 
   /** Triple-tap recogniser (1 finger). */
-  inner class TripleTapSM : InnerSM(maxPointers = 1) {
+  inner class TripleTapSM : RecognitionSM(maxPointers = 1) {
     private val maxGapMs: Long get() = cfg.tripleTapGapMs.toLong()
     private var downX: Float = 0f
     private var downY: Float = 0f
 
     override fun initialState(): State = FirstTapDown
 
-    private open inner class TapDownState : InnerState() {
+    private open inner class TapDownState : RecognitionState() {
       override fun onEnter(cause: Cause) {
         val ev = (cause as? Cause.Touch)!!.ev
         downX = ev.x
@@ -372,7 +407,7 @@ class AccessibilityModeExitGestureDetector(
       }
     }
 
-    private open inner class TapUpState : InnerState() {
+    private open inner class TapUpState : RecognitionState() {
       override fun onEnter(cause: Cause) {
         timers.schedule(maxGapMs) {
           if (isCurrent(this@TapUpState)) fail()
@@ -406,7 +441,7 @@ class AccessibilityModeExitGestureDetector(
   }
 
   /** Two-finger chord then slide the centroid upwards by ≥20 mm before any finger lifts. */
-  inner class ChordSlideUpSM : InnerSM(maxPointers = 2) {
+  inner class ChordSlideUpSM : RecognitionSM(maxPointers = 2) {
     private val chordMaxGapMs: Long get() = cfg.chordSecondFingerTimeoutMs.toLong()
     private val slideUpThresholdPx: Float = mmToPx(20f)
 
@@ -416,7 +451,7 @@ class AccessibilityModeExitGestureDetector(
 
     override fun initialState(): State = AwaitSecond
 
-    private inner class AwaitSecondState : InnerState() {
+    private inner class AwaitSecondState : RecognitionState() {
       override fun onEnter(cause: Cause) {
         val down = (cause as? Cause.Touch)!!.ev
         firstId = down.getPointerId(down.actionIndex)
@@ -434,7 +469,7 @@ class AccessibilityModeExitGestureDetector(
     }
     private val AwaitSecond = AwaitSecondState()
 
-    private inner class PairLockedState : InnerState() {
+    private inner class PairLockedState : RecognitionState() {
       override fun onMove(ev: MotionEvent) {
         val cy = currentCentroidY(ev)
         if (centroidStartY - cy >= slideUpThresholdPx) {
@@ -483,41 +518,41 @@ class AccessibilityModeExitGestureDetector(
 
 /*
 ==============================================================
-Transition table — OuterSM <-> InnerSM (common to all gestures)
+Transition table — PolicySM <-> RecognitionSM (common to all gestures)
 ==============================================================
 
-Event / Condition                     Outer: state → next                 Inner: state → next
+Event / Condition                     Policy: state → next                 Recognition: state → next
 ---------------------------------------------------------------------------------------------------------------
-Idle entry with changed parameters    Idle  → Idle (rebuild Outer+Inner)  (old) any → Quiescent; (new) Quiescent
+Idle entry with changed parameters    Idle  → Idle (rebuild Policy+Recognition)  (old) any → Quiescent; (new) Quiescent
 DOWN @ hotspot                        Idle     → Tracking                 Quiescent → initialState (gesture-specific)
 MOVE                                  Tracking → Tracking                 gesture-specific handling
 POINTER_DOWN within maxPointers       Tracking → Tracking                 gesture-specific handling
-POINTER_DOWN exceeds maxPointers      Tracking → Idle                     any → Quiescent   (outer aborts)
-POINTER_UP                            Tracking → inner dependent          fail() unless subclass overrides
-UP                                    Tracking → inner dependent          fail() unless subclass overrides
+POINTER_DOWN exceeds maxPointers      Tracking → Idle                     any → Quiescent   (policy aborts)
+POINTER_UP                            Tracking → Recognition dependent          fail() unless subclass overrides
+UP                                    Tracking → Recognition dependent          fail() unless subclass overrides
 CANCEL (system/Dialog etc.)           Tracking → Idle                     any → Quiescent   (external abort)
-Total timeout (~5 s)                  Tracking → Idle                     any → Quiescent   (outer timeout)
+Total timeout (~5 s)                  Tracking → Idle                     any → Quiescent   (policy timeout)
 Dispose()                             any → Idle                          any → Quiescent
 
-Inner succeed()                       Tracking → Success → Idle           any → Quiescent   (inner self-cleans)
-Inner fail()                          Tracking → Idle                     any → Quiescent   (inner self-cleans)
+Recognition succeed()                       Tracking → Success → Idle           any → Quiescent   (Recognition self-cleans)
+Recognition fail()                          Tracking → Idle                     any → Quiescent   (Recognition self-cleans)
 
 Notes:
-- Parameter changes are handled by rebuilding the entire Outer+Inner structure
+- Parameter changes are handled by rebuilding the entire Policy+Recognition structure
 - Pointer cap is enforced only on ACTION_POINTER_DOWN (new finger arriving).
-- On Idle→Tracking hand-off: enter Tracking first (scope+timers live), then forward the same DOWN to the inner.
+- On Idle→Tracking hand-off: enter Tracking first (scope+timers live), then forward the same DOWN to the recognition.
 - Gesture selection changes received during Tracking are queued (latest-wins) and applied on next Idle entry.
 ---------------------------------------------------------------------------------------------------------------
 
 
 ======================================
-InnerSM — TripleTapSM (1-finger)
+RecognitionSM — TripleTapSM (1-finger)
 ======================================
 
 State machine:
   Quiescent → FirstTapDown → FirstTapUp → SecondTapDown → SecondTapUp → ThirdTapDown → (UP) → Success
 
-Event / Condition                     Inner: state → next
+Event / Condition                     Recognition: state → next
 -----------------------------------------------------------------------------------------------
 onEnter(FirstTapUp/SecondTapUp)       arm gap timer (≤ 600 ms); if timer fires while still in state → Fail
 MOVE in any *Down                     if motion exceeds touch slop → Fail; else Continue
@@ -526,12 +561,12 @@ DOWN in FirstTapUp                    → SecondTapDown
 UP in SecondTapDown                   → SecondTapUp
 DOWN in SecondTapUp                   → ThirdTapDown
 UP in ThirdTapDown                    → Success
-Any unexpected UP/POINTER_UP          default InnerState behaviour → Fail
-CANCEL / external abort               Outer drives → inner → Quiescent
+Any unexpected UP/POINTER_UP          default RecognitionState behaviour → Fail
+CANCEL / external abort               Policy drives → recognition → Quiescent
 
 
 ======================================
-InnerSM — ChordSlideUpSM (2-finger)
+RecognitionSM — ChordSlideUpSM (2-finger)
 ======================================
 
 State machine:
@@ -539,13 +574,13 @@ State machine:
                  └─(POINTER_DOWN)→ PairLocked --(MOVE: Δy_centroid ≥ 20 mm up)--> Success
                                             └─(UP | POINTER_UP)------------------> Fail
 
-Event / Condition                     Inner: state → next
+Event / Condition                     Recognition: state → next
 -----------------------------------------------------------------------------------------------
 onEnter(AwaitSecond)                  remember firstId, startY; arm 250 ms timer; if fires while still here → Fail
 POINTER_DOWN in AwaitSecond           capture secondId; set centroidStartY; → PairLocked
 MOVE in PairLocked                    if centroidStartY − currentCentroidY ≥ 20 mm → Success; else Continue
 UP or POINTER_UP in PairLocked        → Fail
-UP in AwaitSecond                     default InnerState behaviour → Fail
-CANCEL / external abort               Outer drives → inner → Quiescent
+UP in AwaitSecond                     default RecognitionState behaviour → Fail
+CANCEL / external abort               Policy drives → recognition → Quiescent
 
 */
