@@ -19,6 +19,15 @@ import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.util.ViewUtil
 import org.thoughtcrime.securesms.R
 
+/*
+ * Initial implementation.  Space for future improvements.
+ *
+ * TODO (at minimum)
+ * - Highlight currently configured chat (if any) in the list.
+ * - Handle group creation from Accessibility chat picker if/when approved.
+ * - If a user selects a contact without an existing thread, create a new thread.
+ */
+
 class AccessibilityChatSelectionFragment : LoggingFragment(),
     ContactSelectionListFragment.OnContactSelectedListener,
     ContactSelectionListFragment.NewConversationCallback {
@@ -28,6 +37,11 @@ class AccessibilityChatSelectionFragment : LoggingFragment(),
 
   override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
 
+    /*
+     * TODO: Preselect currently configured chat if present.
+     * Read SignalStore.accessibilityMode.accessibilityRecipientId, convert to RecipientId,
+     * and add to currentSelection so the list highlights the current choice.
+     */
     val currentSelection = ArrayList<RecipientId>(/* XXX: TODO */)
 
     // Configure child fragment arguments for single-selection, existing-chat-only behavior
@@ -62,8 +76,6 @@ class AccessibilityChatSelectionFragment : LoggingFragment(),
 
     toolbar.setTitle(R.string.acc_mode_select_chat_title)
     toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
-
-    childFragmentManager.setFragmentResultListener("dummy", this) { _, _ -> }
 
     selectionFragment = childFragmentManager.findFragmentById(R.id.contact_selection_list) as ContactSelectionListFragment
 
@@ -102,16 +114,19 @@ class AccessibilityChatSelectionFragment : LoggingFragment(),
     }
   }
 
-  override fun onContactDeselected(recipientId: java.util.Optional<RecipientId>, number: String?, chatType: java.util.Optional<org.thoughtcrime.securesms.contacts.paged.ChatType>) {}
+  override fun onContactDeselected(
+    recipientId: java.util.Optional<RecipientId>,
+    number: String?,
+    chatType: java.util.Optional<org.thoughtcrime.securesms.contacts.paged.ChatType>) {}
 
   override fun onSelectionChanged() {}
 
   override fun onNewGroup(forceV1: Boolean) {
-    // Optional: persist the flag somewhere if you need to force v1 here.
-    // XXX: TBD
-    //    findNavController().safeNavigate(
-    //  R.id.action_chatSelectionFragment_to_selectMembersFragment  // <- use your real action id
-    //)
+    /*
+     * TODO: Enable group creation from Accessibility chat picker if/when approved.
+     * Define nav action id and selection flow; ensure the resulting group RecipientId
+     * is returned via "pick_recipient" result.
+     */
   }
 
   override fun onInvite() {
