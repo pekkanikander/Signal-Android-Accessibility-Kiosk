@@ -16,7 +16,7 @@ import org.thoughtcrime.securesms.MainActivity
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.testing.SignalActivityRule
-import org.thoughtcrime.securesms.testing.AccessibilityTestHelpers
+import org.thoughtcrime.securesms.keyvalue.SignalStore
 
 @RunWith(AndroidJUnit4::class)
 class AccessibilityLaunchTest {
@@ -40,8 +40,8 @@ class AccessibilityLaunchTest {
     val recipient = org.thoughtcrime.securesms.recipients.Recipient.resolved(recipientId)
     val threadId = SignalDatabase.threads.getOrCreateThreadIdFor(recipient)
 
-    // Enable accessibility mode for that thread (helper maps to recipient-based store)
-    AccessibilityTestHelpers.enableAccessibilityModeForThread(threadId)
+    // Enable accessibility mode for that thread (map to recipient-based store)
+    enableAccessibilityModeForThread(threadId)
 
     // Start AccessibilityModeActivity directly to avoid race with router init timing
     val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -56,4 +56,11 @@ class AccessibilityLaunchTest {
     // Espresso assertion once present
     onView(withId(R.id.message_list)).check(matches(isDisplayed()))
   }
+}
+
+private fun enableAccessibilityModeForThread(threadId: Long) {
+  // Map threadId -> recipientId and write recipient-based setting
+  val rid = org.thoughtcrime.securesms.database.SignalDatabase.threads.getRecipientIdForThreadId(threadId)
+  SignalStore.accessibilityMode.isAccessibilityModeEnabled = true
+  SignalStore.accessibilityMode.accessibilityRecipientId = rid?.toLong() ?: -1L
 }
