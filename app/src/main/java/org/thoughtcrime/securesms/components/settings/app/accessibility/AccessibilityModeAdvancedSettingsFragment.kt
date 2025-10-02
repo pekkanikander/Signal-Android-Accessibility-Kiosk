@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.thoughtcrime.securesms.compose.ComposeFragment
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 
 class AccessibilityModeAdvancedSettingsFragment : ComposeFragment() {
 
@@ -68,15 +69,15 @@ private fun AccessibilityModeAdvancedSettingsScreen(
       )
 
       RadioRow(
-        title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_gesture_two_fingers_hold_prod),
-        selected = ui.exitGestureTypeValue == 1,
-        onClick = { callbacks.onChangeGesture(1) }
+        title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_gesture_two_fingers_hold),
+        selected = ui.exitGestureTypeValue == AccessibilityModeExitGestureType.ChordSlideUp.value,
+        onClick = { callbacks.onChangeGesture(AccessibilityModeExitGestureType.ChordSlideUp.value) }
       )
 
       RadioRow(
-        title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_gesture_triple_tap_debug),
-        selected = ui.exitGestureTypeValue == 3,
-        onClick = { callbacks.onChangeGesture(3) }
+        title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_gesture_triple_tap),
+        selected = ui.exitGestureTypeValue == AccessibilityModeExitGestureType.TripleTap.value,
+        onClick = { callbacks.onChangeGesture(AccessibilityModeExitGestureType.TripleTap.value) }
       )
       // Suppress notifications toggle (advanced option)
       androidx.compose.material3.ListItem(

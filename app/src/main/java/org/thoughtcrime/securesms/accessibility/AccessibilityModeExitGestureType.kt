@@ -7,11 +7,9 @@ package org.thoughtcrime.securesms.accessibility
 
 /**
  * Defines the available exit gesture types for Accessibility Mode.
- *
- * Production: Two-finger header hold. Debug: Triple-tap header.
  */
 enum class AccessibilityModeExitGestureType(val value: Int, val displayName: String) {
-  TripleTap(1, "Triple tap on header (debug)"),
+  TripleTap(1, "Triple tap on header"),
   ChordSlideUp(2, "Chord slide up"),
   ChordPinchOut(3, "Chord pinch out"),
   ChordDial(4, "Chord dial");

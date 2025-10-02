@@ -8732,8 +8732,8 @@
     <string name="acc_mode_suppress_notifications_subtitle">When enabled, incoming message notifications are suppressed to avoid popups and unexpected interactions.</string>
     <string name="acc_mode_advanced_title">Accessibility Mode – Advanced</string>
     <string name="acc_mode_exit_gesture_header">Exit Gesture</string>
-    <string name="acc_mode_gesture_two_fingers_hold_prod">Two fingers hold</string>
-    <string name="acc_mode_gesture_triple_tap_debug">Triple tap</string>
+    <string name="acc_mode_gesture_two_fingers_hold">Two fingers hold</string>
+    <string name="acc_mode_gesture_triple_tap">Triple tap</string>
 
     <!-- EOF -->
 </resources>
