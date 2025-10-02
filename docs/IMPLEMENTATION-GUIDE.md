@@ -32,11 +32,11 @@ Intent creation utilities.
 - **Purpose**: Creates properly configured Intents for mode transitions
 - **Features**: `FLAG_ACTIVITY_CLEAR_TASK` for clean activity stack
 
-#### `AccessibilityModeExitToSettingsGestureDetector.kt`
+#### `AccessibilityModeExitGestureDetector.kt`
 Gesture detection for exiting accessibility mode.
 - **Location**: `app/src/main/java/org/thoughtcrime/securesms/accessibility/`
-- **Purpose**: Detects configured exit gestures
-- **Features**: Production gesture + debug gesture options
+- **Purpose**: Detects configured exit gestures (policy + recognition state machines)
+- **Features**: Production gesture (Chord slide up) + debug gesture (Triple tap)
 
 #### `AccessibilityModeExitGestureType.kt`
 Gesture type enumeration for exit gestures.
@@ -89,7 +89,7 @@ app/src/main/java/org/thoughtcrime/securesms/
 │   ├── IntentFactory.kt                      # Intent utilities
 │   ├── AccessibilityModeItemClickListener.kt # Simplified interactions
 │   ├── AccessibilityModeExitGestureType.kt                # Exit gesture type enum
-│   ├── AccessibilityModeExitToSettingsGestureDetector.kt  # Exit gesture detection
+│   ├── AccessibilityModeExitGestureDetector.kt            # Exit gesture detection
 │   ├── AccessibilityModeExitConfirmationDialog.kt         # Exit confirmation dialog
 ├── components/settings/app/accessibility/
 │   ├── AccessibilityModeSettingsFragment.kt  # Settings UI

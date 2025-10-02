@@ -22,8 +22,8 @@ This document explains the architectural decisions made during the planning of s
 - **Debug limitations**: Emulator testing less flexible
 
 #### Files Consolidated
-- `AccessibilityModeExitToSettingsGestureDetector.kt`: Reduce from 457 to ~150 lines
-- `AccessibilityModeExitGestureType.kt`: Reduce from 4 to 2 gesture types
+- `AccessibilityModeExitGestureDetector.kt`: New design (~600 lines including detailed state machine notes)
+- `AccessibilityModeExitGestureType.kt`: Reduced from 4 to 2 gesture families (production + debug)
 
 ### 2. Settings UI System
 **Before**: 771 lines across 10 files (Fragments, Screens, ViewModels, States, Callbacks, Tags)

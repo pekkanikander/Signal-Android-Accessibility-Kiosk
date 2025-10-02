@@ -99,7 +99,7 @@ Common test infrastructure
 Practical patterns to copy
 -------------------------
 1. Pure-JVM fake for gesture/timing logic
-   - Example: implement `AccessibilityModeExitToSettingsGestureDetectorFake` and test triple-tap timing purely on timestamps (see `AccessibilityGestureRouterUnitTest`).
+   - Example: implement `AccessibilityModeExitGestureDetectorFake` and test triple-tap timing purely on timestamps (see `AccessibilityGestureRouterUnitTest`).
 
 2. Robolectric integration test for View/Handler interactions
    - Use `TestApplication` and `ApplicationProvider.getApplicationContext()`.
