@@ -8740,5 +8740,9 @@
     <string name="acc_mode_exit_confirm_message">Open Accessibility settings?</string>
     <string name="acc_mode_exit_confirm_positive">Go to settings</string>
 
+    <!-- Accessibility mode conversation UI -->
+    <string name="acc_mode_message_input_hint">Type a message…</string>
+    <string name="acc_mode_send">Send</string>
+
     <!-- EOF -->
 </resources>

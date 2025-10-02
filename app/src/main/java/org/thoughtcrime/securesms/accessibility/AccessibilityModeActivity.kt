@@ -43,7 +43,7 @@ import com.bumptech.glide.Glide
 class AccessibilityModeActivity : AppCompatActivity() {
 
   companion object {
-    private val TAG = "AccessModeActivity"
+    private val TAG = Log.tag(AccessibilityModeActivity::class.java)
   }
 
   private lateinit var exitGestureDetector: AccessibilityModeExitGestureDetector
