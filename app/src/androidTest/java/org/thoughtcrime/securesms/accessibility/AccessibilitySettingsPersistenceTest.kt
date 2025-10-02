@@ -27,7 +27,7 @@ class AccessibilitySettingsPersistenceTest {
     fun settings_persist_across_app_restarts() {
         // Given: Initial state of accessibility settings
         val initialEnabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled
-        val initialThreadId = SignalStore.accessibilityMode.accessibilityThreadId
+        val initialRecipientId = SignalStore.accessibilityMode.accessibilityRecipientId
         val initialGestureType = SignalStore.accessibilityMode.exitGestureType
 
         // When: We modify accessibility settings
@@ -36,30 +36,30 @@ class AccessibilitySettingsPersistenceTest {
 
         SignalStore.accessibilityMode.run {
             isAccessibilityModeEnabled = true
-            accessibilityThreadId = testRecipientId
+            accessibilityRecipientId = testRecipientId
             exitGestureType = newGestureType
         }
 
         // Then: Settings should be persisted and readable
         assertThat("Accessibility mode enabled should be persisted",
                    SignalStore.accessibilityMode.isAccessibilityModeEnabled, equalTo(true))
-        assertThat("Thread ID should be persisted",
-                   SignalStore.accessibilityMode.accessibilityThreadId, equalTo(testRecipientId))
+        assertThat("Recipient ID should be persisted",
+                   SignalStore.accessibilityMode.accessibilityRecipientId, equalTo(testRecipientId))
         assertThat("Gesture type should be persisted",
                    SignalStore.accessibilityMode.exitGestureType, equalTo(newGestureType))
 
         // When: We restore to initial state (simulating app restart behavior)
         SignalStore.accessibilityMode.run {
             isAccessibilityModeEnabled = initialEnabled
-            accessibilityThreadId = initialThreadId
+            accessibilityRecipientId = initialRecipientId
             exitGestureType = initialGestureType
         }
 
         // Then: Settings should return to initial values
         assertThat("Accessibility mode should restore to initial state",
                    SignalStore.accessibilityMode.isAccessibilityModeEnabled, equalTo(initialEnabled))
-        assertThat("Thread ID should restore to initial state",
-                   SignalStore.accessibilityMode.accessibilityThreadId, equalTo(initialThreadId))
+        assertThat("Recipient ID should restore to initial state",
+                   SignalStore.accessibilityMode.accessibilityRecipientId, equalTo(initialRecipientId))
         assertThat("Gesture type should restore to initial state",
                    SignalStore.accessibilityMode.exitGestureType, equalTo(initialGestureType))
     }
@@ -72,11 +72,11 @@ class AccessibilitySettingsPersistenceTest {
         // Then: Default values should be as expected
         assertThat("Default accessibility mode should be disabled",
                    SignalStore.accessibilityMode.isAccessibilityModeEnabled, equalTo(false))
-        assertThat("Default thread ID should be -1 (none selected)",
-                   SignalStore.accessibilityMode.accessibilityThreadId, equalTo(-1L))
-        assertThat("Default gesture type should be ChordSlideUp",
+        assertThat("Default recipient ID should be -1 (none selected)",
+                   SignalStore.accessibilityMode.accessibilityRecipientId, equalTo(-1L))
+        assertThat("Default gesture type should be TripleTap",
                    SignalStore.accessibilityMode.exitGestureType,
-                   equalTo(AccessibilityModeExitGestureType.ChordSlideUp.value))
+                   equalTo(AccessibilityModeExitGestureType.TripleTap.value))
     }
 
     @Test

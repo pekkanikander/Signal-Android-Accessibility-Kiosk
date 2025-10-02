@@ -11,12 +11,11 @@ object AccessibilityTestHelpers {
 
     fun enableAccessibilityModeForThread(threadId: Long) {
         SignalStore.accessibilityMode.isAccessibilityModeEnabled = true
-        SignalStore.accessibilityMode.accessibilityThreadId = threadId
+        val rid = org.thoughtcrime.securesms.database.SignalDatabase.threads.getRecipientIdForThreadId(threadId)
+        SignalStore.accessibilityMode.accessibilityRecipientId = rid?.toLong() ?: -1L
     }
 
     fun assertConversationListPresent() {
         onView(withId(R.id.message_list)).check(matches(org.hamcrest.Matchers.not(org.hamcrest.Matchers.nullValue())))
     }
 }
-
-

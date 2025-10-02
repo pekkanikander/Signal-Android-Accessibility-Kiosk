@@ -74,10 +74,10 @@ class AccessibilityDatabaseIntegrationTest {
         val testRecipient = Recipient.resolved(testRecipientId)
         val testThreadId = SignalDatabase.threads.getOrCreateThreadIdFor(testRecipient)
 
-        // Configure accessibility mode settings
+        // Configure accessibility mode settings (recipient-based)
         SignalStore.accessibilityMode.run {
             isAccessibilityModeEnabled = true
-            accessibilityThreadId = testThreadId
+            accessibilityRecipientId = testRecipientId.toLong()
         }
 
         // Ensure the thread is marked active early (some devices may lazily mark newly-created threads inactive)
@@ -118,8 +118,8 @@ class AccessibilityDatabaseIntegrationTest {
         // Then: All data should be accessible and consistent
         assertThat("Thread should exist", threadRecord, not(nullValue()))
         assertThat("Recipient should be accessible", recipient, not(nullValue()))
-        assertThat("Thread ID should match settings", testThreadId,
-                   equalTo(SignalStore.accessibilityMode.accessibilityThreadId))
+        assertThat("Recipient ID should match settings",
+                   SignalStore.accessibilityMode.accessibilityRecipientId, equalTo(testRecipientId.toLong()))
 
         // Verify the recipient matches
         assertThat("Recipient should be accessible", recipient, not(nullValue()))
@@ -160,7 +160,7 @@ class AccessibilityDatabaseIntegrationTest {
 
         SignalStore.accessibilityMode.run {
             isAccessibilityModeEnabled = true
-            accessibilityThreadId = originalThreadId
+            accessibilityRecipientId = testRecipientId.toLong()
         }
 
         // When: We perform various thread operations
@@ -173,8 +173,8 @@ class AccessibilityDatabaseIntegrationTest {
         // Then: Accessibility mode settings should remain intact
         assertThat("Accessibility mode should still be enabled",
                    SignalStore.accessibilityMode.isAccessibilityModeEnabled, equalTo(true))
-        assertThat("Thread ID should remain the same",
-                   SignalStore.accessibilityMode.accessibilityThreadId, equalTo(originalThreadId))
+        assertThat("Recipient ID should remain the same",
+                   SignalStore.accessibilityMode.accessibilityRecipientId, equalTo(testRecipientId.toLong()))
 
         // And thread should still be accessible
         val threadRecord = SignalDatabase.threads.getThreadRecord(originalThreadId)
