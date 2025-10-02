@@ -35,6 +35,7 @@ import org.thoughtcrime.securesms.dependencies.AppDependencies
 import org.thoughtcrime.securesms.notifications.v2.ConversationId
 import androidx.recyclerview.widget.ConversationLayoutManager
 import org.thoughtcrime.securesms.conversation.MarkReadHelper
+import org.signal.core.util.logging.Log
 
 /**
  * Fragment for the accessibility conversation interface.
@@ -46,6 +47,10 @@ import org.thoughtcrime.securesms.conversation.MarkReadHelper
  * - MarkReadHelper for proper read status management
  */
 class AccessibilityModeFragment : Fragment() {
+
+    companion object {
+        private val TAG = Log.tag(AccessibilityModeFragment::class.java)
+    }
 
     private lateinit var messageList: RecyclerView
     private lateinit var messageInput: EditText
@@ -84,11 +89,11 @@ class AccessibilityModeFragment : Fragment() {
         // Get the selected thread ID from arguments
         threadId = arguments?.getLong("selected_thread_id", -1L) ?: -1L
         if (threadId == -1L) {
-            android.util.Log.e("AccessibilityFragment", "No thread ID provided")
+            Log.e(TAG, "No thread ID provided")
             return
         }
 
-        android.util.Log.d("AccessibilityFragment", "Setting up accessibility mode for thread: $threadId")
+        Log.d(TAG, "Setting up accessibility mode for thread: $threadId")
 
         // Suppress notifications for this thread to prevent popups
         AppDependencies.messageNotifier.setVisibleThread(ConversationId.forConversation(threadId))
@@ -152,16 +157,16 @@ class AccessibilityModeFragment : Fragment() {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribeBy(
                     onNext = { messages ->
-                        android.util.Log.d("AccessibilityFragment", "Received ${messages.size} messages, updating adapter")
+                        Log.d(TAG, "Received ${messages.size} messages, updating adapter")
                         adapter.submitList(messages) {
-                            android.util.Log.d("AccessibilityFragment", "Adapter updated with ${messages.size} messages")
+                            Log.d(TAG, "Adapter updated with ${messages.size} messages")
 
                             // Auto-scroll to bottom if new messages were added
                             if (messages.size > previousMessageCount) {
-                                android.util.Log.d("AccessibilityFragment", "New messages detected, scrolling to bottom")
+                                Log.d(TAG, "New messages detected, scrolling to bottom")
                                 messageList.post {
                                     layoutManager.scrollToPositionWithOffset(0, 0) {
-                                        android.util.Log.d("AccessibilityFragment", "Scrolled to bottom")
+                                        Log.d(TAG, "Scrolled to bottom")
                                     }
                                 }
                             }
@@ -174,7 +179,7 @@ class AccessibilityModeFragment : Fragment() {
                         }
                     },
                     onError = { error ->
-                        android.util.Log.e("AccessibilityFragment", "Error loading conversation data", error)
+                        Log.e(TAG, "Error loading conversation data", error)
                     }
                 )
         )
@@ -219,7 +224,7 @@ class AccessibilityModeFragment : Fragment() {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribeBy(
                     onNext = { recipient ->
-                        android.util.Log.d("AccessibilityFragment", "Recipient updated: ${recipient.getDisplayName(requireContext())}")
+                        Log.d(TAG, "Recipient updated: ${recipient.getDisplayName(requireContext())}")
                         // Could update conversation header here if needed
                     }
                 )
@@ -230,7 +235,7 @@ class AccessibilityModeFragment : Fragment() {
         sendButton.isEnabled = true
         messageInput.isEnabled = true
 
-        android.util.Log.d("AccessibilityFragment", "Accessibility mode setup complete")
+        Log.d(TAG, "Accessibility mode setup complete")
     }
 
     override fun onDestroyView() {

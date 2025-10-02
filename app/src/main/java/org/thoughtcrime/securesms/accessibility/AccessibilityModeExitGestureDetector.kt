@@ -5,8 +5,6 @@
 
 package org.thoughtcrime.securesms.accessibility
 
-import android.util.Log
-
 import android.content.Context
 import android.graphics.Rect
 import android.os.Handler
@@ -21,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.signal.core.util.logging.Log
 
 // Exit gesture configuration snapshot (see also AccessibilityModeActivity).
 data class ExitGestureConfig(
@@ -112,8 +111,7 @@ class AccessibilityModeExitGestureDetector(
   private var policy: PolicySM = PolicySM(initialRecognition = buildRecognition(selectedGesture), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
 
   private companion object {
-    private const val TAG   = "AMExitGesture"
-    private const val DEBUG = true // set to false to silence logs
+    private val TAG = Log.tag(AccessibilityModeExitGestureDetector::class.java)
   }
 
   // --- Public API ---
@@ -146,7 +144,7 @@ class AccessibilityModeExitGestureDetector(
 
   // Handle touch events, lie that we did not consume any of them
   fun onTouch(v: View?, event: MotionEvent): Boolean {
-    if (DEBUG) Log.d(TAG, "[Detector] onTouch " + event.actionLabel())
+    Log.d(TAG, "[Detector] onTouch " + event.actionLabel())
     policy.handleEvent(event)
     return false // Transparent policy: do not consume
   }
@@ -180,7 +178,7 @@ class AccessibilityModeExitGestureDetector(
 
     public fun transitionTo(s: State, cause: Cause) {
       if (isCurrent(s)) return
-      if (DEBUG) Log.d(TAG, "[" + smTag + "] " + stateName(current) + " --" + causeLabel(cause) + "--> " + stateName(s))
+      Log.d(TAG, "[" + smTag + "] " + stateName(current) + " --" + causeLabel(cause) + "--> " + stateName(s))
       current?.onExit()
       current = s
       current!!.onEnter(cause)
@@ -273,13 +271,13 @@ class AccessibilityModeExitGestureDetector(
       private val timers: TrackingTimers = object : TrackingTimers {
         override fun schedule(delayMs: Long, block: () -> Unit) {
           val s = requireNotNull(attemptScope) { "Gesture recognition attempt TrackingTimers not active" }
-          if (DEBUG) Log.d(TAG, "[" + smTag + "] timers.schedule(" + delayMs + "ms)")
+          Log.d(TAG, "[" + smTag + "] timers.schedule(" + delayMs + "ms)")
           s.launch(Dispatchers.Main.immediate) {
             delay(delayMs)
             if (isCurrent(Tracking)) {
-              if (DEBUG) Log.d(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (state still Tracking)")
+              Log.d(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (state still Tracking)")
               block()
-            } else if (DEBUG) {
+            } else {
               Log.d(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (ignored; state changed)")
             }
           }
@@ -367,12 +365,12 @@ class AccessibilityModeExitGestureDetector(
     }
 
     protected fun succeed() {
-      if (DEBUG) Log.d(TAG, "[" + smTag + "] SUCCESS")
+      Log.d(TAG, "[" + smTag + "] SUCCESS")
       transitionTo(Quiescent, Cause.Internal)
       policy.transitionTo(policy.Success, Cause.Internal)
     }
     protected fun fail() {
-      if (DEBUG) Log.d(TAG, "[" + smTag + "] FAIL")
+      Log.d(TAG, "[" + smTag + "] FAIL")
       transitionTo(Quiescent, Cause.Internal)
       policy.transitionTo(policy.Idle,    Cause.Internal)
     }
