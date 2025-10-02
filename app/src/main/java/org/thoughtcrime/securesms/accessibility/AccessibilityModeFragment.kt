@@ -95,8 +95,10 @@ class AccessibilityModeFragment : Fragment() {
 
         Log.d(TAG, "Setting up accessibility mode for thread: $threadId")
 
-        // Suppress notifications for this thread to prevent popups
-        AppDependencies.messageNotifier.setVisibleThread(ConversationId.forConversation(threadId))
+        // Suppress notifications for this thread to prevent popups (honor advanced setting)
+        if (org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.suppressNotifications) {
+            AppDependencies.messageNotifier.setVisibleThread(ConversationId.forConversation(threadId))
+        }
 
         // Initialize Signal's components with the correct threadId
         conversationRecipientRepository = ConversationRecipientRepository(threadId)

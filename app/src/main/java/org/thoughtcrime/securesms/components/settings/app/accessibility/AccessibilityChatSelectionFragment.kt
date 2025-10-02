@@ -65,6 +65,12 @@ class AccessibilityChatSelectionFragment : LoggingFragment(),
 
     childFragmentManager.setFragmentResultListener("dummy", this) { _, _ -> }
 
+    selectionFragment = childFragmentManager.findFragmentById(R.id.contact_selection_list) as ContactSelectionListFragment
+
+    childFragmentManager.beginTransaction()
+      .replace(R.id.contact_selection_list, selectionFragment)
+      .commitNowAllowingStateLoss()
+
     contactFilterView = view.findViewById(R.id.contact_filter_edit_text)
     contactFilterView.setOnFilterChangedListener {
       if (it.isNullOrEmpty()) {
@@ -73,12 +79,6 @@ class AccessibilityChatSelectionFragment : LoggingFragment(),
         selectionFragment.setQueryFilter(it)
       }
     }
-
-    selectionFragment = childFragmentManager.findFragmentById(R.id.contact_selection_list) as ContactSelectionListFragment
-
-    childFragmentManager.beginTransaction()
-      .replace(R.id.contact_selection_list, selectionFragment)
-      .commitNowAllowingStateLoss()
   }
 
   override fun onBeforeContactSelected(
