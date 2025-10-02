@@ -32,7 +32,7 @@ class AccessibilitySettingsPersistenceTest {
 
         // When: We modify accessibility settings
         val testRecipientId = signalActivityRule.others[0].toLong()
-        val newGestureType = AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG.value
+        val newGestureType = AccessibilityModeExitGestureType.TripleTap.value
 
         SignalStore.accessibilityMode.run {
             isAccessibilityModeEnabled = true
@@ -74,21 +74,17 @@ class AccessibilitySettingsPersistenceTest {
                    SignalStore.accessibilityMode.isAccessibilityModeEnabled, equalTo(false))
         assertThat("Default thread ID should be -1 (none selected)",
                    SignalStore.accessibilityMode.accessibilityThreadId, equalTo(-1L))
-        assertThat("Default gesture type should be SINGLE_FINGER_EDGE_DRAG_HOLD",
+        assertThat("Default gesture type should be ChordSlideUp",
                    SignalStore.accessibilityMode.exitGestureType,
-                   equalTo(AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD.value))
-        assertThat("Default PIN requirement should be false",
-                   SignalStore.accessibilityMode.exitGestureRequirePin, equalTo(false))
+                   equalTo(AccessibilityModeExitGestureType.ChordSlideUp.value))
     }
 
     @Test
     fun gesture_type_enum_conversion_works() {
         // Given: We set each gesture type
         val gestureTypes = listOf(
-            AccessibilityModeExitGestureType.OPPOSITE_CORNERS_HOLD,
-            AccessibilityModeExitGestureType.TWO_FINGER_HEADER_HOLD,
-            AccessibilityModeExitGestureType.SINGLE_FINGER_EDGE_DRAG_HOLD,
-            AccessibilityModeExitGestureType.TRIPLE_TAP_DEBUG
+            AccessibilityModeExitGestureType.TripleTap,
+            AccessibilityModeExitGestureType.ChordSlideUp
         )
 
         // When/Then: Each gesture type should be stored and retrieved correctly
