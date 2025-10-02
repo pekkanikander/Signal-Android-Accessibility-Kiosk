@@ -385,7 +385,7 @@
 
     <fragment
         android:id="@+id/chatSelectionFragment"
-        android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.ChatSelectionFragment"
+        android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityChatSelectionFragment"
         android:label="@string/acc_mode_select_chat_title"
         tools:layout="@layout/dsl_settings_fragment" />
 

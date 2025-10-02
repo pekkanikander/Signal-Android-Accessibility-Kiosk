@@ -19,7 +19,7 @@ import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.util.ViewUtil
 import org.thoughtcrime.securesms.R
 
-class ChatSelectionFragment : LoggingFragment(),
+class AccessibilityChatSelectionFragment : LoggingFragment(),
     ContactSelectionListFragment.OnContactSelectedListener,
     ContactSelectionListFragment.NewConversationCallback {
 
@@ -52,7 +52,7 @@ class ChatSelectionFragment : LoggingFragment(),
       }
     }
 
-    return inflater.inflate(R.layout.fragment_chat_selection, container, false)
+    return inflater.inflate(R.layout.fragment_accessibility_chat_selection, container, false)
   }
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
