@@ -1,4 +1,4 @@
-package org.thoughtcrime.securesms.testing.accessibility
+package org.thoughtcrime.securesms.accessibility
 
 import android.app.Application
 

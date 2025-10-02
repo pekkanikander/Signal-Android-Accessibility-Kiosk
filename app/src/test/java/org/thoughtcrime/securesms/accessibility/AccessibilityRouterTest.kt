@@ -25,7 +25,7 @@ import org.thoughtcrime.securesms.recipients.RecipientId
 @Config(
   sdk = [28],
   manifest = Config.NONE,
-  application = org.thoughtcrime.securesms.testing.accessibility.AccessibilityTestApplication::class
+  application = org.thoughtcrime.securesms.accessibility.AccessibilityTestApplication::class
 )
 class AccessibilityRouterTest {
 
