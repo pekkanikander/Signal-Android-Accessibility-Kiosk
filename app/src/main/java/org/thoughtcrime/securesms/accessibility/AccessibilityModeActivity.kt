@@ -163,8 +163,14 @@ class AccessibilityModeActivity : AppCompatActivity() {
 
   private fun showExitConfirmationOverlay() {
     val timeoutMs = org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitConfirmTimeoutMs.toLong()
-    val dialog = AccessibilityModeExitConfirmationDialog.newInstance(timeoutMs)
-    dialog.show(supportFragmentManager, AccessibilityModeExitConfirmationDialog.TAG)
+    val fm = supportFragmentManager
+    val existing = fm.findFragmentByTag(AccessibilityModeExitConfirmationDialog.TAG)
+    if (existing == null) {
+      AccessibilityModeExitConfirmationDialog.newInstance(timeoutMs)
+        .show(fm, AccessibilityModeExitConfirmationDialog.TAG)
+    } else {
+      Log.d(TAG, "Exit confirmation already shown; skipping duplicate")
+    }
   }
 
   fun navigateToSettings() {
