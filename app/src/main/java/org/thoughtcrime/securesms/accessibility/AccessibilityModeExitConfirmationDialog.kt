@@ -12,6 +12,7 @@ import android.widget.Button
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
+import org.thoughtcrime.securesms.R
 
 /**
  * Lightweight confirmation dialog used when the accessibility exit gesture is triggered.
@@ -33,13 +34,15 @@ class AccessibilityModeExitConfirmationDialog : DialogFragment() {
     }
   }
 
+  private var timer: CountDownTimer? = null
+
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
     val timeout = arguments?.getLong(ARG_TIMEOUT_MS) ?: 5000L
 
     val builder = AlertDialog.Builder(requireContext())
-      .setTitle("Confirm exit")
-      .setMessage("Confirm exit to settings")
-      .setPositiveButton("Go to settings") { _, _ ->
+      .setTitle(R.string.acc_mode_exit_confirm_title)
+      .setMessage(R.string.acc_mode_exit_confirm_message)
+      .setPositiveButton(R.string.acc_mode_exit_confirm_positive) { _, _ ->
         (activity as? AccessibilityModeActivity)?.navigateToSettings()
       }
       .setNegativeButton(android.R.string.cancel, null)
@@ -62,8 +65,8 @@ class AccessibilityModeExitConfirmationDialog : DialogFragment() {
       }
     }
 
-    // Auto-dismiss after timeout
-    object : CountDownTimer(timeout, timeout) {
+    // Auto-dismiss after timeout; cancel on destroy
+    timer = object : CountDownTimer(timeout, timeout) {
       override fun onTick(millisUntilFinished: Long) {}
       override fun onFinish() {
         if (isAdded && dialog.isShowing) dismiss()
@@ -71,5 +74,11 @@ class AccessibilityModeExitConfirmationDialog : DialogFragment() {
     }.start()
 
     return dialog
+  }
+
+  override fun onDestroyView() {
+    try { timer?.cancel() } catch (_: Exception) {}
+    timer = null
+    super.onDestroyView()
   }
 }

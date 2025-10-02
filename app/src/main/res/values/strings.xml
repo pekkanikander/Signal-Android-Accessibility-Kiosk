@@ -8735,5 +8735,10 @@
     <string name="acc_mode_gesture_two_fingers_hold">Two fingers hold</string>
     <string name="acc_mode_gesture_triple_tap">Triple tap</string>
 
+    <!-- Accessibility exit confirmation dialog -->
+    <string name="acc_mode_exit_confirm_title">Confirm exit</string>
+    <string name="acc_mode_exit_confirm_message">Open Accessibility settings?</string>
+    <string name="acc_mode_exit_confirm_positive">Go to settings</string>
+
     <!-- EOF -->
 </resources>
