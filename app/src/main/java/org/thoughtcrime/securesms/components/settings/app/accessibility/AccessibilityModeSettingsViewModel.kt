@@ -18,15 +18,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import org.thoughtcrime.securesms.database.model.ThreadRecord
 
-// Small store wrapper to make testing easier
-interface AccessibilityModeStore {
+// Store wrapper for settings screen; avoids name collision with runtime router store
+interface AccessibilityModeSettingsStore {
   var selectedRecipientId: RecipientId?
   var enabled: Boolean
   var exitGestureTypeValue: Int
   var suppressNotifications: Boolean
 }
 
-class SignalAccessibilityModeStore : AccessibilityModeStore {
+class SignalAccessibilityModeSettingsStore : AccessibilityModeSettingsStore {
   override var selectedRecipientId: RecipientId?
     get() = SignalStore.accessibilityMode.accessibilityRecipientId
       .takeIf { it > 0 }?.let { RecipientId.from(it) }
@@ -56,7 +56,7 @@ data class AccessibilitySettingsUiState(
 )
 
 class AccessibilityModeSettingsViewModel(
-  private val store: AccessibilityModeStore = SignalAccessibilityModeStore()
+  private val store: AccessibilityModeSettingsStore = SignalAccessibilityModeSettingsStore()
 ) : ViewModel() {
 
   // Typed snapshot of current conversations and their recipient ids
