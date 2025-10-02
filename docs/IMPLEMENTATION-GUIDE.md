@@ -166,7 +166,7 @@ No additional build dependencies required. All functionality uses existing Signa
 - Recommended Robolectric checklist:
   - Use `ApplicationProvider.getApplicationContext()` for Context when possible.
   - Annotate with `@Config(manifest = Config.NONE)` unless the test needs a manifest.
-  - Prefer `application = org.thoughtcrime.securesms.testing.TestApplication::class` in `@Config` for tests that need a test Application.
+  - Prefer `application = org.thoughtcrime.securesms.testing.accessibility.AccessibilityTestApplication::class` in `@Config` for tests that need a test Application.
   - Prevent native/encrypted libraries from loading using test-only Shadows (e.g., `ShadowSqlCipherLibraryLoader`) rather than editing production loader code.
   - When tests post work to the main Looper, call `shadowOf(Looper.getMainLooper()).idle()` to execute queued runnables.
   - Inject Android services as needed with `Shadows.shadowOf(app as Application).setSystemService(...)`.

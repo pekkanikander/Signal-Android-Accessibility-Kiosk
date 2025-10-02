@@ -51,7 +51,7 @@ Recommended approach for accessibility tests
    - Reserve Robolectric for tests that genuinely require Android framework behaviour (Context/Resources/Handler/NotificationManager interaction).
    - When using Robolectric for these integration tests, follow upstream conventions exactly:
      - Use the canonical test Application and dependency rule:
-       - `@Config(manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.TestApplication::class)`
+       - `@Config(manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.accessibility.AccessibilityTestApplication::class)`
        - `@get:Rule val appDependencies = MockAppDependenciesRule()`
      - Inject Android services and idle the main looper after posted work (e.g. `Shadows.shadowOf(Looper.getMainLooper()).idle()`).
      - Prefer test shadows for native/encrypted loaders rather than editing production loader code.
@@ -79,7 +79,7 @@ Common test infrastructure
 --------------------------
 - Test runner and application
   - `@RunWith(RobolectricTestRunner::class)`
-  - `@Config(manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.TestApplication::class, shadows = [...])`
+  - `@Config(manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.accessibility.AccessibilityTestApplication::class, shadows = [...])`
   - `org.thoughtcrime.securesms.testing.TestApplication` is the canonical test Application class.
 
 - Application and dependency rules

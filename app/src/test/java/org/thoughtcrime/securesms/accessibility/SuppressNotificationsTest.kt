@@ -21,7 +21,7 @@ import org.thoughtcrime.securesms.notifications.v2.DefaultMessageNotifier
 import org.thoughtcrime.securesms.notifications.v2.ConversationId
 
 @RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.TestApplication::class)
+@Config(manifest = Config.NONE, application = org.thoughtcrime.securesms.testing.accessibility.AccessibilityTestApplication::class)
 class SuppressNotificationsTest {
 
   @get:Rule
