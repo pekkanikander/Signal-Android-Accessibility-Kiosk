@@ -25,8 +25,7 @@ import org.thoughtcrime.securesms.recipients.RecipientId
 @Config(
   sdk = [28],
   manifest = Config.NONE,
-  application = org.thoughtcrime.securesms.testing.TestApplication::class,
-  shadows = [org.thoughtcrime.securesms.testing.ShadowSqlCipherLibraryLoader::class]
+  application = org.thoughtcrime.securesms.testing.TestApplication::class
 )
 class AccessibilityRouterTest {
 

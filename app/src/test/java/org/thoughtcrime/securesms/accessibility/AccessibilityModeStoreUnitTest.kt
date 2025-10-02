@@ -23,7 +23,7 @@ class AccessibilityModeStoreUnitTest {
   }
 
   @Test
-  fun `store reads and writes suppressNotifications without Robolectric`() {
+  fun `store reads and writes suppressNotifications (without Robolectric)`() {
     val am = mockk<AccessibilityModeValues>(relaxed = true)
     every { am.suppressNotifications } returns true
     every { SignalStore.accessibilityMode } returns am
