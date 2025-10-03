@@ -18,32 +18,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import org.thoughtcrime.securesms.database.model.ThreadRecord
 
-// Store wrapper for settings screen; avoids name collision with runtime router store
-interface AccessibilityModeSettingsStore {
-  var selectedRecipientId: RecipientId?
-  var enabled: Boolean
-  var exitGestureTypeValue: Int
-  var suppressNotifications: Boolean
-}
-
-class SignalAccessibilityModeSettingsStore : AccessibilityModeSettingsStore {
-  override var selectedRecipientId: RecipientId?
-    get() = SignalStore.accessibilityMode.accessibilityRecipientId
-      .takeIf { it > 0 }?.let { RecipientId.from(it) }
-    set(value) { SignalStore.accessibilityMode.accessibilityRecipientId = value?.toLong() ?: -1L }
-
-  override var enabled: Boolean
-    get() = SignalStore.accessibilityMode.isAccessibilityModeEnabled
-    set(value) { SignalStore.accessibilityMode.isAccessibilityModeEnabled = value }
-
-  override var exitGestureTypeValue: Int
-    get() = SignalStore.accessibilityMode.exitGestureType
-    set(value) { SignalStore.accessibilityMode.exitGestureType = value }
-
-  override var suppressNotifications: Boolean
-    get() = SignalStore.accessibilityMode.suppressNotifications
-    set(value) { SignalStore.accessibilityMode.suppressNotifications = value }
-}
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeStore
+import org.thoughtcrime.securesms.accessibility.SignalAccessibilityModeStore
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 
 // UI state returned to Compose
 data class AccessibilitySettingsUiState(
@@ -56,7 +33,7 @@ data class AccessibilitySettingsUiState(
 )
 
 class AccessibilityModeSettingsViewModel(
-  private val store: AccessibilityModeSettingsStore = SignalAccessibilityModeSettingsStore()
+  private val store: AccessibilityModeStore = SignalAccessibilityModeStore
 ) : ViewModel() {
 
   // Typed snapshot of current conversations and their recipient ids
@@ -72,10 +49,10 @@ class AccessibilityModeSettingsViewModel(
   private val conversationsFlow: StateFlow<List<Long>> = _conversationsFlow.asStateFlow()
 
   // 2) Store-backed state (reactive within this screen)
-  private val _selectedRecipientId = MutableStateFlow(store.selectedRecipientId)
-  private val _enabled = MutableStateFlow(store.enabled)
-  private val _exitGesture = MutableStateFlow(store.exitGestureTypeValue)
-  private val _suppressNotifications = MutableStateFlow(store.suppressNotifications)
+  private val _selectedRecipientId = MutableStateFlow(store.state.value.recipientId)
+  private val _enabled = MutableStateFlow(store.state.value.enabled)
+  private val _exitGesture = MutableStateFlow(store.state.value.gestureType.value)
+  private val _suppressNotifications = MutableStateFlow(store.state.value.suppressNotifications)
 
   private val selectedRecipientIdFlow = _selectedRecipientId.asStateFlow()
   private val enabledFlow = _enabled.asStateFlow()
@@ -189,7 +166,7 @@ class AccessibilityModeSettingsViewModel(
       .onEach { exists ->
         if (!exists && everExistedForRecipient.value && _enabled.value) {
           _enabled.value = false
-          store.enabled = false
+          store.setEnabled(false)
         }
       }
       .launchIn(viewModelScope)
@@ -198,24 +175,24 @@ class AccessibilityModeSettingsViewModel(
   // Commands
   fun onSelectRecipient(rid: RecipientId) {
     _selectedRecipientId.value = rid
-    store.selectedRecipientId = rid
+    store.setRecipient(rid)
   }
 
   fun onToggleEnabled(enabled: Boolean) {
     val sel = _selectedRecipientId.value
     if (sel == null) return
     _enabled.value = enabled
-    store.enabled = enabled
+    store.setEnabled(enabled)
   }
 
   fun onChangeGesture(typeValue: Int) {
     _exitGesture.value = typeValue
-    store.exitGestureTypeValue = typeValue
+    store.setGesture(AccessibilityModeExitGestureType.fromValue(typeValue))
   }
 
   fun onSetSuppressNotifications(enabled: Boolean) {
     _suppressNotifications.value = enabled
-    store.suppressNotifications = enabled
+    store.setSuppressNotifications(enabled)
   }
 
 }

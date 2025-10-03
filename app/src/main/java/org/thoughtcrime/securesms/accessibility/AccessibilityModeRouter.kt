@@ -20,21 +20,14 @@ object AccessibilityModeRouter {
 
   private val TAG = Log.tag(AccessibilityModeRouter::class)
 
-  // Store instance - will be initialized in Application.onCreate
-  lateinit var store: AccessibilityModeStore
+  private val store: AccessibilityModeStore = SignalAccessibilityModeStore
 
   /**
    * Call from MainActivity.onStart() and AccessibilityModeActivity.onStart().
    * Routes to the correct mode if needed.
    */
   fun routeIfNeeded(host: Activity) {
-    // Defensive: if store isn't initialized yet, skip routing
-    if (!this::store.isInitialized) {
-      Log.w(TAG, "Route skipped: store not initialized yet")
-      return
-    }
-
-    val state = store.current()
+    val state = store.state.value
     val isAccessibility = state.enabled
 
     when (host) {

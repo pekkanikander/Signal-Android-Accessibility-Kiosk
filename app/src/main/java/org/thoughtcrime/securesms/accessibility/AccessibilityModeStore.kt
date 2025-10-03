@@ -4,53 +4,75 @@
  */
 
 package org.thoughtcrime.securesms.accessibility
-import android.app.Activity
-import android.content.Context
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.Flow
+
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.recipients.RecipientId
 
 /**
- * Store for Accessibility Mode state management.
- * Provides a clean interface to Accessibility Mode settings.
+ * Accessibility Mode store with observable state.
+ * Single source of truth backed by SignalStore.accessibilityMode.
  */
 interface AccessibilityModeStore {
-  fun state(): kotlinx.coroutines.flow.Flow<AccessibilityModeState>
-  fun current(): AccessibilityModeState
-  fun setEnabled(enabled: Boolean, recipientId: RecipientId?)
+  val state: StateFlow<AccessibilityModeState>
+  fun setEnabled(enabled: Boolean, recipientId: RecipientId? = state.value.recipientId)
+  fun setRecipient(recipientId: RecipientId?)
+  fun setGesture(type: AccessibilityModeExitGestureType)
+  fun setSuppressNotifications(enabled: Boolean)
 }
-/**
- * Immutable Accessibility Mode state.
- */
+
+/** Immutable snapshot of Accessibility Mode state. */
 data class AccessibilityModeState(
   val enabled: Boolean,
   val recipientId: RecipientId?,
+  val gestureType: AccessibilityModeExitGestureType,
+  val suppressNotifications: Boolean
 )
+
 /**
- * Implementation using existing SignalStore.accessibilityMode.
+ * Singleton implementation. All callers share the same StateFlow and persistence.
  */
-class SignalAccessibilityModeStore : AccessibilityModeStore {
-  override fun state(): kotlinx.coroutines.flow.Flow<AccessibilityModeState> {
-    return flowOf(current())
+object SignalAccessibilityModeStore : AccessibilityModeStore {
+  private fun readRecipientId(): RecipientId? {
+    val ridLong = SignalStore.accessibilityMode.accessibilityRecipientId
+    return if (ridLong > 0) RecipientId.from(ridLong) else null
   }
 
-  override fun current(): AccessibilityModeState {
-    val ridLong = SignalStore.accessibilityMode.accessibilityRecipientId
-    val rid = if (ridLong > 0) RecipientId.from(ridLong) else null
-    return AccessibilityModeState(
-      enabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
-      recipientId = rid
-    )
-  }
+  private fun readState(): AccessibilityModeState = AccessibilityModeState(
+    enabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
+    recipientId = readRecipientId(),
+    gestureType = AccessibilityModeExitGestureType.fromValue(SignalStore.accessibilityMode.exitGestureType),
+    suppressNotifications = SignalStore.accessibilityMode.suppressNotifications
+  )
+
+  private val internalState: MutableStateFlow<AccessibilityModeState> = MutableStateFlow(readState())
+
+  override val state: StateFlow<AccessibilityModeState> = internalState
 
   override fun setEnabled(enabled: Boolean, recipientId: RecipientId?) {
     SignalStore.accessibilityMode.isAccessibilityModeEnabled = enabled
     SignalStore.accessibilityMode.accessibilityRecipientId = recipientId?.toLong() ?: -1L
+    refresh()
   }
 
-  // Advanced option: suppress notifications while accessibility mode is active
-  var suppressNotifications: Boolean
-    get() = SignalStore.accessibilityMode.suppressNotifications
-    set(value) { SignalStore.accessibilityMode.suppressNotifications = value }
+  override fun setRecipient(recipientId: RecipientId?) {
+    SignalStore.accessibilityMode.accessibilityRecipientId = recipientId?.toLong() ?: -1L
+    refresh()
+  }
+
+  override fun setGesture(type: AccessibilityModeExitGestureType) {
+    SignalStore.accessibilityMode.exitGestureType = type.value
+    refresh()
+  }
+
+  override fun setSuppressNotifications(enabled: Boolean) {
+    SignalStore.accessibilityMode.suppressNotifications = enabled
+    refresh()
+  }
+
+  private fun refresh() {
+    internalState.update { readState() }
+  }
 }
