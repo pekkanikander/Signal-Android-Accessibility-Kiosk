@@ -144,7 +144,7 @@ class AccessibilityModeExitGestureDetector(
 
   // Handle touch events, lie that we did not consume any of them
   fun onTouch(v: View?, event: MotionEvent): Boolean {
-    Log.d(TAG, "[Detector] onTouch " + event.actionLabel())
+    // Log.internal().d(TAG, "[Detector] onTouch " + event.actionLabel())
     policy.handleEvent(event)
     return false // Transparent policy: do not consume
   }
@@ -178,7 +178,7 @@ class AccessibilityModeExitGestureDetector(
 
     public fun transitionTo(s: State, cause: Cause) {
       if (isCurrent(s)) return
-      Log.d(TAG, "[" + smTag + "] " + stateName(current) + " --" + causeLabel(cause) + "--> " + stateName(s))
+      Log.internal().v(TAG, "[" + smTag + "] " + stateName(current) + " --" + causeLabel(cause) + "--> " + stateName(s))
       current?.onExit()
       current = s
       current!!.onEnter(cause)
@@ -271,14 +271,14 @@ class AccessibilityModeExitGestureDetector(
       private val timers: TrackingTimers = object : TrackingTimers {
         override fun schedule(delayMs: Long, block: () -> Unit) {
           val s = requireNotNull(attemptScope) { "Gesture recognition attempt TrackingTimers not active" }
-          Log.d(TAG, "[" + smTag + "] timers.schedule(" + delayMs + "ms)")
+          Log.internal().v(TAG, "[" + smTag + "] timers.schedule(" + delayMs + "ms)")
           s.launch(Dispatchers.Main.immediate) {
             delay(delayMs)
             if (isCurrent(Tracking)) {
-              Log.d(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (state still Tracking)")
+              Log.internal().v(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (state still Tracking)")
               block()
             } else {
-              Log.d(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (ignored; state changed)")
+              Log.internal().v(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (ignored; state changed)")
             }
           }
         }
@@ -365,12 +365,12 @@ class AccessibilityModeExitGestureDetector(
     }
 
     protected fun succeed() {
-      Log.d(TAG, "[" + smTag + "] SUCCESS")
+      Log.i(TAG, "[" + smTag + "] SUCCESS")
       transitionTo(Quiescent, Cause.Internal)
       policy.transitionTo(policy.Success, Cause.Internal)
     }
     protected fun fail() {
-      Log.d(TAG, "[" + smTag + "] FAIL")
+      Log.i(TAG, "[" + smTag + "] FAIL")
       transitionTo(Quiescent, Cause.Internal)
       policy.transitionTo(policy.Idle,    Cause.Internal)
     }
