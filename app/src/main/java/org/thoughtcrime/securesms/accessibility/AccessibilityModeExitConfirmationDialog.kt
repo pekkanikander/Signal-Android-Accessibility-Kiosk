@@ -15,8 +15,24 @@ import androidx.fragment.app.DialogFragment
 import org.thoughtcrime.securesms.R
 
 /**
- * Lightweight confirmation dialog used when the accessibility exit gesture is triggered.
- * Shows a simple confirmation and auto-dismisses after the provided timeout.
+ * Confirmation dialog for Accessibility Mode exit gesture.
+ *
+ * Intent and UX rationale
+ * - Primary goal: prevent assisted users from accidentally exiting Accessibility Mode.
+ * - The exit gesture is intended not to be discoverable for assisting users,
+ *   but an assisted user may still trigger it unintentionally.
+ *   If that happens, the dialog should not force a decision on a confused user;
+ *   instead, it goes away on its own after a short timeout.
+ *
+ * Behavior (by design)
+ * - Presents a clear "Go to settings" action for the assisting user.
+ * - Is cancelable (including outside-tap), and also auto-dismisses after a short timeout.
+ *   This ensures that if an assisted user reaches the dialog by accident, it will disappear
+ *   quickly without requiring them to choose between actions they may not understand.
+ *
+ * Notes
+ * - The timeout is not a failure path; it is an explicit UX choice for this kiosk-like flow.
+ * - Duplicate dialogs are guarded at the callsite to avoid stacking on rapid re-triggers.
  */
 class AccessibilityModeExitConfirmationDialog : DialogFragment() {
 

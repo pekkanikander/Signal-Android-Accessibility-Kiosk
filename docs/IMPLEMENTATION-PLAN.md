@@ -54,7 +54,11 @@
 - [ ] Proper error handling and user feedback
 - [ ] Consolidate and deprecate legacy settings/chat selection files to the minimal set
 
-### **Step 4.3: Integration Verification**
+### **Step 4.3: New functionality**
+- [ ] Implement basic kiosk mode
+- [ ] Depending on how well notifications are supressed, add low battery interface
+
+### **Step 4.4: Integration Verification**
 - [ ] Verify Signal component compatibility
 - [ ] Accessibility audit with TalkBack
 - [ ] Validate rebasing flows, deep links, and notification taps respect the active mode
