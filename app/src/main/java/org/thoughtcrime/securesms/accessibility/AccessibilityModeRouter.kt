@@ -8,6 +8,7 @@ package org.thoughtcrime.securesms.accessibility
 import android.app.Activity
 import android.content.Context
 import org.signal.core.util.logging.Log
+import androidx.core.content.IntentCompat
 import org.thoughtcrime.securesms.MainActivity
 import org.thoughtcrime.securesms.recipients.RecipientId
 
@@ -38,7 +39,7 @@ object AccessibilityModeRouter {
 
     when (host) {
       is AccessibilityModeActivity -> {
-        val hostRecipient: RecipientId? = host.intent.getParcelableExtra("selected_recipient_id", RecipientId::class.java)
+        val hostRecipient: RecipientId? = IntentCompat.getParcelableExtra(host.intent, "selected_recipient_id", RecipientId::class.java)
 
         if (!isAccessibility) {
           Log.d(TAG, "Accessibility Mode disabled, rebasing to Normal Mode")
@@ -74,7 +75,7 @@ object AccessibilityModeRouter {
   fun rebaseToAccessibility(context: Context, recipientId: RecipientId?) {
     // Idempotency: If we are already in AccessibilityModeActivity with the same recipient, skip
     if (context is AccessibilityModeActivity) {
-      val current: RecipientId? = context.intent.getParcelableExtra("selected_recipient_id", RecipientId::class.java)
+      val current: RecipientId? = IntentCompat.getParcelableExtra(context.intent, "selected_recipient_id", RecipientId::class.java)
       if (current == recipientId) {
         Log.d(TAG, "Rebase skipped: already in Accessibility Mode with matching recipient")
         return

@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 import org.signal.core.util.logging.Log
+import androidx.core.content.IntentCompat
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureDetector
@@ -58,7 +59,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
     // Hide action bar to remove back button
     supportActionBar?.hide()
 
-    val selectedRecipientId: RecipientId? = intent.getParcelableExtra("selected_recipient_id", RecipientId::class.java)
+    val selectedRecipientId: RecipientId? = IntentCompat.getParcelableExtra(intent, "selected_recipient_id", RecipientId::class.java)
     if (selectedRecipientId != null) {
       bindHeader(selectedRecipientId)
       if (savedInstanceState == null) {
