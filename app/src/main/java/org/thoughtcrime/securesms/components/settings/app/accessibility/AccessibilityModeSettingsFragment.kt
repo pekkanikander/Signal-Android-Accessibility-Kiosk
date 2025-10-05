@@ -1,7 +1,7 @@
 package org.thoughtcrime.securesms.components.settings.app.accessibility
 
 import android.content.Context
-
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -265,9 +265,9 @@ private fun AccessibilityModeSettingsScreen(
       item { Divider() }
 
       item {
-        // Kiosk helper toggle (API 33+). Sends intent to external helper and reverts on error.
-        val isApi33Plus = android.os.Build.VERSION.SDK_INT >= 33
-        if (!isApi33Plus) {
+        // Kiosk helper toggle (API 29+). Sends intent to external helper and reverts on error.
+        val isApi29Plus = android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        if (!isApi29Plus) {
           ListItem(
             headlineContent = {
               Text(
