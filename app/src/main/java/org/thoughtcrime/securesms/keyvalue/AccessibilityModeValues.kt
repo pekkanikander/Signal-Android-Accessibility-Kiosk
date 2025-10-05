@@ -13,6 +13,8 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     // Basic setting keys
     const val ACCESSIBILITY_MODE_ENABLED = "accessibility_mode.enabled"
     const val ACCESSIBILITY_RECIPIENT_ID = "accessibility_mode.recipient_id"
+    // Helper-backed kiosk preparation (DO policy prepared via external helper)
+    const val KIOSK_ENABLED = "accessibility_mode.kiosk_enabled"
 
     // Advanced settings keys (many not implemented in the UI yet)
     const val EXIT_GESTURE_TYPE = "accessibility_mode.exit_gesture_type"
@@ -28,6 +30,8 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
 
   // Boolean values using booleanValue delegate
   var isAccessibilityModeEnabled: Boolean by booleanValue(ACCESSIBILITY_MODE_ENABLED, false)
+  // Whether helper-backed kiosk policy has been prepared (best-effort; controlled by Settings)
+  var kioskEnabled: Boolean by booleanValue(KIOSK_ENABLED, false)
 
   // Long value for recipient ID
   var accessibilityRecipientId: Long by longValue(ACCESSIBILITY_RECIPIENT_ID, -1L)
@@ -55,6 +59,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     return listOf(
       ACCESSIBILITY_MODE_ENABLED,
       ACCESSIBILITY_RECIPIENT_ID,
+      KIOSK_ENABLED,
       EXIT_GESTURE_TYPE,
       EXIT_GESTURE_TIMEOUT_MS,
       EXIT_GESTURE_POINTER_TIMEOUT_MS,

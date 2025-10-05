@@ -8728,6 +8728,10 @@
     <string name="acc_mode_enable">Enable Accessibility Mode</string>
     <string name="acc_mode_advanced">Advanced…</string>
     <string name="acc_mode_advanced_subtitle">Exit gesture and more</string>
+    <string name="acc_mode_kiosk_enable">Enable Kiosk (requires helper)</string>
+    <string name="acc_mode_kiosk_subtitle">Suppress system UI; managed by Kiosk Helper</string>
+    <string name="acc_mode_kiosk_requires_android13">Requires Android 13 or newer</string>
+    <string name="acc_mode_kiosk_error">Couldn\'t apply kiosk policy. Check helper setup.</string>
     <string name="acc_mode_suppress_notifications">Suppress message notifications while Accessibility Mode is active</string>
     <string name="acc_mode_suppress_notifications_subtitle">When enabled, incoming message notifications are suppressed to avoid popups and unexpected interactions.</string>
     <string name="acc_mode_advanced_title">Accessibility Mode – Advanced</string>

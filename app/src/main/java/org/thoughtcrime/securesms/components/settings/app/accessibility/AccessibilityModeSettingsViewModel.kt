@@ -25,11 +25,11 @@ import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
 // UI state returned to Compose
 data class AccessibilitySettingsUiState(
   val conversations: List<Long> = emptyList(), // minimal DTO: thread ids for now
-  val selectedThreadId: Long? = null,
   val canEnable: Boolean = false,
   val enabled: Boolean = false,
   val exitGestureTypeValue: Int = 0,
-  val suppressNotifications: Boolean = true
+  val suppressNotifications: Boolean = true,
+  val kioskEnabled: Boolean = false
 )
 
 class AccessibilityModeSettingsViewModel(
@@ -53,26 +53,24 @@ class AccessibilityModeSettingsViewModel(
   private val _enabled = MutableStateFlow(store.state.value.enabled)
   private val _exitGesture = MutableStateFlow(store.state.value.gestureType.value)
   private val _suppressNotifications = MutableStateFlow(store.state.value.suppressNotifications)
+  private val _kioskEnabled = MutableStateFlow(store.state.value.kioskEnabled)
 
   private val selectedRecipientIdFlow = _selectedRecipientId.asStateFlow()
   private val enabledFlow = _enabled.asStateFlow()
   // Publicly exposed for external observers (Activity) to react to gesture changes
   val exitGestureFlow = _exitGesture.asStateFlow()
   private val suppressNotificationsFlow = _suppressNotifications.asStateFlow()
-
-  private val selectedThreadIdFlow: Flow<Long?> = selectedRecipientIdFlow.mapLatest { rid ->
-    if (rid == null) return@mapLatest null
-    withContext(Dispatchers.IO) {
-      SignalDatabase.threads.getThreadIdIfExistsFor(rid)
-    }
-  }
+  private val kioskEnabledFlow = _kioskEnabled.asStateFlow()
 
   // Expose the selected thread's record (null if thread does not yet exist). No creation here.
   val selectedThreadRecord: StateFlow<ThreadRecord?> =
-    selectedThreadIdFlow
-      .mapLatest { id ->
-        if (id == null) return@mapLatest null
-        withContext(Dispatchers.IO) { SignalDatabase.threads.getThreadRecord(id) }
+    selectedRecipientIdFlow
+      .mapLatest { rid ->
+        if (rid == null) return@mapLatest null
+        withContext(Dispatchers.IO) {
+          val id = SignalDatabase.threads.getThreadIdIfExistsFor(rid)
+          if (id != null) SignalDatabase.threads.getThreadRecord(id) else null
+        }
       }
       .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -142,24 +140,33 @@ class AccessibilityModeSettingsViewModel(
       .launchIn(viewModelScope)
 
     // Drive UI state from combined sources in two steps to keep overloads explicit.
+    val hasSelectionFlow: StateFlow<Boolean> = selectedRecipientIdFlow
+      .mapLatest { it != null }
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     val baseStateFlow = combine(
       conversationsFlow,
-      selectedThreadIdFlow,
-      selectedRecipientIdFlow,
+      hasSelectionFlow,
       enabledFlow,
       exitGestureFlow
-    ) { conversations, selThread, selRecipient, en, gesture ->
-      val hasSelection = selRecipient != null
+    ) { conversations: List<Long>, hasSelection: Boolean, en: Boolean, gesture: Int ->
       val canEnable = hasSelection
       val effectiveEnabled = en && canEnable
-      AccessibilitySettingsUiState(conversations, selThread, canEnable, effectiveEnabled, gesture)
-    }
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccessibilitySettingsUiState())
+      AccessibilitySettingsUiState(
+        conversations = conversations,
+        canEnable = canEnable,
+        enabled = effectiveEnabled,
+        exitGestureTypeValue = gesture
+      )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccessibilitySettingsUiState())
 
-    combine(baseStateFlow, suppressNotificationsFlow) { base, suppress ->
+    val withKiosk = combine(baseStateFlow, kioskEnabledFlow) { base, kiosk ->
+      base.copy(kioskEnabled = kiosk)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccessibilitySettingsUiState())
+
+    combine(withKiosk, suppressNotificationsFlow) { base, suppress ->
       base.copy(suppressNotifications = suppress)
-    }
-      .onEach { _ui.value = it }
+    }.onEach { _ui.value = it }
       .launchIn(viewModelScope)
 
     selectedThreadExistsFlow
@@ -193,6 +200,11 @@ class AccessibilityModeSettingsViewModel(
   fun onSetSuppressNotifications(enabled: Boolean) {
     _suppressNotifications.value = enabled
     store.setSuppressNotifications(enabled)
+  }
+
+  fun onSetKioskEnabled(enabled: Boolean) {
+    _kioskEnabled.value = enabled
+    store.setKioskEnabled(enabled)
   }
 
 }

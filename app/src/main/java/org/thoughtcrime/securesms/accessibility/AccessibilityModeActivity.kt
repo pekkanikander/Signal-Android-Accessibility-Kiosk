@@ -201,6 +201,20 @@ class AccessibilityModeActivity : AppCompatActivity() {
     exitGestureDetector.updateSelectedGesture(cfg.type, force = true)
   }
 
+  override fun onResume() {
+    super.onResume()
+    // Attempt to enter Lock Task if helper has prepared allowlist. Safe to try; ignore if not allowed.
+    try { startLockTask() } catch (_: IllegalStateException) {
+      // Not allowlisted yet (helper didnt prepare). Intentionally silent to avoid surprises.
+    }
+  }
+
+  override fun onPause() {
+    // Optional unpin on pause; we also unpin explicitly on Exit. Safe to try and ignore failures.
+    try { stopLockTask() } catch (_: IllegalStateException) { }
+    super.onPause()
+  }
+
   // (Removed debug lifecycle logging overrides)
 
   override fun onDestroy() {

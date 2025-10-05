@@ -21,6 +21,7 @@ interface AccessibilityModeStore {
   fun setRecipient(recipientId: RecipientId?)
   fun setGesture(type: AccessibilityModeExitGestureType)
   fun setSuppressNotifications(enabled: Boolean)
+  fun setKioskEnabled(enabled: Boolean)
 }
 
 /** Immutable snapshot of Accessibility Mode state. */
@@ -28,7 +29,8 @@ data class AccessibilityModeState(
   val enabled: Boolean,
   val recipientId: RecipientId?,
   val gestureType: AccessibilityModeExitGestureType,
-  val suppressNotifications: Boolean
+  val suppressNotifications: Boolean,
+  val kioskEnabled: Boolean
 )
 
 /**
@@ -44,7 +46,8 @@ object SignalAccessibilityModeStore : AccessibilityModeStore {
     enabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
     recipientId = readRecipientId(),
     gestureType = AccessibilityModeExitGestureType.fromValue(SignalStore.accessibilityMode.exitGestureType),
-    suppressNotifications = SignalStore.accessibilityMode.suppressNotifications
+    suppressNotifications = SignalStore.accessibilityMode.suppressNotifications,
+    kioskEnabled = SignalStore.accessibilityMode.kioskEnabled
   )
 
   private val internalState: MutableStateFlow<AccessibilityModeState> = MutableStateFlow(readState())
@@ -69,6 +72,13 @@ object SignalAccessibilityModeStore : AccessibilityModeStore {
 
   override fun setSuppressNotifications(enabled: Boolean) {
     SignalStore.accessibilityMode.suppressNotifications = enabled
+    refresh()
+  }
+
+  override fun setKioskEnabled(enabled: Boolean) {
+    // Note: This flag reflects the user's intent and last known apply result.
+    // The helper actually enforces policy. Settings should revert this on helper error.
+    SignalStore.accessibilityMode.kioskEnabled = enabled
     refresh()
   }
 
