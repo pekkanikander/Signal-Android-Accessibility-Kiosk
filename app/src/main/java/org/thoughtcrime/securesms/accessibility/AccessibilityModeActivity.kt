@@ -207,6 +207,14 @@ class AccessibilityModeActivity : AppCompatActivity() {
     try { startLockTask() } catch (_: IllegalStateException) {
       // Not allowlisted yet (helper didnt prepare). Intentionally silent to avoid surprises.
     }
+    val am = getSystemService(android.app.ActivityManager::class.java)
+    val dpm = getSystemService(android.app.admin.DevicePolicyManager::class.java)
+    val mode = when (am.lockTaskModeState) {
+      android.app.ActivityManager.LOCK_TASK_MODE_LOCKED -> "LOCKED"
+      android.app.ActivityManager.LOCK_TASK_MODE_PINNED -> "PINNED"
+      else -> "NONE"
+    }
+    Log.d(TAG, "lockTaskMode=$mode, permitted=${dpm.isLockTaskPermitted(packageName)}")
   }
 
   override fun onPause() {

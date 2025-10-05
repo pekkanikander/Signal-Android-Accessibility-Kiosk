@@ -147,6 +147,13 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     // Register receiver (API 33+ explicit NOT_EXPORTED for dynamic receivers)
     requireContext().registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
 
+    // Pass allowlist and basic defaults (helper auto-adds itself)
+    val callerPkg = requireContext().packageName
+    intent.putStringArrayListExtra(EXTRA_ALLOWLIST, arrayListOf(callerPkg))
+    intent.putExtra(EXTRA_DND_MODE, "total")
+    intent.putExtra(EXTRA_SUPPRESS_STATUS_BAR, true)
+    Log.d(TAG, "Sending to helper: allowlist=[${callerPkg}], dnd=total, suppressStatusBar=true")
+
     // Attach the PendingIntent callback and start the helper command activity
     intent.putExtra("fi.iki.pnr.kioskhelper.extra.RESULT_PENDING_INTENT", resultPi)
 
@@ -183,6 +190,10 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     const val ACTION_ENABLE_KIOSK = "fi.iki.pnr.kioskhelper.ACTION_ENABLE_KIOSK"
     const val ACTION_DISABLE_KIOSK = "fi.iki.pnr.kioskhelper.ACTION_DISABLE_KIOSK"
     const val EXTRA_RESULT_PENDING_INTENT = "fi.iki.pnr.kioskhelper.extra.RESULT_PENDING_INTENT"
+    const val EXTRA_ALLOWLIST = "fi.iki.pnr.kioskhelper.extra.ALLOWLIST"
+    const val EXTRA_DND_MODE = "fi.iki.pnr.kioskhelper.extra.DND_MODE"
+    const val EXTRA_FEATURES = "fi.iki.pnr.kioskhelper.extra.FEATURES"
+    const val EXTRA_SUPPRESS_STATUS_BAR = "fi.iki.pnr.kioskhelper.extra.SUPPRESS_STATUS_BAR"
   }
 
   // Adapter interface to expose the concrete callbacks to composables
