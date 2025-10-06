@@ -4145,7 +4145,7 @@
     <string name="AccessibilityModeSettingsFragment__advanced_subtitle">Exit gesture and more</string>
     <string name="AccessibilityModeSettingsFragment__enable_kiosk">Enable Kiosk (requires helper)</string>
     <string name="AccessibilityModeSettingsFragment__kiosk_subtitle">Suppress system UI; managed by Kiosk Helper</string>
-    <string name="AccessibilityModeSettingsFragment__kiosk_requires_android13">Requires Android 13 or newer</string>
+    <string name="AccessibilityModeSettingsFragment__kiosk_requires_android13">Requires Android 10 or newer</string>
     <string name="AccessibilityModeSettingsFragment__kiosk_error">Couldn\'t apply kiosk policy. Check helper setup.</string>
     <string name="AccessibilityModeAdvancedSettingsFragment__title">Accessibility Mode – Advanced</string>
     <string name="AccessibilityModeAdvancedSettingsFragment__exit_gesture_header">Exit Gesture</string>

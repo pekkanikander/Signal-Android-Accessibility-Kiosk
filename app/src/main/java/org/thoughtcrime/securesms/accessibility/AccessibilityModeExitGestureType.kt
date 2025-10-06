@@ -15,7 +15,7 @@ enum class AccessibilityModeExitGestureType(val value: Int, val displayName: Str
   ChordDial(4, "Chord dial");
   companion object {
     fun fromValue(value: Int): AccessibilityModeExitGestureType {
-      return values().find { it.value == value } ?: ChordSlideUp
+      return values().find { it.value == value } ?: TripleTap
     }
   }
 }

@@ -150,7 +150,7 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     Log.d(TAG, "Sending to helper: allowlist=[${callerPkg}], dnd=total, suppressStatusBar=true")
 
     // Attach the PendingIntent callback and start the helper command activity
-    intent.putExtra("fi.iki.pnr.kioskhelper.extra.RESULT_PENDING_INTENT", resultPi)
+    intent.putExtra(EXTRA_RESULT_PENDING_INTENT, resultPi)
 
     try {
       Log.d(TAG, "Starting helper command activity…")
