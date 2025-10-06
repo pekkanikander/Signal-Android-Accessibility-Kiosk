@@ -56,9 +56,9 @@ class AccessibilityModeExitConfirmationDialog : DialogFragment() {
     val timeout = arguments?.getLong(ARG_TIMEOUT_MS) ?: 5000L
 
     val builder = AlertDialog.Builder(requireContext())
-      .setTitle(R.string.acc_mode_exit_confirm_title)
-      .setMessage(R.string.acc_mode_exit_confirm_message)
-      .setPositiveButton(R.string.acc_mode_exit_confirm_positive) { _, _ ->
+      .setTitle(R.string.AccessibilityModeExitConfirmationDialog__confirm_exit)
+      .setMessage(R.string.AccessibilityModeExitConfirmationDialog__open_accessibility_settings_question)
+      .setPositiveButton(R.string.AccessibilityModeExitConfirmationDialog__go_to_settings) { _, _ ->
         (activity as? AccessibilityModeActivity)?.navigateToSettings()
       }
       .setNegativeButton(android.R.string.cancel, null)

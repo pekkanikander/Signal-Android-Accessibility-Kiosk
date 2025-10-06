@@ -74,7 +74,7 @@ class AccessibilityChatSelectionFragment : LoggingFragment(),
 
     val toolbar: Toolbar = view.findViewById(R.id.toolbar)
 
-    toolbar.setTitle(R.string.acc_mode_select_chat_title)
+    toolbar.setTitle(R.string.AccessibilityChatSelectionFragment__select_chat_title)
     toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
     selectionFragment = childFragmentManager.findFragmentById(R.id.contact_selection_list) as ContactSelectionListFragment

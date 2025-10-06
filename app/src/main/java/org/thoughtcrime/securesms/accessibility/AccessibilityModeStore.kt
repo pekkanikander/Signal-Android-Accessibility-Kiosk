@@ -20,7 +20,6 @@ interface AccessibilityModeStore {
   fun setEnabled(enabled: Boolean, recipientId: RecipientId? = state.value.recipientId)
   fun setRecipient(recipientId: RecipientId?)
   fun setGesture(type: AccessibilityModeExitGestureType)
-  fun setSuppressNotifications(enabled: Boolean)
   fun setKioskEnabled(enabled: Boolean)
 }
 
@@ -29,7 +28,6 @@ data class AccessibilityModeState(
   val enabled: Boolean,
   val recipientId: RecipientId?,
   val gestureType: AccessibilityModeExitGestureType,
-  val suppressNotifications: Boolean,
   val kioskEnabled: Boolean
 )
 
@@ -46,7 +44,6 @@ object SignalAccessibilityModeStore : AccessibilityModeStore {
     enabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
     recipientId = readRecipientId(),
     gestureType = AccessibilityModeExitGestureType.fromValue(SignalStore.accessibilityMode.exitGestureType),
-    suppressNotifications = SignalStore.accessibilityMode.suppressNotifications,
     kioskEnabled = SignalStore.accessibilityMode.kioskEnabled
   )
 
@@ -67,11 +64,6 @@ object SignalAccessibilityModeStore : AccessibilityModeStore {
 
   override fun setGesture(type: AccessibilityModeExitGestureType) {
     SignalStore.accessibilityMode.exitGestureType = type.value
-    refresh()
-  }
-
-  override fun setSuppressNotifications(enabled: Boolean) {
-    SignalStore.accessibilityMode.suppressNotifications = enabled
     refresh()
   }
 

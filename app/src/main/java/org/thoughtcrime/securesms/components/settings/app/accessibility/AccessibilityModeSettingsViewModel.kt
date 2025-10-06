@@ -28,7 +28,6 @@ data class AccessibilitySettingsUiState(
   val canEnable: Boolean = false,
   val enabled: Boolean = false,
   val exitGestureTypeValue: Int = 0,
-  val suppressNotifications: Boolean = true,
   val kioskEnabled: Boolean = false
 )
 
@@ -52,14 +51,12 @@ class AccessibilityModeSettingsViewModel(
   private val _selectedRecipientId = MutableStateFlow(store.state.value.recipientId)
   private val _enabled = MutableStateFlow(store.state.value.enabled)
   private val _exitGesture = MutableStateFlow(store.state.value.gestureType.value)
-  private val _suppressNotifications = MutableStateFlow(store.state.value.suppressNotifications)
   private val _kioskEnabled = MutableStateFlow(store.state.value.kioskEnabled)
 
   private val selectedRecipientIdFlow = _selectedRecipientId.asStateFlow()
   private val enabledFlow = _enabled.asStateFlow()
   // Publicly exposed for external observers (Activity) to react to gesture changes
   val exitGestureFlow = _exitGesture.asStateFlow()
-  private val suppressNotificationsFlow = _suppressNotifications.asStateFlow()
   private val kioskEnabledFlow = _kioskEnabled.asStateFlow()
 
   // Expose the selected thread's record (null if thread does not yet exist). No creation here.
@@ -164,9 +161,7 @@ class AccessibilityModeSettingsViewModel(
       base.copy(kioskEnabled = kiosk)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccessibilitySettingsUiState())
 
-    combine(withKiosk, suppressNotificationsFlow) { base, suppress ->
-      base.copy(suppressNotifications = suppress)
-    }.onEach { _ui.value = it }
+    withKiosk.onEach { _ui.value = it }
       .launchIn(viewModelScope)
 
     selectedThreadExistsFlow
@@ -195,11 +190,6 @@ class AccessibilityModeSettingsViewModel(
   fun onChangeGesture(typeValue: Int) {
     _exitGesture.value = typeValue
     store.setGesture(AccessibilityModeExitGestureType.fromValue(typeValue))
-  }
-
-  fun onSetSuppressNotifications(enabled: Boolean) {
-    _suppressNotifications.value = enabled
-    store.setSuppressNotifications(enabled)
   }
 
   fun onSetKioskEnabled(enabled: Boolean) {

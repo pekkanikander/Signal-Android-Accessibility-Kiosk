@@ -23,9 +23,6 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     const val EXIT_GESTURE_POINTER_TIMEOUT_MS = "accessibility_mode.exit_gesture_pointer_timeout_ms"
     const val EXIT_TRIPLE_TAP_INTERVAL_MS = "accessibility_mode.exit_triple_tap_interval_ms"
     const val EXIT_CONFIRM_TIMEOUT_MS = "accessibility_mode.exit_confirm_timeout_ms"
-
-    // Suppress message notifications while Accessibility Mode is active
-    const val SUPPRESS_NOTIFICATIONS = "accessibility_mode.suppress_notifications"
   }
 
   // Boolean values using booleanValue delegate
@@ -50,8 +47,6 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
   // Confirmation popup timeout (ms)
   var exitConfirmTimeoutMs: Int by integerValue(EXIT_CONFIRM_TIMEOUT_MS, 5000)
 
-  // Suppress message notifications while Accessibility Mode is active
-  var suppressNotifications: Boolean by booleanValue(SUPPRESS_NOTIFICATIONS, true)
 
   public override fun onFirstEverAppLaunch() = Unit
 
@@ -66,7 +61,6 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
       EXIT_TRIPLE_TAP_INTERVAL_MS,
       EXIT_CONFIRM_TIMEOUT_MS,
       EXIT_HEADER_HEIGHT_DP,
-      SUPPRESS_NOTIFICATIONS
     )
   }
 }

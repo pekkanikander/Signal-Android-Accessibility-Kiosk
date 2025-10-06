@@ -93,18 +93,13 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
       )
     }
 
-    // Provide a concrete implementation callable from composables
-    fun onSetSuppressNotifications(enabled: Boolean) {
-      viewModel.onSetSuppressNotifications(enabled)
-    }
-
     override fun onRequestKioskToggle(desired: Boolean) {
       sendKioskIntent(desired) { success ->
         if (success) {
           viewModel.onSetKioskEnabled(desired)
         } else {
           viewModel.onSetKioskEnabled(false)
-          android.widget.Toast.makeText(requireContext(), R.string.acc_mode_kiosk_error, android.widget.Toast.LENGTH_SHORT).show()
+          android.widget.Toast.makeText(requireContext(), R.string.AccessibilityModeSettingsFragment__kiosk_error, android.widget.Toast.LENGTH_SHORT).show()
         }
       }
     }
@@ -195,11 +190,6 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     const val EXTRA_FEATURES = "fi.iki.pnr.kioskhelper.extra.FEATURES"
     const val EXTRA_SUPPRESS_STATUS_BAR = "fi.iki.pnr.kioskhelper.extra.SUPPRESS_STATUS_BAR"
   }
-
-  // Adapter interface to expose the concrete callbacks to composables
-  private interface AccessibilityModeSettingsCallbacksImpl {
-    fun onSetSuppressNotifications(enabled: Boolean)
-  }
 }
 
 @Composable
@@ -220,37 +210,30 @@ private fun AccessibilityModeSettingsScreen(
     ) {
 
       item {
-        if (record != null) {
-          ListItem(
-            headlineContent = {
-              Text(
-                stringResource(R.string.acc_mode_selected_chat_header),
-                style = MaterialTheme.typography.bodyLarge
-              )
-            },
-            supportingContent = {
-              Text(
-                stringResource(R.string.acc_mode_selected_chat_subtitle),
-                style = MaterialTheme.typography.bodySmall
-              )
-            }
-          )
+        val header   = if (record == null) {
+          R.string.AccessibilityModeSettingsFragment__selected_chat_header
         } else {
-          ListItem(
-            headlineContent = {
-              Text(
-                stringResource(R.string.acc_mode_choose_chat_header),
-                style = MaterialTheme.typography.bodyLarge
-              )
-            },
-            supportingContent = {
-              Text(
-                stringResource(R.string.acc_mode_choose_chat_subtitle),
-                style = MaterialTheme.typography.bodySmall
-              )
-            }
-          )
+          R.string.AccessibilityModeSettingsFragment__choose_chat_header
         }
+        val subtitle = if (record == null) {
+          R.string.AccessibilityModeSettingsFragment__selected_chat_subtitle
+        } else {
+          R.string.AccessibilityModeSettingsFragment__choose_chat_subtitle
+        }
+        ListItem(
+          headlineContent = {
+            Text(
+              stringResource(header),
+              style = MaterialTheme.typography.bodyLarge
+            )
+          },
+          supportingContent = {
+            Text(
+              stringResource(subtitle),
+              style = MaterialTheme.typography.bodySmall
+            )
+          }
+        )
       }
 
       item {
@@ -265,62 +248,11 @@ private fun AccessibilityModeSettingsScreen(
       item { Divider() }
 
       item {
-        // Kiosk helper toggle (API 29+). Sends intent to external helper and reverts on error.
-        val isApi29Plus = android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-        if (!isApi29Plus) {
-          ListItem(
-            headlineContent = {
-              Text(
-                stringResource(R.string.acc_mode_kiosk_enable),
-                style = MaterialTheme.typography.bodyLarge
-              )
-            },
-            supportingContent = {
-              Text(
-                stringResource(R.string.acc_mode_kiosk_requires_android13),
-                style = MaterialTheme.typography.bodySmall
-              )
-            },
-            trailingContent = {
-              Switch(checked = false, onCheckedChange = null, enabled = false)
-            }
-          )
-        } else {
-          ListItem(
-            headlineContent = {
-              Text(
-                stringResource(R.string.acc_mode_kiosk_enable),
-                style = MaterialTheme.typography.bodyLarge
-              )
-            },
-            supportingContent = {
-              Text(
-                stringResource(R.string.acc_mode_kiosk_subtitle),
-                style = MaterialTheme.typography.bodySmall
-              )
-            },
-            trailingContent = {
-              Switch(
-                checked = ui.kioskEnabled,
-                onCheckedChange = { desired -> callbacks.onRequestKioskToggle(desired) }
-              )
-            },
-            modifier = Modifier
-              .fillMaxWidth()
-              .clickable { callbacks.onRequestKioskToggle(!ui.kioskEnabled) }
-              .padding(horizontal = 8.dp)
-          )
-        }
-      }
-
-      item { Divider() }
-
-      item {
         // Enable toggle
         ListItem(
           headlineContent = {
             Text(
-              stringResource(R.string.acc_mode_enable),
+              stringResource(R.string.AccessibilityModeSettingsFragment__enable),
               style = MaterialTheme.typography.bodyLarge
             )
           },
@@ -343,17 +275,54 @@ private fun AccessibilityModeSettingsScreen(
       item { Divider() }
 
       item {
-        // Advanced link
+        // Kiosk helper toggle (API 29+). Sends intent to external helper and reverts on error.
+        val isApi29Plus = android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        val subtitle = if (!isApi29Plus) {
+          R.string.AccessibilityModeSettingsFragment__kiosk_requires_android13
+        } else {
+          R.string.AccessibilityModeSettingsFragment__kiosk_subtitle
+        }
         ListItem(
           headlineContent = {
             Text(
-              stringResource(R.string.acc_mode_advanced),
+              stringResource(R.string.AccessibilityModeSettingsFragment__enable_kiosk),
               style = MaterialTheme.typography.bodyLarge
             )
           },
           supportingContent = {
             Text(
-              stringResource(R.string.acc_mode_advanced_subtitle),
+              stringResource(subtitle),
+              style = MaterialTheme.typography.bodySmall
+            )
+          },
+          trailingContent = {
+            if (!isApi29Plus) {
+              Switch(checked = false, onCheckedChange = null, enabled = false)
+            } else {
+              Switch(checked = ui.kioskEnabled, onCheckedChange = { desired -> callbacks.onRequestKioskToggle(desired) })
+            }
+          },
+          modifier = Modifier
+          .fillMaxWidth()
+          .clickable { callbacks.onRequestKioskToggle(!ui.kioskEnabled) }
+          .padding(horizontal = 8.dp)
+        )
+      }
+
+      item { Divider() }
+
+      item {
+        // Advanced link
+        ListItem(
+          headlineContent = {
+            Text(
+              stringResource(R.string.AccessibilityModeSettingsFragment__advanced),
+              style = MaterialTheme.typography.bodyLarge
+            )
+          },
+          supportingContent = {
+            Text(
+              stringResource(R.string.AccessibilityModeSettingsFragment__advanced_subtitle),
               style = MaterialTheme.typography.bodySmall
             )
           },
@@ -373,13 +342,13 @@ private fun ConversationSelectionRow(items: List<Long>, record: ThreadRecord?, o
   when {
     items.isEmpty() ->
       ListItem(
-        headlineContent = { Text(stringResource(R.string.acc_mode_no_chats)) },
+        headlineContent = { Text(stringResource(R.string.AccessibilityModeSettingsFragment__no_chats)) },
         modifier = Modifier.clickable(onClick = onClick)
       )
 
     record == null ->
       ListItem(
-        headlineContent = { Text(stringResource(R.string.acc_mode_select_chat)) },
+        headlineContent = { Text(stringResource(R.string.AccessibilityModeSettingsFragment__select_chat)) },
         modifier = Modifier.clickable(onClick = onClick)
       )
 
@@ -396,7 +365,7 @@ private fun SelectedConversationExactRow(record: ThreadRecord?, onClick: () -> U
 
   if (record == null) {
     ListItem(
-      headlineContent = { Text(stringResource(R.string.acc_mode_select_chat)) },
+      headlineContent = { Text(stringResource(R.string.AccessibilityModeSettingsFragment__select_chat)) },
       modifier = Modifier.clickable(onClick = onClick)
     )
     return

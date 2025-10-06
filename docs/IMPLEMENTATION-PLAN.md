@@ -45,7 +45,6 @@
 - [ ] Implement a reasonable number of Advanced options now in the KV model but not yet in the UI
 - [ ] Reasonably thorough testing of the gestures, both manual testing and automated testing
   - especially the two finger hold usability needs more manual tuning
-- [ ] Another polishing round on the state machine implementation: Unify the Outer and Inner state machine syntax & semantics
 - [ ] Implement another production gesture: Corner-based, reliable on real devices
 - [ ] Polish the final code: remove all smells and all too complex arithmetics
 

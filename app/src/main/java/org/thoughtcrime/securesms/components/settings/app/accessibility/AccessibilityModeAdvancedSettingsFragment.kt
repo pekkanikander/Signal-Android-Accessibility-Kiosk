@@ -51,7 +51,7 @@ private fun AccessibilityModeAdvancedSettingsScreen(
   callbacks: AccessibilityModeAdvancedSettingsCallbacks
 ) {
   org.signal.core.ui.compose.Scaffolds.Settings(
-    title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_advanced_title),
+    title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.AccessibilityModeAdvancedSettingsFragment__title),
     onNavigationClick = callbacks::onNavigationClick,
     navigationIcon = androidx.compose.ui.graphics.vector.ImageVector.vectorResource(org.thoughtcrime.securesms.R.drawable.symbol_arrow_start_24)
   ) { paddingValues ->
@@ -63,36 +63,21 @@ private fun AccessibilityModeAdvancedSettingsScreen(
     ) {
       // Section header
       androidx.compose.material3.Text(
-        text = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_exit_gesture_header),
+        text = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.AccessibilityModeAdvancedSettingsFragment__exit_gesture_header),
         style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
         modifier = androidx.compose.ui.Modifier.padding(16.dp)
       )
 
       RadioRow(
-        title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_gesture_two_fingers_hold),
+        title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.AccessibilityModeAdvancedSettingsFragment__gesture_two_fingers_hold),
         selected = ui.exitGestureTypeValue == AccessibilityModeExitGestureType.ChordSlideUp.value,
         onClick = { callbacks.onChangeGesture(AccessibilityModeExitGestureType.ChordSlideUp.value) }
       )
 
       RadioRow(
-        title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_gesture_triple_tap),
+        title = androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.AccessibilityModeAdvancedSettingsFragment__gesture_triple_tap),
         selected = ui.exitGestureTypeValue == AccessibilityModeExitGestureType.TripleTap.value,
         onClick = { callbacks.onChangeGesture(AccessibilityModeExitGestureType.TripleTap.value) }
-      )
-      // Suppress notifications toggle (advanced option)
-      androidx.compose.material3.ListItem(
-        headlineContent = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_suppress_notifications)) },
-        supportingContent = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(org.thoughtcrime.securesms.R.string.acc_mode_suppress_notifications_subtitle)) },
-        trailingContent = {
-          androidx.compose.material3.Switch(
-            checked = ui.suppressNotifications,
-            onCheckedChange = { callbacks.onSetSuppressNotifications(it) }
-          )
-        },
-        modifier = androidx.compose.ui.Modifier
-          .fillMaxWidth()
-          .clickable(onClick = { callbacks.onSetSuppressNotifications(!ui.suppressNotifications) })
-          .padding(horizontal = 8.dp)
       )
     }
   }
@@ -118,16 +103,12 @@ private fun RadioRow(title: String, selected: Boolean, onClick: () -> Unit) {
     override fun onChangeGesture(typeValue: Int) {
       viewModel.onChangeGesture(typeValue)
     }
-    override fun onSetSuppressNotifications(enabled: Boolean) {
-      viewModel.onSetSuppressNotifications(enabled)
-    }
   }
 }
 
 interface AccessibilityModeAdvancedSettingsCallbacks {
   fun onNavigationClick() = Unit
   fun onChangeGesture(typeValue: Int) = Unit
-  fun onSetSuppressNotifications(enabled: Boolean) = Unit
 
   object Empty : AccessibilityModeAdvancedSettingsCallbacks
 }

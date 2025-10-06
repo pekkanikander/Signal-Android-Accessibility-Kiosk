@@ -380,13 +380,13 @@
     <fragment
         android:id="@+id/accessibilityModeAdvancedSettingsFragment"
         android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeAdvancedSettingsFragment"
-        android:label="@string/acc_mode_advanced_title"
+        android:label="@string/AccessibilityModeAdvancedSettingsFragment__title"
         tools:layout="@layout/dsl_settings_fragment" />
 
     <fragment
         android:id="@+id/chatSelectionFragment"
         android:name="org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityChatSelectionFragment"
-        android:label="@string/acc_mode_select_chat_title"
+        android:label="@string/AccessibilityChatSelectionFragment__select_chat_title"
         tools:layout="@layout/dsl_settings_fragment" />
 
     <!-- endregion -->
