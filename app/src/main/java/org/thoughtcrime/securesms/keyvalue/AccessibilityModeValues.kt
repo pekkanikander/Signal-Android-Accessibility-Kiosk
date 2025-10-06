@@ -1,7 +1,9 @@
 package org.thoughtcrime.securesms.keyvalue
 
+import androidx.lifecycle.LiveData
 import org.thoughtcrime.securesms.keyvalue.SignalStoreValues
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureType
+import org.thoughtcrime.securesms.util.SingleLiveEvent
 
 /**
  * Stores accessibility mode settings for the Signal app.
@@ -25,8 +27,19 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
     const val EXIT_CONFIRM_TIMEOUT_MS = "accessibility_mode.exit_confirm_timeout_ms"
   }
 
-  // Boolean values using booleanValue delegate
-  var isAccessibilityModeEnabled: Boolean by booleanValue(ACCESSIBILITY_MODE_ENABLED, false)
+  // Configuration change event (mirrors SettingsValues pattern)
+  private val _onConfigurationSettingChanged: SingleLiveEvent<String> = SingleLiveEvent()
+  val onConfigurationSettingChanged: LiveData<String> get() = _onConfigurationSettingChanged
+
+  // Boolean value with explicit setter to emit configuration change events (like theme/language)
+  var isAccessibilityModeEnabled: Boolean
+    get() = store.getBoolean(ACCESSIBILITY_MODE_ENABLED, false)
+    set(value) {
+      store.beginWrite()
+        .putBoolean(ACCESSIBILITY_MODE_ENABLED, value)
+        .commit()
+      _onConfigurationSettingChanged.postValue(ACCESSIBILITY_MODE_ENABLED)
+    }
   // Whether helper-backed kiosk policy has been prepared (best-effort; controlled by Settings)
   var kioskEnabled: Boolean by booleanValue(KIOSK_ENABLED, false)
 

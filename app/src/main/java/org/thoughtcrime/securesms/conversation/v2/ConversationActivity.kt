@@ -24,7 +24,6 @@ import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.util.ConfigurationUtil
 import org.thoughtcrime.securesms.util.Debouncer
 import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme
-import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter
 import java.util.concurrent.TimeUnit
 
 /**
@@ -85,12 +84,6 @@ open class ConversationActivity : PassphraseRequiredActivity(), VoiceNoteMediaCo
   override fun onResume() {
     super.onResume()
     theme.onResume(this)
-  }
-
-  override fun onStart() {
-    super.onStart()
-    // Funnel direct conversation entries through router to respect Accessibility Mode
-    AccessibilityModeRouter.routeIfNeeded(this)
   }
 
   override fun onStop() {

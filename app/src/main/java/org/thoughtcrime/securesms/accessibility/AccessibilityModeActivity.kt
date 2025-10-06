@@ -5,12 +5,14 @@
 
 package org.thoughtcrime.securesms.accessibility
 
-import android.graphics.Rect
 import android.os.Bundle
+import android.content.Intent
+import android.content.Context
 import android.view.View
-// import android.view.ViewGroup (removed)
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import org.thoughtcrime.securesms.PassphraseRequiredActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -21,12 +23,12 @@ import org.signal.core.util.logging.Log
 import androidx.core.content.IntentCompat
 import androidx.core.app.NotificationManagerCompat
 import org.thoughtcrime.securesms.R
-import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureDetector
 import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsViewModel
-import org.thoughtcrime.securesms.accessibility.IntentFactory
+import org.thoughtcrime.securesms.components.settings.app.AppSettingsActivity
 import org.thoughtcrime.securesms.conversation.ConversationTitleView
 import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.MainActivity
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.keyvalue.SignalStore
@@ -42,18 +44,51 @@ import com.bumptech.glide.Glide
  * - Simplified conversation interface
  * - Accessibility-optimized UI
  */
-class AccessibilityModeActivity : AppCompatActivity() {
+class AccessibilityModeActivity : PassphraseRequiredActivity() {
 
   companion object {
     private val TAG = Log.tag(AccessibilityModeActivity::class.java)
+
+    @JvmStatic
+    fun getAccessibilityModeIntent(context: Context): Intent? {
+      // Loop prevention: if already in AccessibilityModeActivity, don’t re-launch
+      if (context is AccessibilityModeActivity) return null
+
+      // Never open AccessibilityModeActivity from AppSettingsActivity
+      if (context is AppSettingsActivity)       return null;
+
+      val s = SignalStore.accessibilityMode
+      val ridLong = s.accessibilityRecipientId
+
+      return Intent(context, AccessibilityModeActivity::class.java).apply {
+        if (ridLong > 0L) {
+          putExtra("selected_recipient_id", RecipientId.from(ridLong))
+        }
+      }
+    }
   }
 
   private lateinit var exitGestureDetector: AccessibilityModeExitGestureDetector
   private val settingsViewModel: AccessibilityModeSettingsViewModel by viewModels()
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+  private val openSettings: ActivityResultLauncher<Intent> =
+    registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+      if (result.resultCode == MainActivity.RESULT_CONFIG_CHANGED) {
+        recreate()
+      }
+    }
+
+  override fun onCreate(savedInstanceState: Bundle?, ready: Boolean) {
+    super.onCreate(savedInstanceState, ready)
     Log.d(TAG, "AccessibilityModeActivity.onCreate() called")
+
+    // Fail-safe: if Accessibility Mode was disabled while we were away, exit to Main.
+    if (!SignalStore.accessibilityMode.isAccessibilityModeEnabled) {
+      startActivity(MainActivity.clearTop(this))
+      finish()
+      return
+    }
+
     setContentView(R.layout.activity_accessibility_mode)
 
     // Hide action bar to remove back button
@@ -163,7 +198,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
   }
 
   private fun showExitConfirmationOverlay() {
-    val timeoutMs = org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitConfirmTimeoutMs.toLong()
+    val timeoutMs = SignalStore.accessibilityMode.exitConfirmTimeoutMs.toLong()
     val fm = supportFragmentManager
     val existing = fm.findFragmentByTag(AccessibilityModeExitConfirmationDialog.TAG)
     if (existing == null) {
@@ -175,7 +210,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
   }
 
   fun navigateToSettings() {
-    startActivity(IntentFactory.settings(this))
+    openSettings.launch(AppSettingsActivity.home(this))
   }
 
   private fun readExitGestureConfig(): ExitGestureConfig {
@@ -200,10 +235,6 @@ class AccessibilityModeActivity : AppCompatActivity() {
 
   override fun onStart() {
     super.onStart()
-    Log.d(TAG, "AccessibilityModeActivity.onStart() called")
-    AccessibilityModeRouter.routeIfNeeded(this)
-    Log.d(TAG, "AccessibilityModeActivity.onStart() completed")
-
     // Snapshot current settings and apply to detector on every (re)start.
     val cfg = readExitGestureConfig()
     exitGestureDetector.applyConfig(cfg)
