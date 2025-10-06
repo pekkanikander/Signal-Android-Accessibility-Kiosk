@@ -22,6 +22,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
   val internalValues = InternalValues(store)
   val emojiValues = EmojiValues(store)
   val settingsValues = SettingsValues(store, context)
+  val accessibilityModeValues = AccessibilityModeValues(store)
   val certificateValues = CertificateValues(store)
   val phoneNumberPrivacyValues = PhoneNumberPrivacyValues(store)
   val onboardingValues = OnboardingValues(store)
@@ -37,7 +38,6 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
   val storyValues = StoryValues(store)
   val apkUpdateValues = ApkUpdateValues(store)
   val backupValues = BackupValues(store)
-  val accessibilityModeValues = AccessibilityModeValues(store)
 
   val plainTextValues = PlainTextSharedPrefsDataStore(context)
 
@@ -70,6 +70,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
       internal.onFirstEverAppLaunch()
       emoji.onFirstEverAppLaunch()
       settings.onFirstEverAppLaunch()
+      accessibilityMode.onFirstEverAppLaunch()
       certificate.onFirstEverAppLaunch()
       phoneNumberPrivacy.onFirstEverAppLaunch()
       onboarding.onFirstEverAppLaunch()
@@ -85,7 +86,6 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
       story.onFirstEverAppLaunch()
       apkUpdate.onFirstEverAppLaunch()
       backup.onFirstEverAppLaunch()
-      accessibilityMode.onFirstEverAppLaunch()
     }
 
     @JvmStatic
@@ -103,6 +103,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
           internal.keysToIncludeInBackup +
           emoji.keysToIncludeInBackup +
           settings.keysToIncludeInBackup +
+          accessibilityMode.keysToIncludeInBackup +
           certificate.keysToIncludeInBackup +
           phoneNumberPrivacy.keysToIncludeInBackup +
           onboarding.keysToIncludeInBackup +
@@ -117,8 +118,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
           releaseChannel.keysToIncludeInBackup +
           story.keysToIncludeInBackup +
           apkUpdate.keysToIncludeInBackup +
-          backup.keysToIncludeInBackup +
-          accessibilityMode.keysToIncludeInBackup
+          backup.keysToIncludeInBackup
       }
 
     /**
@@ -199,6 +199,11 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
       get() = instance!!.settingsValues
 
     @JvmStatic
+    @get:JvmName("accessibilityMode")
+    val accessibilityMode: AccessibilityModeValues
+      get() = instance!!.accessibilityModeValues
+
+    @JvmStatic
     @get:JvmName("certificate")
     val certificate: CertificateValues
       get() = instance!!.certificateValues
@@ -268,11 +273,6 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
     @get:JvmName("backup")
     val backup: BackupValues
       get() = instance!!.backupValues
-
-    @JvmStatic
-    @get:JvmName("accessibilityMode")
-    val accessibilityMode: AccessibilityModeValues
-      get() = instance!!.accessibilityModeValues
 
     val groupsV2AciAuthorizationCache: GroupsV2AuthorizationSignalStoreCache
       get() = GroupsV2AuthorizationSignalStoreCache.createAciCache(instance!!.store)

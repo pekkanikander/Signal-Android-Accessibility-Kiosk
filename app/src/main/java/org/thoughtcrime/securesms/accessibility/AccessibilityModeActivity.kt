@@ -19,6 +19,7 @@ import kotlinx.coroutines.withContext
 
 import org.signal.core.util.logging.Log
 import androidx.core.content.IntentCompat
+import androidx.core.app.NotificationManagerCompat
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeRouter
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureDetector
@@ -54,7 +55,6 @@ class AccessibilityModeActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
     Log.d(TAG, "AccessibilityModeActivity.onCreate() called")
     setContentView(R.layout.activity_accessibility_mode)
-    Log.d(TAG, "Content view set")
 
     // Hide action bar to remove back button
     supportActionBar?.hide()
@@ -121,7 +121,7 @@ class AccessibilityModeActivity : AppCompatActivity() {
     )
   }
   override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
-    // Passive observe for the exit detector; return value ignored to keep Transparent policy
+    // Passive observe at the exit detector; return value ignored to keep Transparent policy
     if (::exitGestureDetector.isInitialized) {
       try { exitGestureDetector.onTouch(null, ev) } catch (_: Exception) {}
     }
@@ -189,6 +189,15 @@ class AccessibilityModeActivity : AppCompatActivity() {
     )
   }
 
+  private fun clearAppNotifications(reason: String) {
+    try {
+      NotificationManagerCompat.from(this).cancelAll()
+      Log.d(TAG, "Cleared notifications ($reason)")
+    } catch (t: Throwable) {
+      Log.w(TAG, "clearAppNotifications failed: ${t.message}")
+    }
+  }
+
   override fun onStart() {
     super.onStart()
     Log.d(TAG, "AccessibilityModeActivity.onStart() called")
@@ -201,29 +210,37 @@ class AccessibilityModeActivity : AppCompatActivity() {
     exitGestureDetector.updateSelectedGesture(cfg.type, force = true)
   }
 
-  override fun onResume() {
-    super.onResume()
-    // Attempt to enter Lock Task if helper has prepared allowlist. Safe to try; ignore if not allowed.
-    try { startLockTask() } catch (_: IllegalStateException) {
-      // Not allowlisted yet (helper didnt prepare). Intentionally silent to avoid surprises.
-    }
-    val am = getSystemService(android.app.ActivityManager::class.java)
-    val dpm = getSystemService(android.app.admin.DevicePolicyManager::class.java)
-    val mode = when (am.lockTaskModeState) {
-      android.app.ActivityManager.LOCK_TASK_MODE_LOCKED -> "LOCKED"
-      android.app.ActivityManager.LOCK_TASK_MODE_PINNED -> "PINNED"
-      else -> "NONE"
-    }
-    Log.d(TAG, "lockTaskMode=$mode, permitted=${dpm.isLockTaskPermitted(packageName)}")
+/**
+ * Handover point: the caregiver gives the device to the assisted user.
+ * From here on, the UI must be distraction-free.
+ *
+ * We first attempt to enter Lock Task (if the helper has prepared the allowlist),
+ * then clear any app notifications so there are no badges/toasts at hand-off.
+ * While Accessibility Mode is active, Signal remains pinned;
+ * when the user exits it, normal system behavior resumes.
+ */
+override fun onResume() {
+  super.onResume()
+  // Attempt to enter Lock Task if helper has prepared allowlist. Safe to try; ignore if not allowed.
+  try { startLockTask() } catch (_: IllegalStateException) {
+    // Not allowlisted yet (helper didn’t prepare). Intentionally silent to avoid surprises.
   }
+  clearAppNotifications("entering Accessibility Mode")
+}
 
-  override fun onPause() {
-    // Optional unpin on pause; we also unpin explicitly on Exit. Safe to try and ignore failures.
-    try { stopLockTask() } catch (_: IllegalStateException) { }
-    super.onPause()
-  }
-
-  // (Removed debug lifecycle logging overrides)
+/**
+ * Handover back: the caregiver has performed the exit gesture and confirmed it.
+ *
+ * Notifications may become visible/audible again after kiosk is lifted;
+ * to avoid any burst of backlog, clear Signal's notifications before unpinning.
+ */
+override fun onPause() {
+  // Clear before unpinning to avoid a visible burst when returning to Settings.
+  clearAppNotifications("exiting Accessibility Mode")
+  // Optional unpin on pause; we also unpin explicitly on Exit. Safe to try and ignore failures.
+  try { stopLockTask() } catch (_: IllegalStateException) { }
+  super.onPause()
+}
 
   override fun onDestroy() {
     try {
