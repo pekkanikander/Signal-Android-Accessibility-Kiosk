@@ -21,6 +21,11 @@ interface AccessibilityModeStore {
   fun setRecipient(recipientId: RecipientId?)
   fun setGesture(type: AccessibilityModeExitGestureType)
   suspend fun requestKioskEnabled(enabled: Boolean): Boolean
+  fun setExitGestureTimeoutMs(value: Int)
+  fun setExitGesturePointerTimeoutMs(value: Int)
+  fun setExitHeaderHeightDp(value: Int)
+  fun setExitTripleTapIntervalMs(value: Int)
+  fun setExitConfirmTimeoutMs(value: Int)
 }
 
 /** Immutable snapshot of Accessibility Mode state. */
@@ -28,7 +33,12 @@ data class AccessibilityModeState(
   val enabled: Boolean,
   val recipientId: RecipientId?,
   val gestureType: AccessibilityModeExitGestureType,
-  val kioskEnabled: Boolean
+  val kioskEnabled: Boolean,
+  val exitGestureTimeoutMs: Int,
+  val exitGesturePointerTimeoutMs: Int,
+  val exitHeaderHeightDp: Int,
+  val exitTripleTapIntervalMs: Int,
+  val exitConfirmTimeoutMs: Int
 )
 
 /**
@@ -44,7 +54,12 @@ object SignalAccessibilityModeStore : AccessibilityModeStore {
     enabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
     recipientId = readRecipientId(),
     gestureType = AccessibilityModeExitGestureType.fromValue(SignalStore.accessibilityMode.exitGestureType),
-    kioskEnabled = SignalStore.accessibilityMode.isKioskEnabled
+    kioskEnabled = SignalStore.accessibilityMode.isKioskEnabled,
+    exitGestureTimeoutMs = SignalStore.accessibilityMode.exitGestureTimeoutMs,
+    exitGesturePointerTimeoutMs = SignalStore.accessibilityMode.exitGesturePointerTimeoutMs,
+    exitHeaderHeightDp = SignalStore.accessibilityMode.exitHeaderHeightDp,
+    exitTripleTapIntervalMs = SignalStore.accessibilityMode.exitTripleTapIntervalMs,
+    exitConfirmTimeoutMs = SignalStore.accessibilityMode.exitConfirmTimeoutMs
   )
 
   private val internalState: MutableStateFlow<AccessibilityModeState> = MutableStateFlow(readState())
@@ -76,6 +91,31 @@ object SignalAccessibilityModeStore : AccessibilityModeStore {
     }
     refresh()
     return ok
+  }
+
+  override fun setExitGestureTimeoutMs(value: Int) {
+    SignalStore.accessibilityMode.exitGestureTimeoutMs = value
+    refresh()
+  }
+
+  override fun setExitGesturePointerTimeoutMs(value: Int) {
+    SignalStore.accessibilityMode.exitGesturePointerTimeoutMs = value
+    refresh()
+  }
+
+  override fun setExitHeaderHeightDp(value: Int) {
+    SignalStore.accessibilityMode.exitHeaderHeightDp = value
+    refresh()
+  }
+
+  override fun setExitTripleTapIntervalMs(value: Int) {
+    SignalStore.accessibilityMode.exitTripleTapIntervalMs = value
+    refresh()
+  }
+
+  override fun setExitConfirmTimeoutMs(value: Int) {
+    SignalStore.accessibilityMode.exitConfirmTimeoutMs = value
+    refresh()
   }
 
   private fun refresh() {

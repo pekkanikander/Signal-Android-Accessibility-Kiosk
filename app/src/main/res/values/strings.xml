@@ -4151,6 +4151,12 @@
     <string name="AccessibilityModeAdvancedSettingsFragment__exit_gesture_header">Exit Gesture</string>
     <string name="AccessibilityModeAdvancedSettingsFragment__gesture_two_fingers_hold">Two fingers hold</string>
     <string name="AccessibilityModeAdvancedSettingsFragment__gesture_triple_tap">Triple tap</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__advanced_tuning_header">Advanced tuning</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_timeout_ms">Exit timeout (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_pointer_timeout_ms">Pointer second-finger timeout (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_header_height_dp">Exit header height (dp)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__triple_tap_interval_ms">Triple-tap interval (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__confirm_timeout_ms">Confirm timeout (ms)</string>
 
     <!-- Accessibility exit confirmation dialog -->
     <string name="AccessibilityModeExitConfirmationDialog__confirm_exit">Confirm exit</string>

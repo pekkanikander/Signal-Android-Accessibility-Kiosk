@@ -29,7 +29,12 @@ data class AccessibilitySettingsUiState(
   val canEnable: Boolean = false,
   val enabled: Boolean = false,
   val exitGestureTypeValue: Int = 0,
-  val kioskEnabled: Boolean = false
+  val kioskEnabled: Boolean = false,
+  val exitGestureTimeoutMs: Int = 8000,
+  val exitGesturePointerTimeoutMs: Int = 700,
+  val exitHeaderHeightDp: Int = 120,
+  val exitTripleTapIntervalMs: Int = 350,
+  val exitConfirmTimeoutMs: Int = 5000
 )
 
 class AccessibilityModeSettingsViewModel(
@@ -53,12 +58,22 @@ class AccessibilityModeSettingsViewModel(
   private val _enabled = MutableStateFlow(store.state.value.enabled)
   private val _exitGesture = MutableStateFlow(store.state.value.gestureType.value)
   private val _kioskEnabled = MutableStateFlow(store.state.value.kioskEnabled)
+  private val _exitGestureTimeoutMs = MutableStateFlow(store.state.value.exitGestureTimeoutMs)
+  private val _exitGesturePointerTimeoutMs = MutableStateFlow(store.state.value.exitGesturePointerTimeoutMs)
+  private val _exitHeaderHeightDp = MutableStateFlow(store.state.value.exitHeaderHeightDp)
+  private val _exitTripleTapIntervalMs = MutableStateFlow(store.state.value.exitTripleTapIntervalMs)
+  private val _exitConfirmTimeoutMs = MutableStateFlow(store.state.value.exitConfirmTimeoutMs)
 
   private val selectedRecipientIdFlow = _selectedRecipientId.asStateFlow()
   private val enabledFlow = _enabled.asStateFlow()
   // Publicly exposed for external observers (Activity) to react to gesture changes
   val exitGestureFlow = _exitGesture.asStateFlow()
   private val kioskEnabledFlow = _kioskEnabled.asStateFlow()
+  private val exitGestureTimeoutFlow = _exitGestureTimeoutMs.asStateFlow()
+  private val exitGesturePointerTimeoutFlow = _exitGesturePointerTimeoutMs.asStateFlow()
+  private val exitHeaderHeightFlow = _exitHeaderHeightDp.asStateFlow()
+  private val exitTripleTapIntervalFlow = _exitTripleTapIntervalMs.asStateFlow()
+  private val exitConfirmTimeoutFlow = _exitConfirmTimeoutMs.asStateFlow()
 
   // Expose the selected thread's record (null if thread does not yet exist). No creation here.
   val selectedThreadRecord: StateFlow<ThreadRecord?> =
@@ -158,11 +173,18 @@ class AccessibilityModeSettingsViewModel(
       )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccessibilitySettingsUiState())
 
-    val withKiosk = combine(baseStateFlow, kioskEnabledFlow) { base, kiosk ->
-      base.copy(kioskEnabled = kiosk)
+    val withStore = combine(baseStateFlow, store.state) { base, st ->
+      base.copy(
+        kioskEnabled = st.kioskEnabled,
+        exitGestureTimeoutMs = st.exitGestureTimeoutMs,
+        exitGesturePointerTimeoutMs = st.exitGesturePointerTimeoutMs,
+        exitHeaderHeightDp = st.exitHeaderHeightDp,
+        exitTripleTapIntervalMs = st.exitTripleTapIntervalMs,
+        exitConfirmTimeoutMs = st.exitConfirmTimeoutMs
+      )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccessibilitySettingsUiState())
 
-    withKiosk.onEach { _ui.value = it }
+    withStore.onEach { _ui.value = it }
       .launchIn(viewModelScope)
 
     selectedThreadExistsFlow
@@ -191,6 +213,31 @@ class AccessibilityModeSettingsViewModel(
   fun onChangeGesture(typeValue: Int) {
     _exitGesture.value = typeValue
     store.setGesture(AccessibilityModeExitGestureType.fromValue(typeValue))
+  }
+
+  fun onSetExitGestureTimeoutMs(value: Int) {
+    _exitGestureTimeoutMs.value = value
+    store.setExitGestureTimeoutMs(value)
+  }
+
+  fun onSetExitGesturePointerTimeoutMs(value: Int) {
+    _exitGesturePointerTimeoutMs.value = value
+    store.setExitGesturePointerTimeoutMs(value)
+  }
+
+  fun onSetExitHeaderHeightDp(value: Int) {
+    _exitHeaderHeightDp.value = value
+    store.setExitHeaderHeightDp(value)
+  }
+
+  fun onSetExitTripleTapIntervalMs(value: Int) {
+    _exitTripleTapIntervalMs.value = value
+    store.setExitTripleTapIntervalMs(value)
+  }
+
+  fun onSetExitConfirmTimeoutMs(value: Int) {
+    _exitConfirmTimeoutMs.value = value
+    store.setExitConfirmTimeoutMs(value)
   }
 
   fun onSetKioskEnabled(enabled: Boolean) {
