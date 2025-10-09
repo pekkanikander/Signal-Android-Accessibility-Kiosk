@@ -94,102 +94,11 @@ class AccessibilityModeSettingsFragment : ComposeFragment() {
     }
 
     override fun onRequestKioskToggle(desired: Boolean) {
-      sendKioskIntent(desired) { success ->
-        if (success) {
-          viewModel.onSetKioskEnabled(desired)
-        } else {
-          viewModel.onSetKioskEnabled(false)
-          android.widget.Toast.makeText(requireContext(), R.string.AccessibilityModeSettingsFragment__kiosk_error, android.widget.Toast.LENGTH_SHORT).show()
-        }
-      }
+      viewModel.onSetKioskEnabled(desired)
     }
   }
 
-  private fun sendKioskIntent(enable: Boolean, onResult: (Boolean) -> Unit) {
-    // Minimal contract per helper design: setPackage + action + optional ResultReceiver.
-    // Corner cases: helper missing or no response -> treat as failure and revert UI with a toast.
-    val action = if (enable) ACTION_ENABLE_KIOSK else ACTION_DISABLE_KIOSK
-    Log.d(TAG, "sendKioskIntent(enable=$enable) action=$action package=$HELPER_PACKAGE")
 
-    val intent = Intent(action)
-      .setPackage(HELPER_PACKAGE)
-
-    // Prepare a unique one-shot broadcast for the helper's callback
-    val callbackAction = "org.thoughtcrime.securesms.KIOSK_RESULT." + System.currentTimeMillis()
-    val resultIntent = Intent(callbackAction).setPackage(requireContext().packageName)
-    val resultPi = PendingIntent.getBroadcast(
-      requireContext(), 0, resultIntent,
-      PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_MUTABLE
-    )
-
-    // One-shot dynamic receiver
-    val filter = IntentFilter(callbackAction)
-    val handler = Handler(Looper.getMainLooper())
-    var completed = false
-
-    val receiver = object : BroadcastReceiver() {
-      override fun onReceive(ctx: android.content.Context?, i: Intent?) {
-        if (completed) return
-        completed = true
-        try { requireContext().unregisterReceiver(this) } catch (_: Throwable) {}
-        handler.removeCallbacksAndMessages(null)
-        val ok = i?.getStringExtra("status") == "OK"
-        Log.d(TAG, "Helper callback received: status=${i?.getStringExtra("status")}")
-        onResult(ok)
-      }
-    }
-
-    // Register receiver (API 33+ explicit NOT_EXPORTED for dynamic receivers)
-    requireContext().registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-
-    // Pass allowlist and basic defaults (helper auto-adds itself)
-    val callerPkg = requireContext().packageName
-    intent.putStringArrayListExtra(EXTRA_ALLOWLIST, arrayListOf(callerPkg))
-    intent.putExtra(EXTRA_DND_MODE, "total")
-    intent.putExtra(EXTRA_SUPPRESS_STATUS_BAR, true)
-    Log.d(TAG, "Sending to helper: allowlist=[${callerPkg}], dnd=total, suppressStatusBar=true")
-
-    // Attach the PendingIntent callback and start the helper command activity
-    intent.putExtra(EXTRA_RESULT_PENDING_INTENT, resultPi)
-
-    try {
-      Log.d(TAG, "Starting helper command activity…")
-      intent.setClassName(HELPER_PACKAGE, "fi.iki.pnr.kioskhelper.KioskCommandActivity")
-      startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    } catch (se: SecurityException) {
-      Log.e(TAG, "Helper rejected startActivity (permission?)", se)
-      try { requireContext().unregisterReceiver(receiver) } catch (_: Throwable) {}
-      onResult(false)
-      return
-    } catch (t: Throwable) {
-      Log.w(TAG, "Failed to start helper activity", t)
-      try { requireContext().unregisterReceiver(receiver) } catch (_: Throwable) {}
-      onResult(false)
-      return
-    }
-
-    // Fallback timeout if helper never responds
-    handler.postDelayed({
-      if (!completed) {
-        Log.w(TAG, "Helper callback timed out")
-        completed = true
-        try { requireContext().unregisterReceiver(receiver) } catch (_: Throwable) {}
-        onResult(false)
-      }
-    }, 3000L)
-  }
-
-  private companion object {
-    private val TAG = Log.tag(AccessibilityModeSettingsFragment::class.java)
-    const val HELPER_PACKAGE = "fi.iki.pnr.kioskhelper"
-    const val ACTION_ENABLE_KIOSK = "fi.iki.pnr.kioskhelper.ACTION_ENABLE_KIOSK"
-    const val ACTION_DISABLE_KIOSK = "fi.iki.pnr.kioskhelper.ACTION_DISABLE_KIOSK"
-    const val EXTRA_RESULT_PENDING_INTENT = "fi.iki.pnr.kioskhelper.extra.RESULT_PENDING_INTENT"
-    const val EXTRA_ALLOWLIST = "fi.iki.pnr.kioskhelper.extra.ALLOWLIST"
-    const val EXTRA_DND_MODE = "fi.iki.pnr.kioskhelper.extra.DND_MODE"
-    const val EXTRA_FEATURES = "fi.iki.pnr.kioskhelper.extra.FEATURES"
-    const val EXTRA_SUPPRESS_STATUS_BAR = "fi.iki.pnr.kioskhelper.extra.SUPPRESS_STATUS_BAR"
-  }
 }
 
 @Composable

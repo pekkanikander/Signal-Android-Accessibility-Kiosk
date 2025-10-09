@@ -20,7 +20,7 @@ interface AccessibilityModeStore {
   fun setEnabled(enabled: Boolean, recipientId: RecipientId? = state.value.recipientId)
   fun setRecipient(recipientId: RecipientId?)
   fun setGesture(type: AccessibilityModeExitGestureType)
-  fun setKioskEnabled(enabled: Boolean)
+  suspend fun requestKioskEnabled(enabled: Boolean): Boolean
 }
 
 /** Immutable snapshot of Accessibility Mode state. */
@@ -44,7 +44,7 @@ object SignalAccessibilityModeStore : AccessibilityModeStore {
     enabled = SignalStore.accessibilityMode.isAccessibilityModeEnabled,
     recipientId = readRecipientId(),
     gestureType = AccessibilityModeExitGestureType.fromValue(SignalStore.accessibilityMode.exitGestureType),
-    kioskEnabled = SignalStore.accessibilityMode.kioskEnabled
+    kioskEnabled = SignalStore.accessibilityMode.isKioskEnabled
   )
 
   private val internalState: MutableStateFlow<AccessibilityModeState> = MutableStateFlow(readState())
@@ -67,11 +67,15 @@ object SignalAccessibilityModeStore : AccessibilityModeStore {
     refresh()
   }
 
-  override fun setKioskEnabled(enabled: Boolean) {
-    // Note: This flag reflects the user's intent and last known apply result.
-    // The helper actually enforces policy. Settings should revert this on helper error.
-    SignalStore.accessibilityMode.kioskEnabled = enabled
+  override suspend fun requestKioskEnabled(enabled: Boolean): Boolean {
+    val ok = KioskHelperClient.requestKioskEnabled(enable = enabled)
+    if (ok) {
+      SignalStore.accessibilityMode.isKioskEnabled = enabled
+    } else {
+      SignalStore.accessibilityMode.isKioskEnabled = false
+    }
     refresh()
+    return ok
   }
 
   private fun refresh() {

@@ -2,6 +2,7 @@ package org.thoughtcrime.securesms.components.settings.app.accessibility
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.*
@@ -193,8 +194,10 @@ class AccessibilityModeSettingsViewModel(
   }
 
   fun onSetKioskEnabled(enabled: Boolean) {
-    _kioskEnabled.value = enabled
-    store.setKioskEnabled(enabled)
+    viewModelScope.launch {
+      val ok = store.requestKioskEnabled(enabled)
+      _kioskEnabled.value = ok && enabled
+    }
   }
 
 }

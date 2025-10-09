@@ -41,7 +41,7 @@ class AccessibilityModeValues(store: KeyValueStore) : SignalStoreValues(store) {
       _onConfigurationSettingChanged.postValue(ACCESSIBILITY_MODE_ENABLED)
     }
   // Whether helper-backed kiosk policy has been prepared (best-effort; controlled by Settings)
-  var kioskEnabled: Boolean by booleanValue(KIOSK_ENABLED, false)
+  var isKioskEnabled: Boolean by booleanValue(KIOSK_ENABLED, false)
 
   // Long value for recipient ID
   var accessibilityRecipientId: Long by longValue(ACCESSIBILITY_RECIPIENT_ID, -1L)
