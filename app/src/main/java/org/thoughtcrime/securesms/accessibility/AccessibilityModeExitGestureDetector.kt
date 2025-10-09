@@ -19,7 +19,26 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.signal.core.util.logging.Log
+import org.signal.core.util.logging.Log as SignalCoreLog
+
+// Compile-time gated logging
+private object Log {
+  private const val A11Y_GESTURE_TRACE_DEBUG   = true
+  private const val A11Y_GESTURE_TRACE_VERBOSE = true
+
+  fun tag(c: Class<*>) = SignalCoreLog.tag(c)
+
+  inline fun v(tag: String, keepLonger: Boolean = false, msg: () -> String) {
+    if (A11Y_GESTURE_TRACE_DEBUG) SignalCoreLog.v(tag, msg(), keepLonger)
+  }
+
+  inline fun d(tag: String, keepLonger: Boolean = false, msg: () -> String) {
+    if (A11Y_GESTURE_TRACE_VERBOSE) SignalCoreLog.d(tag, msg(), keepLonger)
+  }
+
+  inline fun i(tag: String, msg: String, keepLonger: Boolean = false) =
+    SignalCoreLog.i(tag, msg, keepLonger)
+}
 
 // Exit gesture configuration snapshot (see also AccessibilityModeActivity).
 data class ExitGestureConfig(
@@ -94,17 +113,25 @@ class AccessibilityModeExitGestureDetector(
   /** Replace the current configuration snapshot. Call from Activity.onStart(). */
   fun applyConfig(newCfg: ExitGestureConfig) {
     cfg = newCfg
+    Log.d(TAG) {
+      "[Config] type=${cfg.type} totalTimeoutMs=${cfg.totalTimeoutMs} tripleTapGapMs=${cfg.tripleTapGapMs} " +
+      "chordSecondFingerTimeoutMs=${cfg.chordSecondFingerTimeoutMs} headerHeightDp=${cfg.headerHeightDp}"
+    }
   }
 
   // The selected gesture, which is used to select the right recognition state machine
   private var selectedGesture: AccessibilityModeExitGestureType =
     AccessibilityModeExitGestureType.TripleTap
 
-  private fun buildRecognition(id: AccessibilityModeExitGestureType): RecognitionSM = when (id) {
-    AccessibilityModeExitGestureType.TripleTap     -> TripleTapSM()
-    AccessibilityModeExitGestureType.ChordSlideUp  -> ChordSlideUpSM()
-    AccessibilityModeExitGestureType.ChordDial,
-    AccessibilityModeExitGestureType.ChordPinchOut -> TripleTapSM() // TODO: implement
+  private fun buildRecognition(id: AccessibilityModeExitGestureType): RecognitionSM {
+    val rec: RecognitionSM = when (id) {
+      AccessibilityModeExitGestureType.TripleTap     -> TripleTapSM()
+      AccessibilityModeExitGestureType.ChordSlideUp  -> ChordSlideUpSM()
+      AccessibilityModeExitGestureType.ChordDial,
+      AccessibilityModeExitGestureType.ChordPinchOut -> TripleTapSM() // TODO: implement
+    }
+    Log.d(TAG) { "[Build] recognition=${rec::class.simpleName} for gesture=$id" }
+    return rec
   }
 
   // The policy state machine, which owns the current recognition state machine
@@ -125,10 +152,12 @@ class AccessibilityModeExitGestureDetector(
     // TODO: Simplify, now some code duplication with PolicySM.IdleState.onEnter()
     if (policy.isIdle()) {
       if (!force && id == selectedGesture) return
+      Log.d(TAG) { "[Detector] updateSelectedGesture: applying immediately → $id (force=$force)" }
       selectedGesture = id
       policy = PolicySM(initialRecognition = buildRecognition(id), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
     } else {
       if (!force && id == selectedGesture) return
+      Log.d(TAG) { "[Detector] updateSelectedGesture: queued → $id (force=$force)" }
       pendingGesture = id // latest wins
     }
   }
@@ -138,13 +167,14 @@ class AccessibilityModeExitGestureDetector(
 
   /** Cancel any in-flight attempt and reset to Idle. */
   fun dispose() {
+    Log.d(TAG) { "[Detector] dispose(): cancelling any in-flight attempt" }
     policy.recognition.transitionTo(policy.recognition.Quiescent, Cause.Dispose)
     policy.transitionTo(policy.Idle, Cause.Dispose)
   }
 
   // Handle touch events, lie that we did not consume any of them
   fun onTouch(v: View?, event: MotionEvent): Boolean {
-    // Log.internal().d(TAG, "[Detector] onTouch " + event.actionLabel())
+    Log.v(TAG) { "[Detector] onTouch ${event.actionLabel()}" }
     policy.handleEvent(event)
     return false // Transparent policy: do not consume
   }
@@ -178,7 +208,7 @@ class AccessibilityModeExitGestureDetector(
 
     public fun transitionTo(s: State, cause: Cause) {
       if (isCurrent(s)) return
-      Log.internal().v(TAG, "[" + smTag + "] " + stateName(current) + " --" + causeLabel(cause) + "--> " + stateName(s))
+      Log.v(TAG) { "[${smTag}] ${stateName(current)} --${causeLabel(cause)}--> ${stateName(s)}" }
       current?.onExit()
       current = s
       current!!.onEnter(cause)
@@ -236,9 +266,11 @@ class AccessibilityModeExitGestureDetector(
     private inner class IdleState : State() {
       override fun onEnter(cause: Cause) {
         // Apply any queued gesture selection change (latest wins)
+        Log.d(TAG) { "[Policy] Idle.onEnter cause=${causeLabel(cause)} pendingGesture=$pendingGesture" }
         pendingGesture?.let { next ->
           pendingGesture = null
           selectedGesture = next
+          Log.d(TAG) { "[Policy] Applying queued gesture → $next (rebuild Policy+Recognition)" }
           // Replace the entire Policy, with a new recognition; this method runs inside the old Policy
           // At this point, the old Policy is entering the Idle state. Hence, it is safe to replace it.
           policy = PolicySM(
@@ -258,9 +290,14 @@ class AccessibilityModeExitGestureDetector(
       }
       // If a finger goes down in the header, transition to Tracking and let the recognition handle the event
       override fun onDown(ev: MotionEvent) {
-        if (!ev.isIn(headerBoundsProvider())) return
+        val inHeader = ev.isIn(headerBoundsProvider())
+        if (!inHeader) {
+          Log.v(TAG) { "[Policy] DOWN outside header: x=${ev.getX(0).toInt()} y=${ev.getY(0).toInt()}" }
+          return
+        }
+        Log.d(TAG) { "[Policy] DOWN in header: start Tracking" }
         transitionTo(Tracking, Cause.Touch(ev)) // Create first the new timers, with a coroutine scope, for the recognition state machine
-        recognition.handleEvent(ev)                   // Only then let the recognition state machine handle the event, with the new timers
+        recognition.handleEvent(ev)             // Only then let the recognition state machine handle the event, with the new timers
       }
     }
 
@@ -271,14 +308,14 @@ class AccessibilityModeExitGestureDetector(
       private val timers: TrackingTimers = object : TrackingTimers {
         override fun schedule(delayMs: Long, block: () -> Unit) {
           val s = requireNotNull(attemptScope) { "Gesture recognition attempt TrackingTimers not active" }
-          Log.internal().v(TAG, "[" + smTag + "] timers.schedule(" + delayMs + "ms)")
+          Log.v(TAG) { "[${smTag}] timers.schedule(${delayMs}ms)" }
           s.launch(Dispatchers.Main.immediate) {
             delay(delayMs)
             if (isCurrent(Tracking)) {
-              Log.internal().v(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (state still Tracking)")
+              Log.v(TAG) { "[${smTag}] timer fired after ${delayMs}ms (state still Tracking)" }
               block()
             } else {
-              Log.internal().v(TAG, "[" + smTag + "] timer fired after " + delayMs + "ms (ignored; state changed)")
+              Log.v(TAG) { "[${smTag}] timer fired after ${delayMs}ms (ignored; state changed)" }
             }
           }
         }
@@ -286,6 +323,7 @@ class AccessibilityModeExitGestureDetector(
 
       // Cancel all timers if the recognition attempt succeeds or fails
       override fun onExit() {
+        Log.d(TAG) { "[Policy] Tracking.onExit – cancel timers" }
         attemptScope?.cancel()
         attemptScope = null
       }
@@ -294,6 +332,7 @@ class AccessibilityModeExitGestureDetector(
       override fun onEnter(cause: Cause) {
         assert(attemptScope == null) { "Gesture recognition attempt already active" }
         attemptScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+        Log.d(TAG) { "[Policy] Tracking.onEnter – gesture=$selectedGesture, maxTotal=${maxTotalDurationMs}ms" }
         recognition.onStart(timers)
         // Policy-enforced overall timeout
         timers.schedule(maxTotalDurationMs) {
@@ -311,6 +350,7 @@ class AccessibilityModeExitGestureDetector(
       // Pointer-cap: abort if a new pointer would exceed maxPointers
       override fun onPD(ev: MotionEvent)   {
         if (ev.pointerCount > recognition.maxPointers) {
+          Log.d(TAG) { "[Policy] pointer-cap exceeded: count=${ev.pointerCount} > max=${recognition.maxPointers} – abort" }
           recognition.transitionTo(recognition.Quiescent, Cause.Touch(ev))
           transitionTo(Idle, Cause.Touch(ev))
         } else {
@@ -397,11 +437,15 @@ class AccessibilityModeExitGestureDetector(
         val ev = (cause as? Cause.Touch)!!.ev
         downX = ev.x
         downY = ev.y
+        Log.d(TAG) { "[TripleTap] down@(${downX.toInt()},${downY.toInt()})" }
       }
       override fun onMove(ev: MotionEvent) {
         val dx = kotlin.math.abs(ev.x - downX)
         val dy = kotlin.math.abs(ev.y - downY)
-        if (dx > touchSlopPx || dy > touchSlopPx) fail()
+        if (dx > touchSlopPx || dy > touchSlopPx) {
+          Log.v(TAG) { "[TripleTap] moved beyond slop: dx=${dx.toInt()} dy=${dy.toInt()} slop=${touchSlopPx}" }
+          fail()
+        }
       }
     }
 
@@ -455,6 +499,7 @@ class AccessibilityModeExitGestureDetector(
         firstId = down.getPointerId(down.actionIndex)
         secondId = -1
         centroidStartY = down.getY(down.actionIndex)
+        Log.d(TAG) { "[Chord] first finger id=$firstId y=${centroidStartY}" }
         timers.schedule(chordMaxGapMs) {
           if (isCurrent(AwaitSecond)) fail()
         }
@@ -462,6 +507,7 @@ class AccessibilityModeExitGestureDetector(
       override fun onPD(ev: MotionEvent) {
         secondId = ev.getPointerId(ev.actionIndex)
         centroidStartY = currentCentroidY(ev)
+        Log.d(TAG) { "[Chord] second finger id=$secondId centroidStartY=${centroidStartY}" }
         transitionTo(PairLocked, Cause.Touch(ev))
       }
     }
@@ -470,14 +516,18 @@ class AccessibilityModeExitGestureDetector(
     private inner class PairLockedState : RecognitionState() {
       override fun onMove(ev: MotionEvent) {
         val cy = currentCentroidY(ev)
-        if (centroidStartY - cy >= slideUpThresholdPx) {
+        val delta = centroidStartY - cy
+        Log.v(TAG) { "[Chord] move: cy=${cy} Δ=${delta} thr=${slideUpThresholdPx}" }
+        if (delta >= slideUpThresholdPx) {
           succeed()
         }
       }
       override fun onPU(ev: MotionEvent) {
+        Log.d(TAG) { "[Chord] POINTER_UP before threshold – fail" }
         fail()
       }
       override fun onUp(ev: MotionEvent) {
+        Log.d(TAG) { "[Chord] UP before threshold – fail" }
         fail()
       }
     }
