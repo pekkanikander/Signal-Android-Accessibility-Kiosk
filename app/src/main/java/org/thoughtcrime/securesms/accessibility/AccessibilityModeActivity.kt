@@ -8,20 +8,25 @@ package org.thoughtcrime.securesms.accessibility
 import android.os.Bundle
 import android.content.Intent
 import android.content.Context
+import android.graphics.Rect
 import android.view.View
 import androidx.activity.viewModels
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import org.thoughtcrime.securesms.PassphraseRequiredActivity
+import androidx.core.content.IntentCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.lifecycleScope
+
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 import org.signal.core.util.logging.Log
-import androidx.core.content.IntentCompat
-import androidx.core.app.NotificationManagerCompat
+import org.thoughtcrime.securesms.PassphraseRequiredActivity
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureDetector
 import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsViewModel
@@ -82,8 +87,12 @@ class AccessibilityModeActivity : PassphraseRequiredActivity() {
     super.onCreate(savedInstanceState, ready)
     Log.d(TAG, "AccessibilityModeActivity.onCreate() called")
 
-    // Fail-safe: if Accessibility Mode was disabled while we were away, exit to Main.
-    if (!SignalStore.accessibilityMode.isAccessibilityModeEnabled) {
+    val selectedRecipientId: RecipientId? = IntentCompat.getParcelableExtra(intent, "selected_recipient_id", RecipientId::class.java)
+    val rid: RecipientId? = selectedRecipientId ?: SignalStore.accessibilityMode.accessibilityRecipientId.let { if (it > 0) RecipientId.from(it) else null }
+
+    // Fail-safe: if, while we were away,  Accessibility Mode was disabled or no recipient id was available, exit to Main.
+    if (!SignalStore.accessibilityMode.isAccessibilityModeEnabled || rid == null) {
+      Log.e(TAG, "Accessibility Mode disabled or no recipient id available for AccessibilityModeActivity")
       startActivity(MainActivity.clearTop(this))
       finish()
       return
@@ -94,49 +103,15 @@ class AccessibilityModeActivity : PassphraseRequiredActivity() {
     // Hide action bar to remove back button
     supportActionBar?.hide()
 
-    val selectedRecipientId: RecipientId? = IntentCompat.getParcelableExtra(intent, "selected_recipient_id", RecipientId::class.java)
-    if (selectedRecipientId != null) {
-      bindHeader(selectedRecipientId)
-      if (savedInstanceState == null) {
-        lifecycleScope.launch {
-          val threadId: Long = withContext(Dispatchers.IO) {
-            val recipient = Recipient.resolved(selectedRecipientId)
-            SignalDatabase.threads.getOrCreateThreadIdFor(recipient) ?: -1L
-          }
-          val fragment = AccessibilityModeFragment().apply {
-            arguments = Bundle().apply { putLong("selected_thread_id", threadId) }
-          }
-          supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
-        }
-      }
-      setupExitGestureDetector()
-      return
-    }
+    bindHeader(rid)
 
-    // Get the selected thread ID from intent
-    val selectedThreadId = intent.getLongExtra("selected_thread_id", -1L)
-    Log.d(TAG, "Selected thread ID: $selectedThreadId")
-
-    bindHeader(selectedThreadId)
-
-    // Add the accessibility fragment if this is the first creation
     if (savedInstanceState == null) {
-      Log.d(TAG, "Creating new fragment")
-      val fragment = AccessibilityModeFragment()
-
-      // Pass the thread ID to the fragment via arguments
-      val args = Bundle()
-      args.putLong("selected_thread_id", selectedThreadId)
-      fragment.arguments = args
-
+      val fragment = AccessibilityModeFragment().apply {
+        arguments = Bundle().apply { putParcelable("selected_recipient_id", rid) }
+      }
       supportFragmentManager.beginTransaction()
         .replace(R.id.fragment_container, fragment)
         .commit()
-      Log.d(TAG, "Fragment transaction committed")
-    } else {
-      Log.d(TAG, "Using existing fragment from savedInstanceState")
     }
 
     // Initialize exit gesture detector
@@ -154,6 +129,7 @@ class AccessibilityModeActivity : PassphraseRequiredActivity() {
         showExitConfirmationOverlay()
       }
     )
+    observeExitGestureConfig()
   }
   override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
     // Passive observe at the exit detector; return value ignored to keep Transparent policy
@@ -163,30 +139,23 @@ class AccessibilityModeActivity : PassphraseRequiredActivity() {
     return super.dispatchTouchEvent(ev)
   }
 
-  private fun computeHeaderBounds(): android.graphics.Rect {
-    val header = findViewById<View>(R.id.accessibility_title_view)
-    val measured = header?.height ?: 0
-    val heightPx = if (measured > 0) measured else {
-      val heightDp = org.thoughtcrime.securesms.keyvalue.SignalStore.accessibilityMode.exitHeaderHeightDp
-      (resources.displayMetrics.density * heightDp).toInt()
-    }
-    val width = resources.displayMetrics.widthPixels
-    return android.graphics.Rect(0, 0, width, heightPx)
-  }
+  private fun computeHeaderBounds(): Rect {
+    val win = android.graphics.Rect()
+    window.decorView.getWindowVisibleDisplayFrame(win)
 
-  private fun bindHeader(threadId: Long) {
-    val header = findViewById<View>(R.id.accessibility_title_view) as? ConversationTitleView ?: return
-    if (threadId <= 0L) return
+    val density = resources.displayMetrics.density
+    val headerView = findViewById<View>(R.id.accessibility_title_view)
+    val configuredDp = SignalStore.accessibilityMode.exitHeaderHeightDp
 
-    lifecycleScope.launch {
-      val recipient: Recipient? = withContext(Dispatchers.IO) {
-        val rid: RecipientId? = SignalDatabase.threads.getRecipientIdForThreadId(threadId)
-        rid?.let { Recipient.resolved(it) }
-      }
-      recipient?.let { r ->
-        header.setTitle(Glide.with(header), r)
-      }
+    val headerPx = when {
+      configuredDp > 0                           -> (configuredDp * density).toInt()
+      headerView?.height?.let { it > 0 } == true -> headerView.height
+      else                                       -> (200f * density).toInt()
     }
+
+    val bottom = (win.top + headerPx).coerceAtMost(win.bottom)
+    Log.d(TAG, "Header bounds: left=${win.left}, top=${win.top}, right=${win.right}, bottom=$bottom (cfgDp=$configuredDp, px=$headerPx)")
+    return Rect(win.left, win.top, win.right, bottom)
   }
 
   private fun bindHeader(recipientId: RecipientId) {
@@ -224,6 +193,30 @@ class AccessibilityModeActivity : PassphraseRequiredActivity() {
     )
   }
 
+  private fun observeExitGestureConfig() {
+    lifecycleScope.launch {
+      repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+        SignalAccessibilityModeStore.state
+          .map { st ->
+            ExitGestureConfig(
+              type = st.gestureType,
+              totalTimeoutMs = st.exitGestureTimeoutMs,
+              tripleTapGapMs = st.exitTripleTapIntervalMs,
+              chordSecondFingerTimeoutMs = st.exitGesturePointerTimeoutMs,
+              headerHeightDp = st.exitHeaderHeightDp
+            )
+          }
+          .distinctUntilChanged()
+          .collectLatest { cfg ->
+            if (::exitGestureDetector.isInitialized) {
+              exitGestureDetector.applyConfig(cfg)
+              Log.d(TAG, "Applied updated exit gesture config: $cfg")
+            }
+          }
+      }
+    }
+  }
+
   private fun clearAppNotifications(reason: String) {
     try {
       NotificationManagerCompat.from(this).cancelAll()
@@ -238,7 +231,6 @@ class AccessibilityModeActivity : PassphraseRequiredActivity() {
     // Snapshot current settings and apply to detector on every (re)start.
     val cfg = readExitGestureConfig()
     exitGestureDetector.applyConfig(cfg)
-    exitGestureDetector.updateSelectedGesture(cfg.type, force = true)
   }
 
 /**

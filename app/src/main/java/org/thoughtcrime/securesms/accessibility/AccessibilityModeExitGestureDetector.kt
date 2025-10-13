@@ -72,7 +72,7 @@ data class ExitGestureConfig(
  *
  * Configuration
  * - ExitGestureConfig is snapshotted in AccessibilityModeActivity.onStart() and applied via applyConfig(...).
- * - Gesture selection updates call updateSelectedGesture(...). While Tracking, updates are queued
+ * - Gesture selection updates call applyConfig(...). While Tracking, updates are queued
  *   (latest-wins) and applied on the next transition to Idle.
  * - Supported gestures: TripleTap, ChordSlideUp. Others may be added by mapping in buildRecognition(...).
  *
@@ -110,15 +110,6 @@ class AccessibilityModeExitGestureDetector(
     headerHeightDp = 120
   )
 
-  /** Replace the current configuration snapshot. Call from Activity.onStart(). */
-  fun applyConfig(newCfg: ExitGestureConfig) {
-    cfg = newCfg
-    Log.d(TAG) {
-      "[Config] type=${cfg.type} totalTimeoutMs=${cfg.totalTimeoutMs} tripleTapGapMs=${cfg.tripleTapGapMs} " +
-      "chordSecondFingerTimeoutMs=${cfg.chordSecondFingerTimeoutMs} headerHeightDp=${cfg.headerHeightDp}"
-    }
-  }
-
   // The selected gesture, which is used to select the right recognition state machine
   private var selectedGesture: AccessibilityModeExitGestureType =
     AccessibilityModeExitGestureType.TripleTap
@@ -143,22 +134,24 @@ class AccessibilityModeExitGestureDetector(
 
   // --- Public API ---
 
-  /**
-   * Update the selected gesture. May be called at any time.
-   * If Tracking, the request is **queued** and applied on the next Idle entry (latest wins).
-   * If [force] is true, rebuilds even if the type is unchanged (e.g., to apply new thresholds).
-   */
-  fun updateSelectedGesture(id: AccessibilityModeExitGestureType, force: Boolean = false) {
+  /** Replace the current configuration snapshot. Call from Activity.onStart(). */
+  fun applyConfig(newCfg: ExitGestureConfig) {
+    cfg = newCfg
+    Log.d(TAG) {
+      "[Config] type=${cfg.type} totalTimeoutMs=${cfg.totalTimeoutMs} tripleTapGapMs=${cfg.tripleTapGapMs} " +
+      "chordSecondFingerTimeoutMs=${cfg.chordSecondFingerTimeoutMs} headerHeightDp=${cfg.headerHeightDp}"
+    }
+    // Ensure policy reflects new thresholds and (possibly) new gesture selection.
+    // Force rebuild so updated total timeout and recognition mapping take effect immediately or next Idle.
+
     // TODO: Simplify, now some code duplication with PolicySM.IdleState.onEnter()
     if (policy.isIdle()) {
-      if (!force && id == selectedGesture) return
-      Log.d(TAG) { "[Detector] updateSelectedGesture: applying immediately → $id (force=$force)" }
-      selectedGesture = id
-      policy = PolicySM(initialRecognition = buildRecognition(id), maxTotalDurationMs = cfg.totalTimeoutMs.toLong())
+      Log.d(TAG) { "[Detector] applyConfig: applying immediately → $newCfg.type" }
+      selectedGesture = newCfg.type
+      policy = PolicySM(initialRecognition = buildRecognition(newCfg.type), maxTotalDurationMs = newCfg.totalTimeoutMs.toLong())
     } else {
-      if (!force && id == selectedGesture) return
-      Log.d(TAG) { "[Detector] updateSelectedGesture: queued → $id (force=$force)" }
-      pendingGesture = id // latest wins
+      Log.d(TAG) { "[Detector] applyConfig: queued → $newCfg.type" }
+      pendingGesture = newCfg.type // latest wins
     }
   }
   // --- Pending gesture update ---
@@ -174,7 +167,7 @@ class AccessibilityModeExitGestureDetector(
 
   // Handle touch events, lie that we did not consume any of them
   fun onTouch(v: View?, event: MotionEvent): Boolean {
-    Log.v(TAG) { "[Detector] onTouch ${event.actionLabel()}" }
+    // Log.v(TAG) { "[Detector] onTouch ${event.actionLabel()}" }
     policy.handleEvent(event)
     return false // Transparent policy: do not consume
   }
@@ -485,7 +478,7 @@ class AccessibilityModeExitGestureDetector(
   /** Two-finger chord then slide the centroid upwards by ≥20 mm before any finger lifts. */
   inner class ChordSlideUpSM : RecognitionSM(maxPointers = 2) {
     private val chordMaxGapMs: Long get() = cfg.chordSecondFingerTimeoutMs.toLong()
-    private val slideUpThresholdPx: Float = mmToPx(20f)
+    private val slideUpThresholdPx: Float = mmToPx(10f)
 
     private var firstId: Int = -1
     private var secondId: Int = -1

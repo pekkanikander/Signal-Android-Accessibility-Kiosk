@@ -13,25 +13,29 @@ import android.widget.Button
 import android.widget.EditText
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.ConversationLayoutManager
 import com.bumptech.glide.Glide
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.kotlin.subscribeBy
 import io.reactivex.rxjava3.schedulers.Schedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.conversation.MarkReadHelper
+import org.thoughtcrime.securesms.conversation.ScheduledMessagesRepository
 import org.thoughtcrime.securesms.conversation.colors.ChatColors
 import org.thoughtcrime.securesms.conversation.colors.ChatColorsPalette
+import org.thoughtcrime.securesms.conversation.colors.Colorizer
 import org.thoughtcrime.securesms.conversation.v2.ConversationAdapterV2
 import org.thoughtcrime.securesms.conversation.v2.ConversationRecipientRepository
 import org.thoughtcrime.securesms.conversation.v2.ConversationRepository
 import org.thoughtcrime.securesms.conversation.v2.ConversationViewModel
-import org.thoughtcrime.securesms.conversation.ScheduledMessagesRepository
-import org.thoughtcrime.securesms.messagerequests.MessageRequestRepository
-import org.thoughtcrime.securesms.util.SignalLocalMetrics
+import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.dependencies.AppDependencies
+import org.thoughtcrime.securesms.messagerequests.MessageRequestRepository
 import org.thoughtcrime.securesms.notifications.v2.ConversationId
-import androidx.recyclerview.widget.ConversationLayoutManager
-import org.thoughtcrime.securesms.conversation.MarkReadHelper
+import org.thoughtcrime.securesms.recipients.RecipientId
+import org.thoughtcrime.securesms.recipients.Recipient
+import org.thoughtcrime.securesms.util.SignalLocalMetrics
 import org.signal.core.util.logging.Log
 
 /**
@@ -53,6 +57,7 @@ class AccessibilityModeFragment : Fragment() {
     private lateinit var messageInput: EditText
     private lateinit var sendButton: Button
     private var threadId: Long = -1L
+    private var recipientId: RecipientId? = null
     private var previousMessageCount = 0
 
     // Signal's components - initialized after we have threadId
@@ -83,10 +88,14 @@ class AccessibilityModeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Get the selected thread ID from arguments
-        threadId = arguments?.getLong("selected_thread_id", -1L) ?: -1L
-        if (threadId == -1L) {
-            Log.e(TAG, "No thread ID provided")
+        recipientId = arguments?.getParcelable("selected_recipient_id")
+        if (recipientId == null) {
+            Log.e(TAG, "No recipient id provided")
+            return
+        }
+        threadId = SignalDatabase.threads.getOrCreateThreadIdFor(Recipient.resolved(recipientId!!))
+        if (threadId <= 0L) {
+            Log.e(TAG, "Failed to resolve thread id for recipient ${recipientId}")
             return
         }
 
@@ -111,7 +120,7 @@ class AccessibilityModeFragment : Fragment() {
             requestManager = Glide.with(this),
             clickListener = AccessibilityModeItemClickListener(),
             hasWallpaper = false, // No wallpaper for accessibility
-            colorizer = org.thoughtcrime.securesms.conversation.colors.Colorizer(),
+            colorizer = Colorizer(),
             startExpirationTimeout = viewModel::startExpirationTimeout,
             chatColorsDataProvider = viewModel::chatColorsSnapshot,
             displayDialogFragment = { /* No dialogs for accessibility */ }
