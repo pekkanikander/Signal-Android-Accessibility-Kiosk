@@ -42,24 +42,23 @@
 - [X] Add a clear header to AccessibilityBode page, giving clear indication of whom the chat is with
 - [X] Change the selected chat into a ConversationPreview or similar, so that it looks similar to the one that the user selects in the ChatSelectionFragment
 - [X] Another polisihing round of the state machine implementation, adding first class gesture abstraction, for multiple gestures
-- [ ] Implement a reasonable number of Advanced options now in the KV model but not yet in the UI
+- [X] Implement a reasonable number of Advanced options now in the KV model but not yet in the UI
 - [ ] Reasonably thorough testing of the gestures, both manual testing and automated testing
-  - especially the two finger hold usability needs more manual tuning
 - [ ] Implement another production gesture: Corner-based, reliable on real devices
 - [ ] Polish the final code: remove all smells and all too complex arithmetics
 
 ### **Step 4.2: New Settings Implementation**
 - [ ] Polish the Settings UI — proper layout following the other settings, explanations, etc.
+- [ ] Investigate if changing header height option is really honoured at runtime or does it require restart?
 - [ ] Proper error handling and user feedback
 - [ ] Consolidate and deprecate legacy settings/chat selection files to the minimal set
 
 ### **Step 4.3: New functionality**
-- [ ] Implement basic kiosk mode
+- [X] Implement basic kiosk mode
 - [ ] Depending on how well notifications are supressed, add low battery interface
 
 ### **Step 4.4: Integration Verification**
 - [ ] Verify Signal component compatibility
-- [ ] Accessibility audit with TalkBack
 - [ ] Validate rebasing flows, deep links, and notification taps respect the active mode
 
 ---
@@ -67,10 +66,10 @@
 ## 🎯 **PHASE 5: VALIDATION & POLISH (1-2 Weeks)**
 
 ### **Step 5.1: Quality Assurance**
-- [ ] Speed up Gradle Kotlin compile for :app:compilePlayProdInstrumentationKotlin
 - [ ] Add a Gradle aggregate `testAccessibility*` tasks to root build (if still needed)
 - [ ] All tests pass consistently
 - [ ] Manual testing on real devices
+- [ ] Accessibility audit with TalkBack
 - [ ] Accessibility compliance verification
 
 ### **Step 5.2: Documentation Finalization**

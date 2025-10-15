@@ -187,7 +187,7 @@ private fun AccessibilityModeSettingsScreen(
         // Kiosk helper toggle (API 29+). Sends intent to external helper and reverts on error.
         val isApi29Plus = android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
         val subtitle = if (!isApi29Plus) {
-          R.string.AccessibilityModeSettingsFragment__kiosk_requires_android13
+          R.string.AccessibilityModeSettingsFragment__kiosk_requires_android10
         } else {
           R.string.AccessibilityModeSettingsFragment__kiosk_subtitle
         }

@@ -4126,6 +4126,42 @@
   <!-- Removed by excludeNonTranslatables <string name="preferences__internal_details" translatable="false">Internal Details</string> -->
   <!-- Removed by excludeNonTranslatables <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string> -->
 
+    <!-- Accessibility Mode -->
+    <string name="preferences__accessibility_mode">Huolenpitotila</string>
+    <string name="AccessibilityChatSelectionFragment__select_chat_title">Valitse keskustelu</string>
+    <string name="AccessibilityModeSettingsFragment__no_chats">Ei keskusteluja. Aloita keskustelu ensin!</string>
+    <string name="AccessibilityModeSettingsFragment__select_chat">Valitse keskustelu huolenpitotilaa varten</string>
+    <string name="AccessibilityModeSettingsFragment__selected_chat_header">Valittu keskustelu</string>
+    <string name="AccessibilityModeSettingsFragment__selected_chat_subtitle">Vain tämä keskustelu on näkyvissä huolenpitotilassa.</string>
+    <string name="AccessibilityModeSettingsFragment__choose_chat_header">Valitse keskustelu</string>
+    <string name="AccessibilityModeSettingsFragment__choose_chat_subtitle">Käytössä huolenpitotilassa. Napauta muuttaaksesi.</string>
+    <string name="AccessibilityChatSelectionFragment__chat_selected_id">Valittu Signal-keskustelu (ID: %1$d)</string>
+    <string name="AccessibilityModeSettingsFragment__enable">Ota käyttöön huolenpitotila</string>
+    <string name="AccessibilityModeSettingsFragment__advanced">Lisäasetukset…</string>
+    <string name="AccessibilityModeSettingsFragment__advanced_subtitle">Poistumisele ja muuta</string>
+    <string name="AccessibilityModeSettingsFragment__enable_kiosk">Estä Android-järjestelmätoimintojen käyttö</string>
+    <string name="AccessibilityModeSettingsFragment__kiosk_subtitle">Estä Androidin käyttö. Vaatii toimiakseen erillisen apuohjelman.</string>
+    <string name="AccessibilityModeSettingsFragment__kiosk_requires_android10">Vaatii toimiakseen Android version 10 tai uudemman.</string>
+    <string name="AccessibilityModeSettingsFragment__kiosk_error">Androidin käytön esto epäonnistui. Tarkista apuohjelman asetukset.</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__title">Esteettömyystilan lisäasetukset</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_gesture_header">Poistumisele</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__gesture_two_fingers_hold">Kahden sormen pito</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__gesture_triple_tap">Kolmoisnapautus</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__advanced_tuning_header">Lisäasetukset</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_timeout_ms">Poistumisen aikakatkaisu (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_pointer_timeout_ms">Toisen sormen aikakatkaisu (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_header_height_dp">Otsakealueen korkeus (dp)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__triple_tap_interval_ms">Kolmoisnapautuksen väli (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__confirm_timeout_ms">Vahvistusikkunan aikakatkaisu (ms)</string>
+
+    <!-- Accessibility exit confirmation dialog -->
+    <string name="AccessibilityModeExitConfirmationDialog__confirm_exit">Vahvista poistuminen</string>
+    <string name="AccessibilityModeExitConfirmationDialog__open_accessibility_settings_question">Avaa huolenpitotilan asetukset?</string>
+    <string name="AccessibilityModeExitConfirmationDialog__go_to_settings">Avaa asetukset</string>
+
+    <!-- Accessibility mode conversation UI -->
+    <string name="AccessibilityModeFragment__message_input_hint">Kirjoita viesti…</string>
+    <string name="AccessibilityModeFragment__send">Lähetä</string>
 
     <!-- Payments -->
     <string name="PaymentsActivityFragment__all_activity">Kaikki toiminta</string>
