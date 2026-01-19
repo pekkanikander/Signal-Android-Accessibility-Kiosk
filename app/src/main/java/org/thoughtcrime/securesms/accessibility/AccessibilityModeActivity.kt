@@ -29,7 +29,7 @@ import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.PassphraseRequiredActivity
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.accessibility.AccessibilityModeExitGestureDetector
-import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsViewModel
+// import org.thoughtcrime.securesms.components.settings.app.accessibility.AccessibilityModeSettingsViewModel
 import org.thoughtcrime.securesms.components.settings.app.AppSettingsActivity
 import org.thoughtcrime.securesms.conversation.ConversationTitleView
 import org.thoughtcrime.securesms.database.SignalDatabase
@@ -74,7 +74,7 @@ class AccessibilityModeActivity : PassphraseRequiredActivity() {
   }
 
   private lateinit var exitGestureDetector: AccessibilityModeExitGestureDetector
-  private val settingsViewModel: AccessibilityModeSettingsViewModel by viewModels()
+//   private val settingsViewModel: AccessibilityModeSettingsViewModel by viewModels()
 
   private val openSettings: ActivityResultLauncher<Intent> =
     registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
