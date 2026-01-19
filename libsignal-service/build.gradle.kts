@@ -4,6 +4,7 @@
  */
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -39,6 +40,18 @@ tasks.withType<KotlinCompile>().configureEach {
       suppressWarnings = true
     }
   }
+}
+
+// Ensure Kotlin class output folders are advertised as source set outputs so IDE import (jdt.ls/Buildship)
+// includes them on the Java classpath for IntelliSense.
+val sourceSets = extensions.getByName("sourceSets") as SourceSetContainer
+sourceSets.named("main") {
+  output.dir(mapOf("builtBy" to tasks.named("compileKotlin")),
+    "$buildDir/classes/kotlin/main")
+}
+sourceSets.named("test") {
+  output.dir(mapOf("builtBy" to tasks.named("compileTestKotlin")),
+    "$buildDir/classes/kotlin/test")
 }
 
 afterEvaluate {
