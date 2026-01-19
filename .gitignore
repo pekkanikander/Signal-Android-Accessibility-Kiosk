@@ -33,3 +33,8 @@ maps.key
 kls_database.db
 .kotlin
 lefthook-local.yml
+
+# Local environment variables (contains secrets for local testing)
+.env
+.env.local
+quick-smoke-host
