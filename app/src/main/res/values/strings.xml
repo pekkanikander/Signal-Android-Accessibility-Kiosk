@@ -4130,6 +4130,14 @@
     <string name="preferences__internal_details" translatable="false">Internal Details</string>
     <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string>
 
+    <!-- Accessibility exit confirmation dialog -->
+    <string name="AccessibilityModeExitConfirmationDialog__confirm_exit">Confirm exit</string>
+    <string name="AccessibilityModeExitConfirmationDialog__open_accessibility_settings_question">Open Accessibility settings?</string>
+    <string name="AccessibilityModeExitConfirmationDialog__go_to_settings">Go to settings</string>
+
+    <!-- Accessibility mode conversation UI -->
+    <string name="AccessibilityModeFragment__message_input_hint">Type a message…</string>
+    <string name="AccessibilityModeFragment__send">Send</string>
 
     <!-- Payments -->
     <string name="PaymentsActivityFragment__all_activity">All activity</string>
