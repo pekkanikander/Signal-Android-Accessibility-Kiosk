@@ -206,6 +206,7 @@ android {
 
     buildConfigField("long", "BUILD_TIMESTAMP", getLastCommitTimestamp() + "L")
     buildConfigField("String", "GIT_HASH", "\"${getGitHash()}\"")
+    buildConfigField("boolean", "GIT_DIRTY", "${isGitDirty()}")
     buildConfigField("String", "SIGNAL_URL", "\"https://chat.signal.org\"")
     buildConfigField("String", "STORAGE_URL", "\"https://storage.signal.org\"")
     buildConfigField("String", "SIGNAL_CDN_URL", "\"https://cdn.signal.org\"")
@@ -685,6 +686,14 @@ fun getGitHash(): String {
   return providers.exec {
     commandLine("git", "rev-parse", "HEAD")
   }.standardOutput.asText.get().trim().substring(0, 12)
+}
+
+fun isGitDirty(): Boolean {
+  val status = providers.exec {
+    commandLine("git", "status", "--porcelain")
+  }.standardOutput.asText.get().trim()
+
+  return status.isNotEmpty()
 }
 
 fun getNightlyTagForCurrentCommit(): String? {
