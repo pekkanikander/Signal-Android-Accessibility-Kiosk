@@ -71,9 +71,14 @@ class HelpSettingsFragment : ComposeFragment() {
         }
 
         item {
+          val suffix = buildString {
+            append(" ")
+            append(BuildConfig.GIT_HASH)
+            if (BuildConfig.GIT_DIRTY) append("-dirty")
+          }
           Rows.TextRow(
             text = stringResource(R.string.HelpSettingsFragment__version),
-            label = BuildConfig.VERSION_NAME
+            label = BuildConfig.VERSION_NAME + suffix
           )
         }
 
