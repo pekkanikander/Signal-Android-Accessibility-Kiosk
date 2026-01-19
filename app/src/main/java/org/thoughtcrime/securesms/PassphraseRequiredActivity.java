@@ -16,6 +16,8 @@ import org.greenrobot.eventbus.EventBus;
 import org.signal.core.util.logging.Log;
 import org.signal.core.util.tracing.Tracer;
 import org.signal.devicetransfer.TransferStatus;
+import org.thoughtcrime.securesms.accessibility.AccessibilityModeActivity;
+import org.thoughtcrime.securesms.components.settings.app.AppSettingsActivity;
 import org.thoughtcrime.securesms.components.settings.app.changenumber.ChangeNumberLockActivity;
 import org.thoughtcrime.securesms.crypto.MasterSecretUtil;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
@@ -56,6 +58,7 @@ public abstract class PassphraseRequiredActivity extends BaseActivity implements
   private static final int STATE_TRANSFER_LOCKED     = 9;
   private static final int STATE_CHANGE_NUMBER_LOCK  = 10;
   private static final int STATE_TRANSFER_OR_RESTORE = 11;
+  private static final int STATE_ACCESSIBILITY_MODE  = 12; // Accessibility Mode Enabled
 
   private SignalServiceNetworkAccess networkAccess;
   private BroadcastReceiver          clearKeyReceiver;
@@ -154,6 +157,7 @@ public abstract class PassphraseRequiredActivity extends BaseActivity implements
       case STATE_TRANSFER_LOCKED:     return getOldDeviceTransferLockedIntent();
       case STATE_CHANGE_NUMBER_LOCK:  return getChangeNumberLockIntent();
       case STATE_TRANSFER_OR_RESTORE: return getTransferOrRestoreIntent();
+      case STATE_ACCESSIBILITY_MODE:  return getAccessibilityModeIntent();
       default:                        return null;
     }
   }
@@ -181,6 +185,8 @@ public abstract class PassphraseRequiredActivity extends BaseActivity implements
       return STATE_TRANSFER_LOCKED;
     } else if (SignalStore.misc().isChangeNumberLocked() && getClass() != ChangeNumberLockActivity.class) {
       return STATE_CHANGE_NUMBER_LOCK;
+    } else if (SignalStore.accessibilityMode().isAccessibilityModeEnabled()) {
+      return STATE_ACCESSIBILITY_MODE;
     } else {
       return STATE_NORMAL;
     }
@@ -243,6 +249,10 @@ public abstract class PassphraseRequiredActivity extends BaseActivity implements
   private Intent getTransferOrRestoreIntent() {
     Intent intent = RestoreActivity.getRestoreIntent(this);
     return getRoutedIntent(intent, MainActivity.clearTop(this));
+  }
+
+  private Intent getAccessibilityModeIntent() {
+    return AccessibilityModeActivity.getAccessibilityModeIntent(this);
   }
 
   private Intent getCreateProfileNameIntent() {
