@@ -1,0 +1,64 @@
+name: CI Smoke
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Allow manual dispatch from the GitHub UI
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    name: smoke
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
+
+      - name: Decode debug keystore (for CI)
+        if: env.DEBUG_KEYSTORE_B64 != ''
+        run: |
+          echo "Decoding DEBUG_KEYSTORE_B64 into repo-root debug.keystore"
+          echo "$DEBUG_KEYSTORE_B64" | base64 -d > debug.keystore
+          printf '%s\n' "storeFile=debug.keystore" "storePassword=android" "keyAlias=androiddebugkey" "keyPassword=android" > keystore.debug.properties
+          chmod 600 debug.keystore keystore.debug.properties || true
+
+
+      - name: Dump Android SDK and environment (debug)
+        run: |
+          chmod +x testing-tools/ci-debug-env.sh || true
+          ./testing-tools/ci-debug-env.sh
+
+      - name: Verify that the emulator is running
+        run: |
+          adb devices | grep -v "List of devices" | grep -v "^$" | awk '{print $1" "$2}' | grep -v "^$" | wc -l
+
+      - name: Use Android emulator running on external port and run CI smoke script (shell runner)
+        run: |
+          chmod +x testing-tools/ci-emulator-shell.sh
+          ANDROID_HOME=${ANDROID_HOME} API_LEVEL=31 TARGET=google_apis ./testing-tools/ci-emulator-shell.sh
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-artifacts
+          path: |
+            app/build/reports/androidTests/connected/**
+            /tmp/ci-*.log
+            /tmp/ci-*.zip

@@ -1,0 +1,35 @@
+name: CI Quick - Accessibility
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  quick:
+    name: quick
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Verify emulator reachable
+        run: |
+          adb devices | grep -v "List of devices" | grep -v "^$" | awk '{print $1" "$2}' | grep -v "^$" | wc -l
+
+      - name: Decode debug keystore (for CI)
+        if: env.DEBUG_KEYSTORE_B64 != ''
+        run: |
+          echo "Decoding DEBUG_KEYSTORE_B64 into repo-root debug.keystore"
+          echo "$DEBUG_KEYSTORE_B64" | base64 -d > debug.keystore
+          printf '%s\n' "storeFile=debug.keystore" "storePassword=android" "keyAlias=androiddebugkey" "keyPassword=android" > keystore.debug.properties
+          chmod 600 debug.keystore keystore.debug.properties || true
+
+      - name: Run quick smoke script (uses external emulator)
+        run: |
+          chmod +x testing-tools/ci-quick.sh
+          ANDROID_HOME=${ANDROID_HOME:-/opt/android-sdk} API_LEVEL=31 TARGET=google_apis ./testing-tools/ci-quick.sh
