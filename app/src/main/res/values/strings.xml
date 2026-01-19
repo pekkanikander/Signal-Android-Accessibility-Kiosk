@@ -4215,6 +4215,34 @@
     <string name="preferences__internal_details" translatable="false">Internal Details</string>
     <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string>
 
+    <!-- Accessibility Mode Settings -->
+    <string name="preferences__accessibility_mode">Accessibility Mode</string>
+    <string name="AccessibilityChatSelectionFragment__select_chat_title">Select Chat or a Contact</string>
+    <string name="AccessibilityModeSettingsFragment__no_chats">No chats available yet. Start a conversation first!</string>
+    <string name="AccessibilityModeSettingsFragment__select_chat">Select a chat for Accessibility Mode</string>
+    <string name="AccessibilityModeSettingsFragment__selected_chat_header">Selected chat</string>
+    <string name="AccessibilityModeSettingsFragment__selected_chat_subtitle">Only this chat is available while Accessibility Mode is enabled. Tap to change.</string>
+    <string name="AccessibilityModeSettingsFragment__choose_chat_header">Choose a chat</string>
+    <string name="AccessibilityModeSettingsFragment__choose_chat_subtitle">Used when Accessibility Mode is enabled. Tap to pick one.</string>
+    <string name="AccessibilityChatSelectionFragment__chat_selected_id">Chat selected (ID: %1$d)</string>
+    <string name="AccessibilityModeSettingsFragment__enable">Enable Accessibility Mode</string>
+    <string name="AccessibilityModeSettingsFragment__advanced">Advanced…</string>
+    <string name="AccessibilityModeSettingsFragment__advanced_subtitle">Exit gesture and more</string>
+    <string name="AccessibilityModeSettingsFragment__enable_kiosk">Enable Kiosk (requires helper)</string>
+    <string name="AccessibilityModeSettingsFragment__kiosk_subtitle">Suppress system UI; managed by Kiosk Helper</string>
+    <string name="AccessibilityModeSettingsFragment__kiosk_requires_android10">Requires Android 10 or newer</string>
+    <string name="AccessibilityModeSettingsFragment__kiosk_error">Couldn\'t apply kiosk policy. Check helper setup.</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__title">Accessibility Mode – Advanced</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_gesture_header">Exit Gesture</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__gesture_two_fingers_hold">Two fingers hold</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__gesture_triple_tap">Triple tap</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__advanced_tuning_header">Advanced tuning</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_timeout_ms">Exit timeout (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_pointer_timeout_ms">Pointer second-finger timeout (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__exit_header_height_dp">Exit header height (dp)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__triple_tap_interval_ms">Triple-tap interval (ms)</string>
+    <string name="AccessibilityModeAdvancedSettingsFragment__confirm_timeout_ms">Confirm timeout (ms)</string>
+
     <!-- Accessibility exit confirmation dialog -->
     <string name="AccessibilityModeExitConfirmationDialog__confirm_exit">Confirm exit</string>
     <string name="AccessibilityModeExitConfirmationDialog__open_accessibility_settings_question">Open Accessibility settings?</string>
