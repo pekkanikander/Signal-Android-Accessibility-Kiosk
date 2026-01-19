@@ -101,6 +101,7 @@ class AppSettingsFragment : ComposeFragment(), Callbacks {
             is AppSettingsRoute.LinkDeviceRoute.LinkDevice -> findNavController().safeNavigate(R.id.action_appSettingsFragment_to_linkDeviceFragment)
             is AppSettingsRoute.DonationsRoute.Donations -> findNavController().safeNavigate(R.id.action_appSettingsFragment_to_manageDonationsFragment)
             is AppSettingsRoute.AppearanceRoute.Appearance -> findNavController().safeNavigate(R.id.action_appSettingsFragment_to_appearanceSettingsFragment)
+            is AppSettingsRoute.AccessibilityRoute.AccessibilityMode -> findNavController().safeNavigate(R.id.action_appSettingsFragment_to_accessibilityModeSettingsFragment)
             is AppSettingsRoute.ChatsRoute.Chats -> findNavController().safeNavigate(R.id.action_appSettingsFragment_to_chatsSettingsFragment)
             is AppSettingsRoute.StoriesRoute.Privacy -> findNavController().safeNavigate(AppSettingsFragmentDirections.actionAppSettingsFragmentToStoryPrivacySettings(route.titleId))
             is AppSettingsRoute.NotificationsRoute.Notifications -> findNavController().safeNavigate(R.id.action_appSettingsFragment_to_notificationsSettingsFragment)
@@ -364,6 +365,16 @@ private fun AppSettingsContent(
             icon = painterResource(R.drawable.symbol_appearance_24),
             onClick = {
               callbacks.navigate(AppSettingsRoute.AppearanceRoute.Appearance)
+            }
+          )
+        }
+
+        item {
+          Rows.TextRow(
+            text = stringResource(R.string.preferences__accessibility_mode),
+            icon = painterResource(R.drawable.symbol_settings_android_24),
+            onClick = {
+              callbacks.navigate(AppSettingsRoute.AccessibilityRoute.AccessibilityMode)
             }
           )
         }

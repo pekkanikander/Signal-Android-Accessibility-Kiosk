@@ -16,6 +16,7 @@ import org.thoughtcrime.securesms.components.settings.app.routes.AppSettingsRout
 import org.thoughtcrime.securesms.components.settings.app.subscription.GooglePayComponent
 import org.thoughtcrime.securesms.components.settings.app.subscription.GooglePayRepository
 import org.thoughtcrime.securesms.help.HelpFragment
+import org.thoughtcrime.securesms.keyvalue.AccessibilityModeValues
 import org.thoughtcrime.securesms.keyvalue.SettingsValues
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.profiles.manage.UsernameEditMode
@@ -103,6 +104,12 @@ class AppSettingsActivity : DSLSettingsActivity(), GooglePayComponent {
         val intent = Intent(this, KeyCachingService::class.java)
         intent.action = KeyCachingService.LOCALE_CHANGE_EVENT
         startService(intent)
+      }
+    }
+
+    SignalStore.accessibilityMode.onConfigurationSettingChanged.observe(this) { key ->
+      if (key == AccessibilityModeValues.ACCESSIBILITY_MODE_ENABLED) {
+        setResult(MainActivity.RESULT_CONFIG_CHANGED)
       }
     }
 

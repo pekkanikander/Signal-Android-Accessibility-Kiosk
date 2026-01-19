@@ -42,6 +42,11 @@ sealed interface AppSettingsRoute : Parcelable {
   data object AppUpdates : AppSettingsRoute
 
   @Parcelize
+  sealed interface AccessibilityRoute : AppSettingsRoute {
+    data object AccessibilityMode : AccessibilityRoute
+  }
+
+  @Parcelize
   sealed interface StoriesRoute : AppSettingsRoute {
     data class Privacy(@StringRes val titleId: Int) : StoriesRoute
     data object MyStory : StoriesRoute
