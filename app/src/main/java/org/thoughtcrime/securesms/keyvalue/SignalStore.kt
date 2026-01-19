@@ -22,6 +22,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
   val internalValues = InternalValues(store)
   val emojiValues = EmojiValues(store)
   val settingsValues = SettingsValues(store, context)
+  val accessibilityModeValues = AccessibilityModeValues(store)
   val certificateValues = CertificateValues(store)
   val phoneNumberPrivacyValues = PhoneNumberPrivacyValues(store)
   val onboardingValues = OnboardingValues(store)
@@ -69,6 +70,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
       internal.onFirstEverAppLaunch()
       emoji.onFirstEverAppLaunch()
       settings.onFirstEverAppLaunch()
+      accessibilityMode.onFirstEverAppLaunch()
       certificate.onFirstEverAppLaunch()
       phoneNumberPrivacy.onFirstEverAppLaunch()
       onboarding.onFirstEverAppLaunch()
@@ -101,6 +103,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
           internal.keysToIncludeInBackup +
           emoji.keysToIncludeInBackup +
           settings.keysToIncludeInBackup +
+          accessibilityMode.keysToIncludeInBackup +
           certificate.keysToIncludeInBackup +
           phoneNumberPrivacy.keysToIncludeInBackup +
           onboarding.keysToIncludeInBackup +
@@ -194,6 +197,11 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
     @get:JvmName("settings")
     val settings: SettingsValues
       get() = instance!!.settingsValues
+
+    @JvmStatic
+    @get:JvmName("accessibilityMode")
+    val accessibilityMode: AccessibilityModeValues
+      get() = instance!!.accessibilityModeValues
 
     @JvmStatic
     @get:JvmName("certificate")
