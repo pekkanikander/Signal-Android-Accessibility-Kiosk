@@ -718,6 +718,15 @@ tasks.withType<Test>().configureEach {
   }
 }
 
+// Exclude a single problematic instrumentation test file from Kotlin compilation
+// (sourceSet-level exclude can resolve to dependency Configuration.exclude in some AGP/KGP versions)
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+  if (name.contains("AndroidTest", ignoreCase = true)) {
+    // Ant-style patterns relative to source roots
+    exclude("**/org/thoughtcrime/securesms/messages/MessageProcessingPerformanceTest.kt")
+  }
+}
+
 gradle.taskGraph.whenReady {
   if (gradle.startParameter.taskNames.any { it.contains("nightly", ignoreCase = true) }) {
     if (!file("${project.rootDir}/nightly-url.txt").exists()) {
